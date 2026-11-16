@@ -1,0 +1,9 @@
+  Voix Pierre : Piper « fr_FR-upmc-medium », locuteur pierre,
+  licence CC BY-SA 4.0, modifiée (sortie d'alignement ajoutée ; le
+  modèle modifié reste sous CC BY-SA 4.0) ; données UPMC Pierre Voice
+  Data (enregistrées en 2013 à l'ISIR, Université Pierre et Marie
+  Curie, par Pierre Chauvin ; CC BY-SA 4.0) ; affinée à partir de la
+  voix anglaise lessac (corpus Blizzard 2013, usage de recherche).
+  Cette voix pourra être retirée d'une version future si la licence
+  de ce modèle de base est contestée.
+  Détails : voices\pierre\SOURCE.txt.

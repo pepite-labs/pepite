@@ -1,0 +1,101 @@
+<Window x:Class="Predict.Keyboard.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        ResizeMode="NoResize" SizeToContent="Height" Width="560"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="True" UseLayoutRounding="True"
+        FontFamily="Segoe UI" FontSize="14">
+  <!-- header and Fermer always visible; the credits scroll (owner 2026-11-14: the window outgrew the screen) and sit in
+       Expanders, so the default view is short. MaxHeight = the work area of the window's monitor (code-behind). -->
+  <Grid Margin="20,16,20,16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <StackPanel Grid.Row="0">
+      <StackPanel Orientation="Horizontal">
+        <Image x:Name="Logo" Width="48" Height="48" Margin="0,0,14,0" VerticalAlignment="Center"/>
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock AutomationProperties.AutomationId="AboutAppTitle">
+            <Run x:Name="AppTitle" FontSize="22" FontWeight="SemiBold"/><Run x:Name="AppTagline" FontSize="17"/>
+          </TextBlock>
+          <TextBlock x:Name="VersionText" Opacity="0.75"/>
+        </StackPanel>
+      </StackPanel>
+      <TextBlock x:Name="Tagline" TextWrapping="Wrap" Margin="0,12,0,4"/>
+      <!-- D18: the project's authors and its site only, no personal name or e-mail -->
+      <TextBlock x:Name="CopyrightText" TextWrapping="Wrap" Opacity="0.85" AutomationProperties.AutomationId="AboutCopyright"/>
+      <TextBlock TextWrapping="Wrap" Margin="0,2,0,8" AutomationProperties.AutomationId="AboutSite">
+        <Run x:Name="SiteLabel"/><Hyperlink x:Name="SiteLink" RequestNavigate="OnNavigate"><Run x:Name="SiteLinkText"/></Hyperlink>
+      </TextBlock>
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1" x:Name="Scroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  Focusable="False" AutomationProperties.AutomationId="AboutScroll">
+      <StackPanel Margin="0,0,6,0">
+        <Expander x:Name="PictosSection" Margin="0,4,0,0" AutomationProperties.AutomationId="AboutPictos">
+          <Expander.Header><TextBlock x:Name="PictosHeader" FontWeight="SemiBold" FontSize="16"/></Expander.Header>
+          <StackPanel Margin="24,4,0,4">
+            <TextBlock x:Name="Attribution" TextWrapping="Wrap"/>
+            <TextBlock Margin="0,4,0,0">
+              <Hyperlink x:Name="ArasaacLink" RequestNavigate="OnNavigate"><Run x:Name="ArasaacLinkText"/></Hyperlink>
+              <Run Text="  ·  "/>
+              <Hyperlink x:Name="LicenceLink" RequestNavigate="OnNavigate"><Run x:Name="LicenceLinkText"/></Hyperlink>
+            </TextBlock>
+            <TextBlock x:Name="PackState" TextWrapping="Wrap" Margin="0,4,0,0" Opacity="0.8"/>
+          </StackPanel>
+        </Expander>
+
+        <Expander x:Name="LexiqueSection" Margin="0,4,0,0" AutomationProperties.AutomationId="AboutLexique">
+          <Expander.Header><TextBlock x:Name="LexiqueHeader" FontWeight="SemiBold" FontSize="16"/></Expander.Header>
+          <StackPanel Margin="24,4,0,4">
+            <TextBlock TextWrapping="Wrap">
+              <Run x:Name="LexiqueText"/>
+              <Hyperlink x:Name="LexiqueLink" RequestNavigate="OnNavigate"><Run x:Name="LexiqueLinkText"/></Hyperlink>
+            </TextBlock>
+            <TextBlock x:Name="CorporaText" TextWrapping="Wrap" Margin="0,4,0,0"/>
+          </StackPanel>
+        </Expander>
+
+        <Expander x:Name="NamesSection" Margin="0,4,0,0" AutomationProperties.AutomationId="AboutNames">
+          <Expander.Header><TextBlock x:Name="NamesHeader" FontWeight="SemiBold" FontSize="16"/></Expander.Header>
+          <StackPanel Margin="24,4,0,4">
+            <TextBlock x:Name="NamesText" TextWrapping="Wrap"/>
+            <TextBlock x:Name="NamesSource" TextWrapping="Wrap" Margin="0,4,0,0" Opacity="0.8"/>
+          </StackPanel>
+        </Expander>
+
+        <Expander x:Name="FontsSection" Margin="0,4,0,0" AutomationProperties.AutomationId="AboutFonts">
+          <Expander.Header><TextBlock x:Name="FontsHeader" FontWeight="SemiBold" FontSize="16"/></Expander.Header>
+          <StackPanel Margin="24,4,0,4">
+            <StackPanel x:Name="FontsList"/>
+            <TextBlock Margin="0,4,0,0">
+              <Hyperlink x:Name="OflLink" RequestNavigate="OnNavigate"><Run x:Name="OflLinkText"/></Hyperlink>
+            </TextBlock>
+          </StackPanel>
+        </Expander>
+
+        <Expander x:Name="VoicesSection" Margin="0,4,0,0" AutomationProperties.AutomationId="AboutVoices">
+          <Expander.Header><TextBlock x:Name="VoicesHeader" FontWeight="SemiBold" FontSize="16"/></Expander.Header>
+          <StackPanel Margin="24,0,0,4">
+            <StackPanel x:Name="VoicesList"/>
+            <TextBlock x:Name="EnginesText" TextWrapping="Wrap" Margin="0,6,0,0"/>
+          </StackPanel>
+        </Expander>
+
+        <Expander x:Name="LicencesSection" Margin="0,4,0,0" AutomationProperties.AutomationId="AboutLicences">
+          <Expander.Header><TextBlock x:Name="LicencesHeader" FontWeight="SemiBold" FontSize="16"/></Expander.Header>
+          <StackPanel Margin="24,4,0,4">
+            <TextBlock x:Name="AppLicenceText" TextWrapping="Wrap"/>
+            <TextBlock Margin="0,4,0,0">
+              <Hyperlink x:Name="NoticesLink" Click="OnNotices"><Run x:Name="NoticesLinkText"/></Hyperlink>
+            </TextBlock>
+          </StackPanel>
+        </Expander>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Button Grid.Row="2" x:Name="CloseButton" HorizontalAlignment="Right" MinWidth="96" Padding="12,4" Margin="0,14,0,0"
+            IsDefault="True" IsCancel="True" Click="OnClose" AutomationProperties.AutomationId="AboutClose"/>
+  </Grid>
+</Window>

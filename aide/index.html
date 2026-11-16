@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="enfant">
+<title>Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html" aria-current="page">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Aide de Pépite</h1>
+<p class="chapeau">Pépite te propose des mots pendant que tu écris. Choisis ce que tu veux savoir.</p>
+<div class="grille">
+  <div class="carte"><h2><a href="bienvenue.html">Bienvenue</a></h2><p>Pour commencer : trois gestes à connaître.</p></div>
+  <div class="carte"><h2><a href="comment-ca-marche.html">Comment ça marche</a></h2><p>La barre de mots, les couleurs, les images, la voix.</p></div>
+  <div class="carte"><h2><a href="orthographe.html">Le rond d'orthographe</a></h2><p>✓, ≈ et ? : ce que le petit rond veut dire.</p></div>
+  <div class="carte"><h2><a href="mes-mots.html">Mes mots</a></h2><p>Ajouter un mot, corriger une faute qui revient.</p></div>
+  <div class="carte"><h2><a href="lire-un-texte.html">Lire un texte</a></h2><p>Pépite lit à voix haute le texte que tu sélectionnes.</p></div>
+  <div class="carte"><h2><a href="reglages.html">Les réglages</a></h2><p>Taille, lettres, voix, place de la barre.</p></div>
+  <div class="carte"><h2><a href="questions.html">Un souci ?</a></h2><p>La barre ne vient pas ? Pas de son ? Les réponses.</p></div>
+  <div class="carte"><h2><a href="pour-les-curieux.html">Pour les curieux</a></h2><p>Comment Pépite trouve les mots. Ce qui reste privé.</p></div>
+</div>
+<h2 id="adultes">Pour les adultes</h2>
+<div class="grille">
+  <div class="carte"><h3><a href="enseignants.html">Enseignants et parents</a></h3><p>Une classe, des profils d'élèves, le code enseignant, les leçons.</p></div>
+  <div class="carte"><h3><a href="installation.html">Installer</a></h3><p>Installation, mise à jour, désinstallation, école.</p></div>
+  <div class="carte"><h3><a href="vie-privee.html">Vie privée</a></h3><p>Rien n'est envoyé. Ce qui est gardé, et où.</p></div>
+  <div class="carte"><h3><a href="a-propos.html">À propos</a></h3><p>Auteurs, licences, voix, contact.</p></div>
+</div>
+<div class="astuce"><p>Pépite peut te lire cette aide : sélectionne un paragraphe avec la souris, puis appuie sur <kbd>Espace</kbd>.</p></div>
+<p>En haut de chaque page, deux cases changent l'affichage : <b>Lettres OpenDyslexic</b> et <b>Texte plus grand</b>.</p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

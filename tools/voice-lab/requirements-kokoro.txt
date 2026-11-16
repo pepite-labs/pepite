@@ -1,0 +1,8 @@
+# Plan 05 voice lab, kokoro venv (Python 3.12). kokoro-onnx MIT, phonemizer GPL-3, espeakng-loader (bundles espeak-ng, GPL-3).
+kokoro-onnx==0.6.1
+onnxruntime==1.31.1
+phonemizer==3.6.0
+espeakng-loader==0.2.4
+soundfile==0.14.0
+numpy==2.5.4
+psutil==7.2.2

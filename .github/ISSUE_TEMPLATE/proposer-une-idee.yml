@@ -1,0 +1,28 @@
+name: Proposer une idée
+description: Une amélioration ou une nouvelle fonction.
+labels: ["idée"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **N'indiquez aucune donnée d'élève** : pas de nom, pas de texte écrit par un élève, pas de profil ni de capture d'écran qui en montrent. Utilisez des exemples inventés.
+  - type: checkboxes
+    id: donnees
+    attributes:
+      label: Données d'élèves
+      options:
+        - label: Ce ticket ne contient aucune donnée d'élève.
+          required: true
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Le besoin
+      description: Qui en a besoin (élève, enseignant, établissement) et dans quelle situation ?
+    validations:
+      required: true
+  - type: textarea
+    id: idee
+    attributes:
+      label: L'idée
+    validations:
+      required: true

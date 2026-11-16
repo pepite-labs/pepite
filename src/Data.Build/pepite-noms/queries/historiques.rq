@@ -1,0 +1,12 @@
+# Historical figures: the QIDs of selection/historiques.tsv (the builder puts them in the VALUES line). French label,
+# else the multilingual one; French aliases; dates of birth and death (a figure with neither a death date nor a birth
+# before 1800 is refused by the build: the pack holds deceased people only); sitelinks for ranking.
+SELECT ?item ?fr ?mul (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) (MIN(YEAR(?b)) AS ?born) (MIN(YEAR(?d)) AS ?died) (MAX(?sl) AS ?links) WHERE {
+  VALUES ?item { {{QIDS}} }
+  OPTIONAL { ?item wikibase:sitelinks ?sl }
+  OPTIONAL { ?item rdfs:label ?fr FILTER(LANG(?fr) = "fr") }
+  OPTIONAL { ?item rdfs:label ?mul FILTER(LANG(?mul) = "mul") }
+  OPTIONAL { ?item skos:altLabel ?alias FILTER(LANG(?alias) = "fr") }
+  OPTIONAL { ?item wdt:P569 ?b }
+  OPTIONAL { ?item wdt:P570 ?d }
+} GROUP BY ?item ?fr ?mul

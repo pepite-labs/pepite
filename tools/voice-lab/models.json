@@ -1,0 +1,131 @@
+{
+ "_comment": "Plan 05 (D19, D25): pinned model files for the voice test. fetch_models.py downloads them under <root>/models and checks the SHA-256. Nothing here is committed except this manifest.",
+ "files": [
+  {
+   "group": "piper-siwis",
+   "licence": "CC BY 4.0 (SIWIS dataset, per MODEL_CARD)",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx",
+   "path": "piper/fr_FR-siwis-medium.onnx",
+   "sha256": "b1d946fd68d0347155fa59bce0a018924abbef3c1561181db45ca463d83963ef"
+  },
+  {
+   "group": "piper-siwis",
+   "licence": "CC BY 4.0 (SIWIS dataset, per MODEL_CARD)",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json",
+   "path": "piper/fr_FR-siwis-medium.onnx.json",
+   "sha256": "df814aa3dfedd00510a07144442cc0a220ff21e43d03c3b078444fc0be68fc37"
+  },
+  {
+   "group": "piper-siwis",
+   "licence": "CC BY 4.0 (SIWIS dataset, per MODEL_CARD)",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/siwis/medium/MODEL_CARD",
+   "path": "piper/fr_FR-siwis-medium.MODEL_CARD",
+   "sha256": "f75d76ec577b5e7a49a7462883d31ef65383022387818a9a0b75bdaf90b9010c"
+  },
+  {
+   "group": "piper-tom",
+   "licence": "AGPL-3.0 (dataset, per MODEL_CARD)",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/tom/medium/fr_FR-tom-medium.onnx",
+   "path": "piper/fr_FR-tom-medium.onnx",
+   "sha256": "bf65074ccdeeeeaa832e75edb1c0a513c01c9a972bdf085ff8a6e71ea234fd41"
+  },
+  {
+   "group": "piper-tom",
+   "licence": "AGPL-3.0 (dataset, per MODEL_CARD)",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/tom/medium/fr_FR-tom-medium.onnx.json",
+   "path": "piper/fr_FR-tom-medium.onnx.json",
+   "sha256": "2f7f885ad5a0aad802e3cc24e4f57239febdcb142b4876de5d238094674361cc"
+  },
+  {
+   "group": "piper-tom",
+   "licence": "AGPL-3.0 (dataset, per MODEL_CARD)",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/tom/medium/MODEL_CARD",
+   "path": "piper/fr_FR-tom-medium.MODEL_CARD",
+   "sha256": "ece4132df4a1ae2f90e22c9f01539aec14acb7f8dc8ded64edd2051945d0f1e9"
+  },
+  {
+   "group": "piper-upmc",
+   "licence": "CC BY-SA 4.0 (upmc-pierre-data, per MODEL_CARD)",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/upmc/medium/fr_FR-upmc-medium.onnx",
+   "path": "piper/fr_FR-upmc-medium.onnx",
+   "sha256": "9abb3800c199148897a9ed64e100d224f3de83579f100044174ad19418f1786f"
+  },
+  {
+   "group": "piper-upmc",
+   "licence": "CC BY-SA 4.0 (upmc-pierre-data, per MODEL_CARD)",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/upmc/medium/fr_FR-upmc-medium.onnx.json",
+   "path": "piper/fr_FR-upmc-medium.onnx.json",
+   "sha256": "e8636ec15dfd5d72db37a02cb5320a20f2b8d339f2a0e4337da64c58a33a5868"
+  },
+  {
+   "group": "piper-upmc",
+   "licence": "CC BY-SA 4.0 (upmc-pierre-data, per MODEL_CARD)",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/upmc/medium/MODEL_CARD",
+   "path": "piper/fr_FR-upmc-medium.MODEL_CARD",
+   "sha256": "cf1ac7309e0e04bb159b7e6ae80bc8f66bfce9bdfb3e62ae93a6f57e210ab98a"
+  },
+  {
+   "group": "kokoro",
+   "licence": "Apache-2.0 (Kokoro-82M v1.0 weights), ONNX export by kokoro-onnx (MIT)",
+   "url": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/kokoro-v1.0.onnx",
+   "path": "kokoro/kokoro-v1.0.onnx",
+   "sha256": "beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a"
+  },
+  {
+   "group": "kokoro",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/kokoro-v1.0.int8.onnx",
+   "path": "kokoro/kokoro-v1.0.int8.onnx",
+   "sha256": "ae315a79b623f244700e4afb9246c46a26066782e049ba174bf3ba433970ee9c"
+  },
+  {
+   "group": "kokoro",
+   "licence": "Apache-2.0",
+   "url": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/voices-v1.0.bin",
+   "path": "kokoro/voices-v1.0.bin",
+   "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d"
+  },
+  {
+   "group": "melo",
+   "licence": "MIT",
+   "url": "https://huggingface.co/myshell-ai/MeloTTS-French/resolve/1e9bf590262392d8bffb679b0a3b0c16b0f9fdaf/checkpoint.pth",
+   "path": "melo/checkpoint.pth",
+   "sha256": "fdf967d514f91582e451c482cab655e5d736821c3ba87ede8bb0625709642b29"
+  },
+  {
+   "group": "melo",
+   "licence": "MIT",
+   "url": "https://huggingface.co/myshell-ai/MeloTTS-French/resolve/1e9bf590262392d8bffb679b0a3b0c16b0f9fdaf/config.json",
+   "path": "melo/config.json",
+   "sha256": "361e84109451acb2f0331c2c9f3c5437e9a502380bbf8741b02545e41b062139"
+  },
+  {
+   "group": "whisper",
+   "licence": "MIT (OpenAI Whisper medium, CTranslate2 conversion by Systran)",
+   "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/model.bin",
+   "path": "whisper-medium/model.bin",
+   "sha256": "9b45e1009dcc4ab601eff815b61d80e60ce3fd8c74c1a14f4a282258286b51ae"
+  },
+  {
+   "group": "whisper",
+   "licence": "MIT",
+   "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/config.json",
+   "path": "whisper-medium/config.json",
+   "sha256": "3622a2ddc41ec0e0fd4e68c13c6830f03b90c38d89aaad184de02c8c642cf807"
+  },
+  {
+   "group": "whisper",
+   "licence": "MIT",
+   "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/tokenizer.json",
+   "path": "whisper-medium/tokenizer.json",
+   "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"
+  },
+  {
+   "group": "whisper",
+   "licence": "MIT",
+   "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/vocabulary.txt",
+   "path": "whisper-medium/vocabulary.txt",
+   "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+  }
+ ]
+}

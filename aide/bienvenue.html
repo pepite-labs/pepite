@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="enfant">
+<title>Bienvenue — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html" aria-current="page">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Bonjour, je suis Pépite !</h1>
+<p class="chapeau">Quand tu écris, je te propose des mots. Tu choisis : j'écris le mot pour toi. Je peux aussi le dire à voix haute.</p>
+<p>Je marche presque partout où tu écris : le Bloc-notes, Word, une page Internet…</p>
+<ol class="etapes">
+  <li><div><p><b>Écris.</b> Dès la première lettre, une barre de mots arrive près de ton texte.</p>
+    <figure><img src="img/barre-maison.png" alt="Une barre de mots avec un seul mot : maison, sur la touche F1." width="166" height="100"></figure></div></li>
+  <li><div><p><b>Choisis</b> le mot avec sa touche (<kbd>F1</kbd>, <kbd>F2</kbd>…) ou avec un clic. Un clic droit : tu l'écoutes d'abord. <kbd>Échap</kbd> cache la barre.</p>
+    <figure><img src="img/gestes.svg" alt="Quatre gestes. Les touches F1 à F8 : choisir un mot. Un clic : choisir le mot. Un clic droit : écouter le mot. La touche Échap : cacher la barre." width="880" height="250"></figure></div></li>
+  <li><div><p><b>Retrouve-moi</b> près de l'horloge : je suis le petit biscuit. Tu ne le vois pas ? Clique sur la petite flèche <b>^</b> à côté de l'horloge.</p>
+    <figure><img src="img/barre-des-taches.svg" alt="La droite de la barre des tâches : la flèche ^ des icônes cachées, l'icône biscuit de Pépite, puis l'horloge." width="640" height="220"></figure></div></li>
+</ol>
+<h2 id="menu">Mon menu</h2>
+<p>Clique sur le biscuit. Un menu s'ouvre :</p>
+<figure><img src="img/menu-icone.svg" alt="Le menu de Pépite : Pause, Ajouter un mot…, Réglages…, Aide, À propos…, Quitter." width="640" height="400"></figure>
+<ul>
+  <li><b>Pause</b> : je m'arrête. Le biscuit devient gris. <b>Reprendre</b> me remet en marche.</li>
+  <li><b>Ajouter un mot…</b> : un mot que je ne connais pas, comme ton prénom. Voir <a href="mes-mots.html">Mes mots</a>.</li>
+  <li><b>Réglages…</b> : la taille, les lettres, la voix. Voir <a href="reglages.html">Les réglages</a>.</li>
+  <li><b>Aide</b> : cette aide.</li>
+  <li><b>À propos…</b> : qui a fait Pépite, d'où viennent les images et les voix.</li>
+  <li><b>Quitter</b> : je m'arrête complètement.</li>
+</ul>
+<h2 id="qui-es-tu"><q>Qui es-tu ?</q></h2>
+<p>À l'école, plusieurs élèves utilisent parfois le même ordinateur. Alors je demande <b>Qui es-tu ?</b></p>
+<p>Clique sur ton image, puis sur <b>C'est moi ✓</b>. Je garde tes réglages et tes mots rien que pour toi.</p>
+<figure><img src="img/qui-es-tu.svg" alt="La fenêtre Qui es-tu ? : une grande case par élève, avec son image et son prénom. La case de Léa est choisie. En bas, le bouton C'est moi." width="720" height="360"></figure>
+<p>Tu t'es trompé d'image ? <kbd>Échap</kbd> ferme la fenêtre sans rien changer. Ensuite, demande à ton enseignant.</p>
+<p class="suivant"><span></span><a href="comment-ca-marche.html">Comment ça marche →</a></p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

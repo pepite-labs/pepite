@@ -1,0 +1,28 @@
+# build outputs
+bin/
+obj/
+# generated data (rebuild with Data.Build/build_db.py from Lexique 3.83)
+src/Data.Build/out/
+*.sqlite
+# Python bytecode
+__pycache__/
+# IDE and test output
+.vs/
+.idea/
+*.user
+*.suo
+TestResults/
+# Python virtual environments
+.venv*/
+venv*/
+# models, archives, data packs and signing material: never committed (fetched or kept outside the repository)
+*.onnx
+*.zim
+*.pepite
+*.pfx
+*.p12
+*.pem
+.env
+
+# the embedded help: fonts copied at build time (src/Data.Build/out/fonts)
+aide/fonts/

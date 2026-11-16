@@ -1,0 +1,11 @@
+# ARASAAC attribution — verbatim from https://arasaac.org/terms-of-use, section
+# "Comment citer la licence d'ARASAAC" / "Cómo citar la licencia de ARASAAC" (first of the two forms).
+# Retrieved 2026-11-08. The page is a JS app: the text is message `app.components.licenseP7` of its bundle
+# (https://arasaac.org/main.dff676740c141ed908e9.js), rendered by chunk 30 (TermsOfUseView / LicenseText.js)
+# with {ARASAAC} = "ARASAAC (http://www.arasaac.org)" (link form) and {creativeCommonsLicense} = message
+# `app.components.creativeCommons` linking to https://creativecommons.org/licenses/by-nc-sa/4.0/deed.<locale>.
+# Placeholders substituted exactly as the page renders them; wording (including « distribuent ») untouched.
+# Second form shown on the page (fr): « Auteur des pictogrammes : Sergio Palao. Origine : ARASAAC
+# (http://www.arasaac.org). Licence : CC (BY-NC-SA). Propriétaire : Gouvernement d'Aragon (Espagne) ».
+fr: Les symboles pictographiques utilisés sont la propriété du Gouvernement d'Aragon et ont été créés par Sergio Palao pour ARASAAC (http://www.arasaac.org), qui les distribuent sous Licence Creative Commons BY-NC-SA.
+es: Los símbolos pictográficos utilizados son propiedad del Gobierno de Aragón y han sido creados por Sergio Palao para ARASAAC (http://www.arasaac.org), que los distribuye bajo Licencia Creative Commons BY-NC-SA.

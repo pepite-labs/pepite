@@ -1,0 +1,58 @@
+# Curated picture overrides for build_pictos.py map (form<TAB>id | -<TAB>reason). Always win over the rules.
+# Review of 2026-11-08 (plan 02): contact sheets top300 + 40 homographs, index 20261108.
+# Owner rule: "none beats wrong", and an empty slot beats an ABSTRACT picture that would confuse a child.
+#
+# --- wrong picture (another sense, a letter, an abbreviation)
+à	-	letter « Á » (alphabet), not the preposition
+se	-	compass « SE » (sud-est)
+ce	-	« CE » collective/organisation picture, not the demonstrative
+y	-	letter « Y »
+temps	-	weather picture; « temps » is mostly time
+quelle	-	red « ! » sign
+raison	-	red spiral, unrelated
+mine	-	coal mine; « mine » is mostly the face/look (avoir bonne mine)
+mousse	-	moss; mostly foam / dessert
+#
+# --- abstract grammar symbols (geometric squares/arrows/triangles/ramps): empty slot instead
+de	-	abstract preposition (square + arrow)
+en	-	abstract preposition
+dans	-	abstract preposition
+pour	-	abstract preposition
+sur	-	abstract preposition
+avec	-	abstract preposition
+par	-	abstract preposition
+sous	-	abstract preposition
+vers	-	abstract preposition
+entre	-	abstract preposition
+devant	-	abstract preposition
+contre	-	abstract preposition
+depuis	-	abstract preposition
+sans	-	abstract (crossed box)
+et	-	abstract conjunction (triangle)
+que	-	abstract (triangle)
+ou	-	abstract (triangle)
+ni	-	abstract (triangle)
+mais	-	abstract (arrow loop)
+comme	-	abstract (dashed circle)
+si	-	abstract (diamond)
+même	-	abstract (= sign, squares)
+ces	-	abstract (circles + arrow)
+cela	-	abstract (circles + arrow)
+plus	-	abstract (cloud of squares)
+moins	-	abstract (cloud of squares)
+très	-	abstract (ramp + !)
+trop	-	abstract (ramp + !)
+peu	-	abstract (ramp)
+beaucoup	-	abstract (ramp)
+tout	-	abstract (grid of dots)
+tous	-	abstract (row of ovals)
+toute	-	abstract (grid of dots)
+toutes	-	abstract (grid of dots)
+quelque	-	abstract (partly filled circles)
+rien	-	abstract (empty blob)
+autre	-	abstract (arrow + crossed dots)
+autres	-	abstract (arrow + crossed dots)
+fois	-	abstract (row of boxes with a tick)
+avant	-	abstract (sequence of dots)
+après	-	abstract (sequence of dots)
+maintenant	-	abstract (sequence of dots)

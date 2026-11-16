@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="enfant">
+<title>Le rond d'orthographe — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html" aria-current="page">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Le rond d'orthographe</h1>
+<p class="chapeau">À gauche des mots, un petit rond te dit si Pépite connaît ton mot.</p>
+<figure><img src="img/marques.svg" alt="Le rond à gauche des mots. Coche verte : mot connu. Signe environ bleu : le mot s'écrit peut-être autrement. Point d'interrogation rouge : mot inconnu. Jamais de croix." width="880" height="320"></figure>
+
+<h2 id="connu">✓ vert : mot connu</h2>
+<p>Pépite connaît ce mot. Pendant que tu tapes, le ✓ arrive dès que tes lettres forment un vrai mot.</p>
+<figure><img src="img/barre-marques-connu.png" alt="La barre avec le rond vert coché à gauche du mot maison." width="230" height="100"></figure>
+
+<h2 id="peut-etre">≈ bleu : s'écrit peut-être autrement</h2>
+<p>Ton mot n'existe pas comme ça, mais un mot connu a le même son. Exemple : tu as écrit « maizon ».</p>
+<p>Clique sur le rond, ou appuie sur <kbd>F9</kbd>. Pépite te montre les mots qui se prononcent pareil.</p>
+<figure><img src="img/barre-marques-son.png" alt="La barre avec le rond bleu ≈, sur la touche F9, puis le mot maison sur la touche F1." width="230" height="100"></figure>
+<p>Choisis le bon mot : Pépite corrige ton mot. Dans quelques programmes, il l'écrit à l'endroit du curseur : efface alors l'ancien mot.</p>
+
+<h2 id="inconnu">? rouge : mot inconnu</h2>
+<p>Pépite ne connaît pas ce mot. Ce n'est pas forcément une faute : c'est peut-être un mot rare, ou un nom.</p>
+<p>Clique sur le rond, ou appuie sur <kbd>F9</kbd>. Pépite demande <q>Ajouter « … » à mes mots ?</q> Réponds <b>Oui</b> ou <b>Non</b>.</p>
+<figure><img src="img/barre-marques-inconnu.png" alt="La barre avec le rond rouge point d'interrogation à gauche, puis un mot proposé pour la suite : le." width="148" height="100"></figure>
+
+<div class="astuce"><p>Il n'y a jamais de croix. Le rond t'aide, il ne te note pas. Et rien de ce que tu écris n'est enregistré.</p></div>
+
+<h2 id="quand">Quand le rond apparaît</h2>
+<ul>
+  <li>Pendant que tu tapes : seulement le ✓ vert.</li>
+  <li>Quand tu finis un mot (espace, virgule, <kbd>Entrée</kbd>) : ✓, ≈ ou ?.</li>
+  <li>Juste après <kbd>.</kbd> ou <kbd>:</kbd>, seulement le ✓, jusqu'à l'espace ou au retour à la ligne suivant : ce pourrait être une adresse Internet.</li>
+  <li>Pas de rond pour une seule lettre, un nombre ou un nom avec une majuscule que Pépite ne connaît pas.</li>
+</ul>
+<p>Pour l'enlever : <b>Réglages…</b>, onglet <b>Mots</b>, case <b>Indicateur d'orthographe</b>. Voir <a href="reglages.html#onglet-mots">les réglages</a>.</p>
+<p>À l'école, Pépite peut demander le code de ton enseignant.</p>
+<p class="suivant"><a href="comment-ca-marche.html">← Comment ça marche</a><a href="mes-mots.html">Mes mots →</a></p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

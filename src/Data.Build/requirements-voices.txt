@@ -1,0 +1,8 @@
+# fetch_voices.py patch step (plan 08a): the alignment patch must give the pinned SHA-256, so onnx is pinned exactly.
+# Python 3.12, win_amd64. Install: python -m venv <work>\venv-voices && <venv>\Scripts\python -m pip install
+#   --require-hashes --only-binary=:all: -r requirements-voices.txt
+onnx==1.23.2 --hash=sha256:9b382ba898a7c142a0801d03cf04ecabced96c1543c7b643a86f0928143802de
+numpy==2.5.4 --hash=sha256:a7b1b6353e36a7e50de2973a38d705c88ee93adcf120673cee7f45a4a3fa223a
+protobuf==7.36.2 --hash=sha256:a300819d441e078a5608c0d3c709796bb548136058fda017ae51d425b44fd353
+typing_extensions==4.16.0 --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8
+ml_dtypes==0.6.0 --hash=sha256:2a3e9d53925597fbffafd2a37048dadeddd0bdaba58058f6ae0869ed709a184d

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="enfant">
+<title>Comment ça marche — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html" aria-current="page">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Comment ça marche</h1>
+<p class="chapeau">Tu écris, Pépite cherche les mots. Toi, tu décides.</p>
+
+<h2 id="barre">La barre de mots</h2>
+<p>Elle montre jusqu'à 8 mots. Le mot le plus probable est à gauche, sur <kbd>F1</kbd>.</p>
+<p>Tu continues à taper ? La barre change à chaque lettre.</p>
+<p>Après un mot et une espace, Pépite propose déjà le mot suivant.</p>
+
+<h2 id="couleurs">Les couleurs</h2>
+<p>La couleur de la case dit <b>pourquoi</b> Pépite propose ce mot.</p>
+<figure><img src="img/couleurs.svg" alt="Les trois couleurs. Bleu : tu écris mai, Pépite propose maison, la suite du mot. Vert : tu écris orizon, Pépite propose horizon, le même son. Orange : tu écris chein, Pépite propose chien, des lettres inversées." width="880" height="330"></figure>
+<ul>
+  <li><span class="mot bleu">bleu</span> : la suite des lettres que tu as tapées ;</li>
+  <li><span class="mot vert">vert</span> : un mot qui a le même son ;</li>
+  <li><span class="mot orange">orange</span> : un mot avec des lettres inversées ou oubliées.</li>
+</ul>
+<p>Alors tu peux écrire comme tu entends : Pépite retrouve souvent le bon mot.</p>
+
+<h2 id="choisir">Choisir un mot</h2>
+<figure><img src="img/gestes.svg" alt="Quatre gestes. Les touches F1 à F8 : choisir un mot. Un clic : choisir le mot. Un clic droit : écouter le mot. La touche Échap : cacher la barre." width="880" height="250"></figure>
+<p>Pépite écrit le mot entier, puis une espace. Tu tapes une virgule ou un point ? L'espace en trop disparaît.</p>
+
+<h2 id="images">Les images</h2>
+<p>Au-dessus d'un mot, une image t'aide à le reconnaître.</p>
+<figure><img src="img/barre-images.svg" alt="Dessin de la barre avec images : au-dessus de maison, un dessin de maison ; au-dessus de les et de est, une case vide." width="566" height="250"></figure>
+<p>Certaines cases restent vides : c'est voulu. Pour des petits mots comme « les », « est » ou « de », une image serait fausse. Une case vide gêne moins qu'une image qui trompe.</p>
+
+<h2 id="noms">Les prénoms et les pays</h2>
+<p>Pépite connaît beaucoup de prénoms, de pays et de villes. Tape une majuscule au milieu d'une phrase : il propose d'abord des noms.</p>
+<p>Au-dessus d'un pays, tu vois son drapeau. « Pierre », le prénom, n'a jamais l'image d'une pierre.</p>
+<p>Ton prénom n'est pas proposé ? <a href="mes-mots.html#ajouter">Ajoute-le à tes mots</a>.</p>
+
+<h2 id="accords">Les accords</h2>
+<p>Pépite regarde les mots juste avant. Il essaie de proposer le mot bien accordé :</p>
+<ul>
+  <li>après « il a », il propose « <b>mangé</b> », pas « manger » ;</li>
+  <li>après « les », il propose « <b>journaux</b> », pas « journal ».</li>
+</ul>
+<p>Pépite ne regarde que les deux ou trois derniers mots. Il peut se tromper : relis toujours ta phrase.</p>
+
+<h2 id="ponctuation">La ponctuation</h2>
+<ul>
+  <li>« l' », « d' », « j' » sont proposés avec leur apostrophe, sans espace après.</li>
+  <li>Après un mot choisi dans la barre, avant <kbd>;</kbd> <kbd>:</kbd> <kbd>!</kbd> <kbd>?</kbd>, Pépite met une petite espace, comme dans les livres.</li>
+  <li>Après un point, le mot proposé commence par une majuscule.</li>
+</ul>
+
+<h2 id="voix">La voix</h2>
+<p>Pépite dit le mot que tu viens de choisir. Tu l'entends, tu vérifies.</p>
+<p>Il dit aussi chaque mot que tu finis, et toute la phrase quand tu mets un point. Tout cela se règle dans les <a href="reglages.html#voix">réglages</a>.</p>
+<p>Un <b>clic droit</b> sur un mot de la barre : tu l'écoutes sans l'écrire.</p>
+
+<h2 id="relire">Relire ce que tu corriges</h2>
+<p>Tu changes une lettre dans un mot, puis tu cliques ailleurs ? Pépite relit le mot corrigé.</p>
+<p>Tu quittes la phrase ? Pépite relit toute la phrase.</p>
+
+<h2 id="pause">Faire une pause</h2>
+<p>Clique sur le biscuit près de l'horloge, puis sur <b>Pause</b>. Le biscuit devient gris. <b>Reprendre</b> remet Pépite en marche.</p>
+
+<h2 id="mots-de-passe">Les mots de passe</h2>
+<div class="attention"><p>Dans un champ de <b>mot de passe</b>, Pépite ne propose rien, ne lit rien et ne dit rien. C'est fait exprès.</p></div>
+<p>Quand Pépite ne sait pas si un champ est sûr, il se tait aussi.</p>
+<p class="suivant"><a href="bienvenue.html">← Bienvenue</a><a href="orthographe.html">Orthographe →</a></p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

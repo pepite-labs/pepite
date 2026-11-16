@@ -1,0 +1,197 @@
+====================================================================
+  PÉPITE {VERSION}{PRIVE}
+  Pépite — prédiction de mots
+====================================================================
+
+Pépite propose des mots pendant que vous écrivez, dans toutes les
+applications Windows (Bloc-notes, Word, navigateur...). Les mots
+s'affichent avec une image (pictogramme) au-dessus, et peuvent être
+lus à voix haute. Tout fonctionne sur cet ordinateur, sans Internet.
+
+{NOTES}
+
+CONFIGURATION RECOMMANDÉE (provisoire, pas encore mesurée)
+--------------------------------------------------------------------
+  - Windows 11, 64 bits (processeur Intel ou AMD ; pas les PC à
+    processeur ARM). Testé sous Windows 11. Windows 10 n'est pas
+    pris en charge : l'installation s'arrête avec un message.
+  - Mémoire : 8 Go conseillés. Avec moins de 4 Go, l'installation
+    affiche un avertissement (elle reste possible).
+  - Un disque SSD est conseillé (le dictionnaire est lu sur le
+    disque pendant la frappe).
+  - Place sur le disque : environ 460 Mo avec les images et la voix
+    naturelle Siwis (environ 400 Mo sans la voix).
+  - Les configurations minimales seront mesurées et publiées plus
+    tard.
+  - Rien d'autre à installer : le programme contient tout ce qu'il
+    lui faut (dont les fichiers Microsoft Visual C++ des voix).
+  - Pour la voix Windows : une voix française (Hortense, en général
+    déjà présente sur un Windows en français).
+
+
+INSTALLER
+--------------------------------------------------------------------
+  1. Vérifiez le fichier (facultatif, conseillé) : dans le dossier
+     du fichier, Maj + clic droit -> « Ouvrir dans le terminal »,
+     puis tapez :
+        Get-FileHash .\Pepite-{VERSION}{SUFFIXE}-installation.exe
+     Le résultat doit être celui du fichier SHA256SUMS.txt.
+  2. Double-cliquez sur « Pepite-{VERSION}{SUFFIXE}-installation.exe ».
+  3. Si Windows affiche « Windows a protégé votre ordinateur » :
+     cliquez sur « Informations complémentaires », puis sur
+     « Exécuter quand même ». (Cette version de test n'est pas encore
+     signée : Windows ne connaît pas encore son auteur.) Si Windows
+     bloque le fichier sans proposer « Exécuter quand même » (« Smart
+     App Control »), cette version ne peut pas être installée sur cet
+     ordinateur : attendez la version signée.
+  4. Choisissez :
+       - « Installer seulement pour moi » : pour ce compte Windows,
+         sans mot de passe administrateur (dossier
+         %LOCALAPPDATA%\Programs\Pepite-Prediction) ;
+       - « Installer pour tous les utilisateurs » : pour tous les
+         comptes de l'ordinateur, il faut un compte administrateur
+         (dossier C:\Program Files\Pepite-Prediction). C'est le choix
+         conseillé dans une école ; voir aussi DEPLOIEMENT.txt.
+  5. Les choix proposés (cochés par défaut) :
+       - les images des mots (pictogrammes) ;
+       - les voix naturelles Siwis et Pierre (sinon, la voix de
+         Windows) ;
+       - « Démarrer Pépite avec Windows » ;
+       - « Ouvrir les fichiers .pepite avec Pépite » (les profils
+         des élèves exportés par l'Espace enseignant).
+     « Créer une icône sur le Bureau » n'est pas coché.
+  6. À la fin, « Lancer Pépite » démarre Pépite (sans droits
+     administrateur). L'icône de Pépite (le biscuit) est à droite de
+     la barre des tâches, près de l'horloge ; si elle n'y est pas,
+     cliquez sur la flèche « ^ ».
+
+  Mettre à jour : lancez simplement l'installation de la nouvelle
+  version. Pépite est fermé pendant la mise à jour ; vos choix, les
+  réglages et les profils sont gardés. Avant la 0.10.0, Pépite
+  était un dossier à copier : quittez l'ancien Pépite, installez la
+  nouvelle version, puis supprimez l'ancien dossier (les réglages ne
+  sont pas dedans, ils sont gardés).
+
+
+DÉMARRER AVEC WINDOWS
+--------------------------------------------------------------------
+  Avec « Démarrer Pépite avec Windows », Pépite démarre à chaque
+  ouverture de session, sans fenêtre : seulement une petite
+  notification « Pépite est prêt ».
+  Pour l'arrêter : Paramètres Windows -> Applications -> Démarrage
+  -> Pépite : Désactivé (ou relancez l'installation et décochez la
+  case).
+
+
+DÉSINSTALLER
+--------------------------------------------------------------------
+  Paramètres Windows -> Applications -> Applications installées ->
+  Pépite -> Désinstaller. Une question est posée : « Supprimer aussi
+  les réglages, les profils des élèves et leurs mots enregistrés sur
+  ce compte Windows ? » Par défaut : Non (ils sont gardés pour une
+  prochaine installation). Les autres comptes Windows ne sont pas
+  concernés.
+
+
+OÙ SONT LES DONNÉES ?
+--------------------------------------------------------------------
+  - Réglages, profils et mots des élèves : %APPDATA%\Pepite-Prediction
+    (pour chaque compte Windows).
+  - Une sauvegarde par jour des profils :
+    %LOCALAPPDATA%\Pepite-Prediction\sauvegardes
+  - Configuration de l'établissement (facultative, posée par un
+    administrateur) : %PROGRAMDATA%\Pepite-Prediction\settings.json
+  - Pépite n'écrit rien dans son dossier d'installation.
+
+
+VIE PRIVÉE
+--------------------------------------------------------------------
+  Pépite fonctionne sans Internet et n'envoie rien : ni les mots
+  tapés, ni les prénoms, ni statistiques. Pas de mise à jour
+  automatique. Les liens de « À propos » s'ouvrent seulement dans
+  votre navigateur, si vous cliquez dessus.
+
+
+UTILISER
+--------------------------------------------------------------------
+  - Écrivez dans n'importe quelle application : une barre de mots
+    apparaît. F1 à F8 ou un clic pour choisir un mot ; clic droit
+    pour l'entendre ; Échap cache la barre. Le rond à gauche des mots
+    est l'indicateur d'orthographe (F9 ou clic pour ≈ et ?).
+  - Lire un texte : sélectionnez-le, puis « Lire » ou Espace / F9.
+  - Dans un champ de mot de passe, rien n'est proposé ni lu.
+  - Aide : menu de l'icône -> « Aide », bouton « ? » ou touche F1 dans
+    les Réglages. Des pages simples, pour les élèves (« tu ») et pour
+    les adultes, ouvertes dans votre navigateur, sans Internet
+    (dossier « aide » du dossier d'installation).
+  - Icône de Pépite près de l'horloge : Pause / Reprendre,
+    Ajouter un mot..., Réglages..., Aide, À propos, Quitter (et, pour une
+    classe, le profil actuel, Changer de profil..., Espace
+    enseignant...).
+
+Si un problème apparaît : Quitter, puis relancer en mode journal :
+  touche Windows + R, tapez (avec les guillemets) :
+    "%LOCALAPPDATA%\Programs\Pepite-Prediction\Pepite.exe" --log
+  (installation pour tous : "C:\Program Files\Pepite-Prediction\Pepite.exe" --log)
+Le journal est enregistré dans %TEMP%\predict-keyboard.log.
+ATTENTION : en mode journal, les mots tapés et le texte sélectionné
+sont enregistrés (jamais les mots de passe, ni le code enseignant, ni
+les prénoms des profils, ni les mots des listes, ni le contenu des
+fichiers exportés ; un prénom tapé dans le texte est enregistré comme
+le reste). À utiliser seulement pour un test, puis supprimer le
+fichier.
+
+
+CRÉDITS ET LICENCES
+--------------------------------------------------------------------
+  Pépite est un logiciel libre, licence GPL-3.0-or-later (COPYING).
+  Le code source d'espeak-ng correspondant à cette version est
+  publié avec elle, à côté du programme d'installation (fichier
+  espeak-ng-<commit>.tar.gz) ; voir aussi
+  licenses\espeak-ng\SOURCE.txt.
+  Logo : dessin original.
+  Composants et licences : THIRD-PARTY-NOTICES.txt et le dossier
+  « licenses » (dans le dossier d'installation).
+  Voix Siwis : Piper « fr_FR-siwis-medium », licence CC BY 4.0,
+  modifiée (sortie d'alignement ajoutée) ; données SIWIS French
+  Speech Synthesis Database (Yamagishi, Honnet, Garner, Lazaridis,
+  2017, University of Edinburgh, CC BY 4.0) ; modèle de base Hi-Fi
+  TTS (CC BY 4.0). Détails : voices\siwis\SOURCE.txt.
+{CREDIT_PIERRE}  Synthèse : Piper (piper1-gpl 1.8.0, GPL-3.0-or-later), espeak-ng
+  1.52.0.1 (GPL-3.0-or-later), ONNX Runtime 1.31.1 (MIT), NAudio
+  2.2.1 (MIT), bibliothèques Microsoft Visual C++ (redistribuables).
+  Pictogrammes : ARASAAC (Gouvernement d'Aragon, auteur Sergio
+  Palao), licence Creative Commons BY-NC-SA 4.0 - voir
+  ARASAAC-LICENCE.txt. Usage non commercial uniquement : les
+  pictogrammes sont un composant séparé, hors de la licence GPL.
+  Dictionnaire : Lexique 3.83 (New, Pallier et al.), licence
+  CC BY-SA 4.0.
+  Fréquences des mots et des suites de mots : phrases de Tatoeba
+  (tatoeba.org), licence CC BY 2.0 FR ; Leipzig Corpora Collection
+  (wortschatz.uni-leipzig.de), corpus d'actualités français 2023,
+  licence CC BY ; Vikidia, l'encyclopédie des 8-13 ans
+  (fr.vikidia.org), licence CC BY-SA 3.0 ; livres pour enfants du
+  domaine public (Project Gutenberg, gutenberg.org). La base de mots
+  (prediction.sqlite) est sous licence CC BY-SA 4.0 ; la liste
+  complète des sources est dans prediction-SOURCES.txt.
+  Liste de référence de l'indicateur d'orthographe et accords des
+  mots proposés : Grammalecte, « Lexique simplifié » v7.7
+  (grammalecte.net), licence MPL-2.0 ; fichiers spelling.sqlite et
+  grammar.sqlite dérivés de ce lexique, chacun avec son SOURCE.txt
+  et le texte de la licence (spelling\MPL-2.0.txt,
+  grammar\MPL-2.0.txt).
+  Polices : OpenDyslexic (Abbie Gonzalez), Lexend, Andika (SIL) -
+  SIL Open Font License 1.1 ; licences dans le dossier « fonts ».
+  Noms propres : paquet de données ouvertes « Noms propres (données
+  ouvertes) », édition 2026.1, licence CC BY 4.0 ; sources, auteurs
+  et licences : noms\LICENCE.txt et noms\SOURCES.md (Insee, Statbel,
+  Unicode CLDR, Wikidata, flag-icons, Wikimedia Commons). Statbel et
+  l'Insee ne cautionnent pas Pépite ni l'usage fait de leurs
+  données.
+  Installation : Inno Setup (jrsoftware.org).
+
+
+--------------------------------------------------------------------
+© 2026 Les auteurs de Pépite
+Site : https://github.com/pepite-labs/pepite
+====================================================================

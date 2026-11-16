@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="adulte">
+<title>Enseignants et parents — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html" aria-current="page">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Enseignants et parents</h1>
+<p class="chapeau">Pépite à la maison ou en classe : les profils d'élèves, le code enseignant, les mots de la classe.</p>
+
+<h2 id="gestion">Plusieurs élèves sur un ordinateur</h2>
+<p>Au départ, Pépite a un seul profil : <b>Mon profil</b>. Pour une classe, ouvrez <b>Réglages…</b>, partie <b>Plusieurs élèves</b>, puis <b>Activer la gestion enseignant…</b></p>
+<ol class="etapes">
+  <li><p>Choisissez le <b>code enseignant</b> : 4 à 6 chiffres. Un code trop facile (1234, 0000…) est refusé. Les élèves ne doivent pas le connaître.</p></li>
+  <li><p>Notez le <b>code de secours</b>. Il n'est affiché qu'une fois : <b>Imprimer…</b> ou <b>Copier</b>, puis <b>J'ai noté le code</b>.</p></li>
+  <li><p>Pépite crée le profil <b>Classe</b>. Ajoutez ensuite un profil par élève dans l'<b>Espace enseignant</b>.</p></li>
+</ol>
+<p><b>Classe</b> donne ses réglages à tous les élèves ; chaque élève ne garde que ses différences. 40 profils au maximum, « Classe » comprise.</p>
+<p>Un profil a un prénom, une image (un mot : chat, fusée…) et une couleur. Jamais de photo.</p>
+
+<h2 id="qui-es-tu"><q>Qui es-tu ?</q></h2>
+<p>Au début de chaque session Windows, Pépite revient à <b>Classe</b> et affiche <q>Qui es-tu ?</q> : l'élève clique sur son image, puis sur <q>C'est moi ✓</q>. Pépite dit le prénom choisi.</p>
+<figure><img src="img/qui-es-tu.svg" alt="La fenêtre où l'élève choisit son profil : une grande case par élève, avec son image et son prénom ; en bas, le bouton de confirmation." width="720" height="360"></figure>
+<p>Le menu de l'icône affiche alors le profil actuel et <b>Changer de profil…</b></p>
+
+<h2 id="espace-enseignant">L'Espace enseignant</h2>
+<p>Menu de l'icône → <b>Espace enseignant…</b> Il demande toujours le code.</p>
+<figure><img src="img/espace-enseignant.svg" alt="L'Espace enseignant : les onglets Profils, Verrouillage, Code, Exporter / importer et Mots ; dans Profils, la liste des élèves et les boutons Ajouter…, Nom et image…, Modifier les réglages…, Utiliser maintenant." width="720" height="360"></figure>
+<dl class="reglages">
+  <dt>Profils</dt><dd><b>Ajouter…</b>, <b>Nom et image…</b>, <b>Dupliquer…</b>, <b>Supprimer…</b>, <b>Monter</b> / <b>Descendre</b>, <b>Modifier les réglages…</b> d'un élève, <b>Utiliser maintenant</b>.</dd>
+  <dt>Verrouillage</dt><dd>Ce qui demande le code : changer de profil (non au départ), modifier les réglages du profil (oui au départ), quitter (non au départ). <q>Qui es-tu ?</q> au début de la session Windows. Le retour à « Classe » après une inactivité ou quand la session est verrouillée (<kbd>Windows</kbd>+<kbd>L</kbd>). Les <b>Profils proposés sur ce poste</b>.</dd>
+  <dt>Code</dt><dd><b>Changer le code…</b>, <b>Nouveau code de secours…</b>, <b>Désactiver la gestion enseignant…</b> (les profils restent enregistrés).</dd>
+  <dt>Exporter / importer</dt><dd>Voir <a href="#fichiers-pepite">les fichiers .pepite</a>.</dd>
+  <dt>Mots</dt><dd>Les mots de chaque profil et de la classe, les listes et les leçons : voir plus bas.</dd>
+</dl>
+<p>Le bouton <b>Fin de session</b> revient à « Classe » et propose <q>Qui es-tu ?</q> à l'élève suivant.</p>
+
+<h2 id="code">Code oublié</h2>
+<p>Dans la fenêtre du code, cliquez sur <b>Code oublié ?</b> et tapez le code de secours. Vous choisissez alors un nouveau code.</p>
+<p>Sans le code de secours, l'administrateur de l'ordinateur peut remettre à zéro la gestion enseignant.</p>
+
+<h2 id="lecons">Listes de mots et leçons</h2>
+<p>Dans l'onglet <b>Mots</b> de l'Espace enseignant, choisissez le profil (ou « Classe »). Les mots de « Classe » sont proposés à tous les élèves.</p>
+<ul>
+  <li><b>Nouvelle leçon…</b> : collez le texte de la leçon, cliquez sur <b>Chercher les mots</b>, cochez les mots utiles, puis <b>Enregistrer la liste</b>. Le texte n'est jamais enregistré : seuls les mots cochés sont gardés.</li>
+  <li>Une liste cochée est proposée. Une leçon reste active jusqu'à ce que vous la décochiez.</li>
+  <li><b>Importer une liste (.txt)…</b> : un mot par ligne. <b>Exporter la liste (.txt)…</b> fait l'inverse.</li>
+  <li>Limites : 5 000 mots par élève, 10 000 pour la classe, 500 mots par leçon, 50 listes par profil.</li>
+</ul>
+<p>Pépite n'apprend jamais seul : aucun mot tapé par un élève n'est gardé sans qu'on le demande. Voir aussi <a href="mes-mots.html">Mes mots</a>, la page des élèves.</p>
+
+<h2 id="noms">Les noms de la classe</h2>
+<p>Pépite connaît déjà des milliers de prénoms, de pays et de villes. Pour les prénoms de vos élèves ou les noms d'un projet, ajoutez-les aux mots de la classe.</p>
+<p><b>Importer une base de noms…</b> ajoute une base préparée (dossier ou fichier .zip, avec <samp>noms.json</samp> ou <samp>noms.csv</samp>), avec des images.</p>
+<div class="attention"><p>Images : seulement des pictogrammes ou des dessins, jamais de photos (en particulier pas de visages d'élèves). Vous êtes responsable des droits des images : la licence de chaque image est demandée, gardée et affichée.</p></div>
+
+<h2 id="fichiers-pepite">Les fichiers .pepite</h2>
+<p>Onglet <b>Exporter / importer</b> : <b>Exporter des profils</b> enregistre les profils cochés dans un fichier « .pepite », pour un autre ordinateur ou une sauvegarde. Options : <b>Inclure le code enseignant</b>, <b>Inclure les listes de mots</b>, <b>Inclure les images</b>.</p>
+<p><b>Importer un fichier…</b> ajoute ou remplace des profils ; une sauvegarde est faite avant. Un double clic sur un fichier « .pepite » ouvre aussi l'import, après le code.</p>
+<div class="attention"><p>Le fichier contient les prénoms des élèves : gardez-le en lieu sûr et ne l'envoyez pas par Internet.</p></div>
+
+<h2 id="limites">Ce que le code protège</h2>
+<p>Le code enseignant empêche un élève de changer les réglages ou de quitter Pépite par erreur. Ce n'est pas une protection informatique : une personne qui a accès au compte Windows peut lire ou supprimer les fichiers de Pépite.</p>
+<p>Un réglage imposé par l'établissement pour tout l'ordinateur affiche <q>Réglé par l'administrateur</q> : voir <a href="installation.html#ecole">Installer dans une école</a>.</p>
+
+<h2 id="journal">Le mode journal (pour un test)</h2>
+<p>Pour aider à comprendre un problème : quittez Pépite, puis relancez-le avec l'option <samp>--log</samp> (le LISEZ-MOI donne la commande exacte). Le journal est enregistré dans <samp>%TEMP%\predict-keyboard.log</samp>.</p>
+<div class="attention"><p>En mode journal, les mots tapés et le texte sélectionné sont enregistrés (jamais les mots de passe, ni le code enseignant, ni les prénoms des profils, ni les mots des listes ; un prénom tapé par l'élève, lui, est enregistré comme le reste du texte). À utiliser seulement pour un test, puis supprimez le fichier. Ne joignez jamais un journal d'élève à un message public.</p></div>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

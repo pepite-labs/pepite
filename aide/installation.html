@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="adulte">
+<title>Installer Pépite — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html" aria-current="page">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Installer Pépite</h1>
+<p class="chapeau">Installer, mettre à jour, désinstaller ; et ce qu'il faut savoir pour une école.</p>
+
+<h2 id="configuration">Configuration recommandée (provisoire)</h2>
+<ul>
+  <li>Windows 11, 64 bits, processeur Intel ou AMD (pas les PC à processeur ARM). Windows 10 n'est pas pris en charge.</li>
+  <li>Mémoire : 8 Go conseillés. En dessous de 4 Go, l'installation affiche un avertissement.</li>
+  <li>Un disque SSD est conseillé.</li>
+  <li>Environ 460 Mo sur le disque avec les images et une voix naturelle.</li>
+  <li>Rien d'autre à installer, et aucune connexion Internet nécessaire.</li>
+</ul>
+<p>Ces valeurs seront mesurées et précisées plus tard.</p>
+
+<h2 id="installer">Installer</h2>
+<ol class="etapes">
+  <li><p>Double-cliquez sur le fichier d'installation de Pépite.</p></li>
+  <li><p>Si Windows affiche <q>Windows a protégé votre ordinateur</q>, voir <a href="#windows-protege">plus bas</a>.</p></li>
+  <li><p>Choisissez <b>Installer seulement pour moi</b> (ce compte Windows, sans mot de passe administrateur) ou <b>Installer pour tous les utilisateurs</b> (tous les comptes ; il faut un compte administrateur ; dossier Program Files uniquement). Pour une école, choisissez « pour tous les utilisateurs ».</p></li>
+  <li><p>Choisissez les composants et les tâches (voir ci-dessous), puis installez.</p></li>
+  <li><p>À la fin, <b>Lancer Pépite</b> démarre Pépite. Son icône, le biscuit, est près de l'horloge (ou derrière la flèche « ^ »).</p></li>
+</ol>
+<p>Vous pouvez vérifier le fichier avant de l'installer : son empreinte SHA-256 (commande PowerShell <samp>Get-FileHash</samp>) doit être celle du fichier <samp>SHA256SUMS.txt</samp> publié avec lui.</p>
+
+<h2 id="choix">Composants et tâches</h2>
+<dl class="reglages">
+  <dt>Images des mots (pictogrammes ARASAAC)</dt><dd>Les images au-dessus des mots. Sans elles, Pépite marche aussi.</dd>
+  <dt>Voix naturelles (sinon, la voix de Windows)</dt><dd><b>Siwis (voix féminine)</b>, la voix par défaut, et <b>Pierre (voix masculine)</b>.</dd>
+  <dt>Démarrer Pépite avec Windows</dt><dd>Coché au départ. Pépite démarre à chaque ouverture de session, sans fenêtre : seulement une petite notification <q>Pépite est prêt</q>.</dd>
+  <dt>Ouvrir les fichiers .pepite (profils des élèves) avec Pépite</dt><dd>Un double clic sur un fichier exporté par l'Espace enseignant ouvre son import.</dd>
+  <dt>Créer une icône sur le Bureau</dt><dd>Non cochée au départ.</dd>
+</dl>
+<p>Au tout premier démarrage, une fenêtre <q>Pépite est prêt !</q> montre où se trouve l'icône. <b>En savoir plus</b> ouvre la page <a href="bienvenue.html">Bienvenue</a> de cette aide.</p>
+
+<h2 id="windows-protege"><q>Windows a protégé votre ordinateur</q></h2>
+<p>Les versions actuelles de Pépite ne sont pas encore signées numériquement : Windows ne connaît pas encore leur auteur.</p>
+<ul>
+  <li><b>SmartScreen</b> affiche <q>Windows a protégé votre ordinateur</q> : cliquez sur <b>Informations complémentaires</b>, puis sur <b>Exécuter quand même</b>.</li>
+  <li><b>Smart App Control</b> peut bloquer le fichier sans proposer « Exécuter quand même ». Pépite ne peut alors pas être installé sur cet ordinateur : attendez la version signée.</li>
+</ul>
+<p>Cette section restera ici tant que l'installation n'est pas signée.</p>
+
+<h2 id="mettre-a-jour">Mettre à jour</h2>
+<p>Lancez l'installation de la nouvelle version. Pépite est fermé pendant la mise à jour ; vos choix, les réglages et les profils sont gardés. Pépite ne se met jamais à jour tout seul.</p>
+
+<h2 id="desinstaller">Désinstaller</h2>
+<p><b>Paramètres</b> Windows → <b>Applications</b> → <b>Applications installées</b> → <b>Pépite</b> → <b>Désinstaller</b>.</p>
+<p>Une question est posée : <q>Supprimer aussi les réglages, les profils des élèves et leurs mots enregistrés sur ce compte Windows ?</q> Par défaut, non : ils sont gardés pour une prochaine installation.</p>
+
+<h2 id="donnees">Où sont les données ?</h2>
+<ul>
+  <li>Réglages, profils et mots des élèves : <samp>%APPDATA%\Pepite-Prediction</samp>, pour chaque compte Windows.</li>
+  <li>Une sauvegarde par jour des profils : <samp>%LOCALAPPDATA%\Pepite-Prediction\sauvegardes</samp>.</li>
+  <li>Configuration de l'établissement, facultative : <samp>%PROGRAMDATA%\Pepite-Prediction\settings.json</samp>.</li>
+  <li>Pépite n'écrit rien dans son dossier d'installation.</li>
+</ul>
+
+<h2 id="ecole">Installer dans une école</h2>
+<p>Le service informatique trouve tout dans le fichier <a href="../DEPLOIEMENT.txt">DEPLOIEMENT.txt</a>, installé à côté de Pépite : installation sans question sur tous les postes, codes de sortie, configuration de l'établissement (réglages imposés à tous les comptes), Intune, SCCM, AppLocker, données personnelles.</p>
+<p>Le fichier <a href="../LISEZ-MOI.txt">LISEZ-MOI.txt</a> résume l'installation et l'utilisation.</p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

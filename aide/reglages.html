@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="enfant">
+<title>Les réglages — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html" aria-current="page">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Les réglages</h1>
+<p class="chapeau">Pour que Pépite soit à ta taille. Clique sur le biscuit près de l'horloge, puis sur <b>Réglages…</b></p>
+<figure><img src="img/reglages.svg" alt="Dessin de la fenêtre Réglages : les onglets Barre et voix et Mots ; les parties Mots, Position, Aperçu, Voix, Lecture, Démarrage et Plusieurs élèves, chacune avec un bouton point d'interrogation sauf Aperçu ; en bas, Enregistrer et Annuler." width="720" height="560"></figure>
+<p>La fenêtre a deux onglets : <b>Barre et voix</b> et <b>Mots</b>.</p>
+<div class="astuce"><p>Le bouton <b>?</b> d'une partie ouvre l'aide de cette partie. La touche <kbd>F1</kbd> aussi, quand la fenêtre Réglages est devant.</p></div>
+
+<h2 id="mots">Mots</h2>
+<dl class="reglages">
+  <dt>Nombre de mots proposés</dt><dd>De 1 à 8. Moins de mots, c'est plus facile à lire.</dd>
+  <dt>Taille du texte</dt><dd><b>Petit</b>, <b>Moyen</b>, <b>Grand</b> ou <b>Très grand</b>. Les images grandissent aussi.</dd>
+  <dt>Police</dt><dd>La forme des lettres : <b>Segoe UI</b>, <b>OpenDyslexic</b>, <b>Lexend</b> ou <b>Andika</b>. Essaie, garde celle qui te va.</dd>
+</dl>
+<figure class="polices">
+  <img src="img/barre-polices-opendyslexic.png" alt="Le mot maison écrit avec la police OpenDyslexic." width="208" height="116">
+  <img src="img/barre-polices-lexend.png" alt="Le mot maison écrit avec la police Lexend." width="178" height="98">
+  <img src="img/barre-polices-andika.png" alt="Le mot maison écrit avec la police Andika." width="169" height="110">
+  <figcaption>OpenDyslexic, Lexend et Andika.</figcaption>
+</figure>
+<dl class="reglages">
+  <dt>Espacement des lettres</dt><dd><b>Normal</b>, <b>Plus large</b> ou <b>Très large</b>. Des lettres plus espacées se lisent souvent mieux.</dd>
+</dl>
+<figure><img src="img/barre-espacement-tres-large.png" alt="Le mot maison en OpenDyslexic, avec un espacement très large entre les lettres." width="238" height="116"><figcaption>OpenDyslexic, espacement « Très large ».</figcaption></figure>
+<dl class="reglages">
+  <dt>Afficher les images</dt><dd>Avec ou sans images au-dessus des mots.</dd>
+  <dt>Touches F1 à F8 pour insérer</dt><dd>Décoche si tu as besoin des touches F pour autre chose. Le clic marche toujours.</dd>
+  <dt>Espace avant ; : ! ?</dt><dd><b>Française (espace fine)</b> : après un mot choisi dans la barre, Pépite met une petite espace avant ces signes, comme dans les livres. <b>Aucune</b> n'en met pas.</dd>
+</dl>
+
+<h2 id="position">Position</h2>
+<p>Où la barre apparaît : <b>À côté du curseur</b> (là où tu écris), <b>En haut de l'écran</b>, <b>En bas de l'écran</b>, ou <b>Position libre (poignée)</b> : tu la déplaces avec sa poignée à pointillés.</p>
+
+<h2 id="apercu">Aperçu</h2>
+<p>L'aperçu montre la barre avec tes choix, tout de suite.</p>
+
+<h2 id="voix">Voix</h2>
+<dl class="reglages">
+  <dt>Lire le mot inséré</dt><dd>Pépite dit le mot que tu as choisi.</dd>
+  <dt>Lire chaque mot après une espace</dt><dd>Pépite dit chaque mot que tu termines.</dd>
+  <dt>Lire la phrase à . ! ?</dt><dd>Pépite lit toute la phrase quand tu la finis.</dd>
+  <dt>Relire le mot / la phrase modifié(e)</dt><dd>Voir <a href="comment-ca-marche.html#relire">Relire ce que tu corriges</a>.</dd>
+  <dt>Voix, Vitesse, Volume</dt><dd>Choisis la voix, sa vitesse et son volume, puis clique sur <b>Écouter</b> pour l'essayer. La voix <b>Siwis</b> est une femme, la voix <b>Pierre</b> un homme. Il y a aussi les voix de Windows.</dd>
+</dl>
+<p>Ces quatre cases sont cochées au départ.</p>
+
+<h2 id="lecture">Lecture</h2>
+<dl class="reglages">
+  <dt>Lire le texte sélectionné (barre de lecture)</dt><dd>Active la <a href="lire-un-texte.html">barre de lecture</a>.</dd>
+  <dt>Images dans la barre de lecture</dt><dd>Avec ou sans images pendant la lecture.</dd>
+  <dt>Copier la sélection par Ctrl+C si l'application ne la donne pas (presse-papiers rétabli)</dt><dd>Pour les rares programmes où la lecture ne marche pas. Décochée au départ. C'est un réglage pour les adultes : l'explication s'affiche quand la souris passe dessus.</dd>
+</dl>
+
+<h2 id="demarrage">Démarrage</h2>
+<p><b>Afficher le message de bienvenue au prochain démarrage</b> : la fenêtre <q>Pépite est prêt !</q> revient une fois, au prochain démarrage de Pépite.</p>
+
+<h2 id="eleves">Plusieurs élèves</h2>
+<p>Pour une classe : un profil par élève. C'est un réglage pour les adultes : voir <a href="enseignants.html">Enseignants et parents</a>.</p>
+
+<h2 id="onglet-mots">L'onglet Mots</h2>
+<dl class="reglages">
+  <dt>Indicateur d'orthographe</dt><dd>Le petit rond ✓, ≈ ou ? à gauche des mots. Voir <a href="orthographe.html">le rond d'orthographe</a>.</dd>
+  <dt>Images pour les noms propres</dt><dd>Le drapeau d'un pays ou l'image donnée par l'enseignant, au-dessus d'un nom propre.</dd>
+  <dt>Mes mots, Mots de la classe, Mes fautes</dt><dd>Voir <a href="mes-mots.html">Mes mots</a>.</dd>
+</dl>
+
+<h2 id="enregistrer">Enregistrer ou annuler</h2>
+<p><b>Enregistrer</b> garde tes choix, même après avoir éteint l'ordinateur. <b>Annuler</b> (ou <kbd>Échap</kbd>) oublie tout.</p>
+<p>Tes mots (onglet <b>Mots</b>) sont gardés tout de suite, sans <b>Enregistrer</b>.</p>
+<div class="attention"><p>Tu vois <q>Réglé par l'administrateur</q> ? À l'école, un adulte a choisi ce réglage pour tout l'ordinateur. Tu ne peux pas le changer.</p></div>
+<p>À l'école, Pépite peut aussi demander le <b>code enseignant</b> avant d'ouvrir les réglages. Demande alors à ton enseignant.</p>
+<p class="suivant"><a href="lire-un-texte.html">← Lire un texte</a><a href="questions.html">Un souci ? →</a></p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

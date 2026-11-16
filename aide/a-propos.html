@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="adulte">
+<title>À propos — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html" aria-current="page">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>À propos de Pépite</h1>
+<div class="carte">
+  <p><b>Pépite</b> — prédiction de mots</p>
+  <p>© 2026 Les auteurs de Pépite</p>
+  <p>Développé avec l'aide de Claude (Anthropic).</p>
+</div>
+
+<h2 id="licences">Licences</h2>
+<ul>
+  <li>Pépite est un <b>logiciel libre et gratuit</b>, sous licence GPL-3.0 ou ultérieure : texte dans le fichier <a href="../COPYING">COPYING</a>.</li>
+  <li>Cette aide est sous licence Creative Commons BY-SA 4.0 ; son petit script <samp>prefs.js</samp> est sous GPL-3.0 ou ultérieure.</li>
+  <li>Chaque composant et chaque ensemble de données garde sa propre licence : liste complète, avec les versions, dans <a href="../THIRD-PARTY-NOTICES.txt">THIRD-PARTY-NOTICES.txt</a> et le dossier <samp>licenses</samp>.</li>
+</ul>
+
+<h2 id="voix">Les voix</h2>
+<table>
+  <thead><tr><th scope="col">Voix</th><th scope="col">D'où elle vient</th></tr></thead>
+  <tbody>
+    <tr><td><b>Siwis</b>, voix féminine, la voix par défaut</td><td>Modèle Piper « fr_FR-siwis-medium », licence CC BY 4.0, modifié. Enregistrements : SIWIS French Speech Synthesis Database (Yamagishi, Honnet, Garner, Lazaridis, University of Edinburgh), CC BY 4.0.</td></tr>
+    <tr><td><b>Pierre</b>, voix masculine</td><td>Modèle Piper « fr_FR-upmc-medium », locuteur Pierre, licence CC BY-SA 4.0, modifié. Enregistrements : UPMC Pierre Voice Data (ISIR, Université Pierre et Marie Curie, Pierre Chauvin), CC BY-SA 4.0. <b>À noter</b> : ce modèle a été affiné à partir de la voix anglaise « lessac », dont les données d'entraînement sont réservées à la recherche. La voix Pierre pourra être retirée d'une version future si la licence de ce modèle de base est contestée.</td></tr>
+    <tr><td>Voix de Windows (Hortense…)</td><td>Fournies par Windows.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="credits">Merci à</h2>
+<table>
+  <thead><tr><th scope="col">Quoi</th><th scope="col">Qui, et sous quelle licence</th></tr></thead>
+  <tbody>
+    <tr><td>Images des mots</td><td>Pictogrammes ARASAAC : auteur Sergio Palao, propriété du Gouvernement d'Aragon (arasaac.org), licence Creative Commons BY-NC-SA 4.0. <b>Usage non commercial uniquement</b> : c'est un composant séparé, hors de la licence GPL. Cette aide n'en contient aucun.</td></tr>
+    <tr><td>Dictionnaire</td><td>Lexique — New, B., Pallier, C. et al. (lexique.org), licence CC BY-SA 4.0.</td></tr>
+    <tr><td>Fréquences des mots et des suites de mots</td><td>Phrases de Tatoeba (tatoeba.org), CC BY 2.0 FR ; Leipzig Corpora Collection (wortschatz.uni-leipzig.de), CC BY ; Vikidia, l'encyclopédie des 8-13 ans (fr.vikidia.org), CC BY-SA 3.0 ; livres pour enfants du domaine public (Project Gutenberg, gutenberg.org). La base de mots est sous licence CC BY-SA 4.0.</td></tr>
+    <tr><td>Orthographe et accords</td><td>Grammalecte, « Lexique simplifié » (grammalecte.net), licence MPL-2.0.</td></tr>
+    <tr><td>Noms propres</td><td>Paquet de données ouvertes « Noms propres », CC BY 4.0 : Insee, Statbel, Unicode CLDR, Wikidata, flag-icons, Wikimedia Commons. Statbel et l'Insee ne cautionnent pas Pépite ni l'usage fait de leurs données.</td></tr>
+    <tr><td>Polices</td><td>OpenDyslexic (Abbie Gonzalez), Lexend, Andika (SIL International) — SIL Open Font License 1.1.</td></tr>
+    <tr><td>Synthèse de la voix</td><td>Piper (piper1-gpl, GPL-3.0 ou ultérieure), espeak-ng (GPL-3.0 ou ultérieure), ONNX Runtime (MIT), NAudio (MIT).</td></tr>
+    <tr><td>Installation</td><td>Inno Setup (jrsoftware.org).</td></tr>
+  </tbody>
+</table>
+<p>Le logo, les dessins de cette aide et le code de Pépite sont des créations originales.</p>
+
+<h2 id="contact">Contact</h2>
+<p>Le site du projet : <b>github.com/pepite-labs/pepite</b>. La même aide est aussi en ligne : <b>pepite-labs.github.io/pepite</b> (celle installée avec Pépite fonctionne sans Internet). Pour poser une question, signaler un problème ou proposer une idée, ouvrez un ticket (« Issues »). Une faille de sécurité se signale en privé, comme expliqué dans le fichier SECURITY.md du projet.</p>
+<div class="attention"><p>Ne mettez jamais de prénom, de texte d'élève ni de journal dans un ticket : il est public.</p></div>
+
+<h2 id="retrait">Demande de retrait ou de correction</h2>
+<p>Vous êtes titulaire de droits sur une source utilisée par Pépite, ou une donnée vous concerne ? Ouvrez un ticket sur le site du projet, sans donnée personnelle. La démarche (délai de réponse de 30 jours, retrait de la source et nouvelle version) est décrite dans le fichier DONNEES.md du projet.</p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

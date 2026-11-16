@@ -1,0 +1,26 @@
+# Towns for the « Noms propres » pack: French communes of 30 000 inhabitants or more and every prefecture, Swiss
+# municipalities of 20 000 or more, Luxembourg communes of 10 000 or more, the capital of every sovereign state and
+# the well-known large cities (300 000 inhabitants or more and 100 Wikipedia articles or more: Montréal, Québec, Dakar…). French label, else the multilingual one;
+# French aliases; the largest population value (P1082) for ranking. Countries themselves come from CLDR.
+SELECT ?item ?fr ?mul (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) (MAX(?pop) AS ?population) (SAMPLE(?cc) AS ?country) (GROUP_CONCAT(DISTINCT ?why; separator="|") AS ?reasons) WHERE {
+  {
+    ?item wdt:P31 wd:Q484170 ; wdt:P1082 ?p . FILTER(?p >= 30000) BIND("fr-commune" AS ?why)
+  } UNION {
+    ?dep wdt:P31 wd:Q6465 ; wdt:P36 ?item . BIND("fr-prefecture" AS ?why)
+  } UNION {
+    ?item wdt:P31 wd:Q70208 ; wdt:P1082 ?p . FILTER(?p >= 20000) BIND("ch-commune" AS ?why)
+  } UNION {
+    ?item wdt:P31 wd:Q2919801 ; wdt:P1082 ?p . FILTER(?p >= 10000) BIND("lu-commune" AS ?why)
+  } UNION {
+    ?state wdt:P31 wd:Q3624078 ; wdt:P36 ?item . FILTER NOT EXISTS { ?state wdt:P576 [] } BIND("capitale" AS ?why)
+  } UNION {
+    VALUES ?big { wd:Q515 wd:Q1637706 wd:Q1549591 wd:Q200250 wd:Q5119 wd:Q1093829 }
+    ?item wdt:P31 ?big ; wdt:P1082 ?p ; wikibase:sitelinks ?sl . FILTER(?p >= 300000 && ?sl >= 100) BIND("grande-ville" AS ?why)
+  }
+  FILTER NOT EXISTS { ?item wdt:P576 [] }
+  OPTIONAL { ?item rdfs:label ?fr FILTER(LANG(?fr) = "fr") }
+  OPTIONAL { ?item rdfs:label ?mul FILTER(LANG(?mul) = "mul") }
+  OPTIONAL { ?item skos:altLabel ?alias FILTER(LANG(?alias) = "fr") }
+  OPTIONAL { ?item wdt:P1082 ?pop }
+  OPTIONAL { ?item wdt:P17 ?c . ?c wdt:P297 ?cc }
+} GROUP BY ?item ?fr ?mul

@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "defaults": {
+    "words": { "count": 6, "size": "L", "font": "opendyslexic", "pictures": true },
+    "speech": { "speakWords": true, "speakSentences": true }
+  },
+  "locked": {
+    "words": { "spellingIndicator": true },
+    "start": { "welcome": false }
+  }
+}

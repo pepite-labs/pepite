@@ -1,0 +1,41 @@
+NOUVEAU DANS LA 0.10.0 : UN PROGRAMME D'INSTALLATION
+  - Pépite s'installe maintenant comme les autres programmes, avec
+    « Pepite-0.10.0-installation.exe » (voir INSTALLER plus bas),
+    pour vous seul ou pour tous les utilisateurs de l'ordinateur.
+  - Pépite peut démarrer avec Windows (coché par défaut) : à
+    l'ouverture de session, seulement la notification « Pépite est
+    prêt », pas de fenêtre.
+  - Double-clic sur un fichier « .pepite » (profils exportés par
+    l'Espace enseignant) : Pépite demande le code enseignant, puis
+    ouvre l'import avec ce fichier. Si la gestion enseignant n'est pas
+    activée, un message l'explique.
+  - Pépite est dans le menu Démarrer et dans « Applications
+    installées » (pour le désinstaller). À la désinstallation, les
+    réglages et les profils des élèves sont gardés, sauf si vous
+    répondez Oui à la question.
+  - Écoles : installation sans question pour tous les postes, avec un
+    fichier de configuration de l'établissement : voir
+    DEPLOIEMENT.txt (pour le service informatique).
+  - Windows 11 seulement (64 bits).
+  - Nouvelle base de mots : les suites de mots viennent maintenant
+    de textes écrits, sans sous-titres de films : Vikidia
+    (l'encyclopédie des 8-13 ans), des livres pour enfants du domaine
+    public, les phrases de Tatoeba et les actualités de la Leipzig
+    Corpora Collection. Même dictionnaire ; les mots proposés
+    changent un peu : mieux sur les textes écrits et pour enfants,
+    un peu moins bien sur les phrases de style oral (dialogues).
+    Sources citées dans « À propos » et dans prediction-SOURCES.txt.
+  - Voix Siwis : les mots dits seuls sont plus nets (« papa », « mais »).
+
+À TESTER (merci de noter ce qui ne va pas)
+  I1. Installer « pour moi », puis « Lancer Pépite » : Pépite
+      démarre-t-il, sans message d'erreur ?
+  I2. Fermer la session Windows et la rouvrir : la notification
+      « Pépite est prêt » s'affiche-t-elle, sans fenêtre ?
+  I3. Double-clic sur un fichier .pepite : le code enseignant, puis
+      l'import avec ce fichier ?
+  I4. Désinstaller : la question sur les données ; réinstaller : les
+      profils sont-ils toujours là (si vous avez répondu Non) ?
+  I5. Quel message Windows a-t-il affiché au lancement de
+      l'installation (« Windows a protégé votre ordinateur »,
+      antivirus) ?

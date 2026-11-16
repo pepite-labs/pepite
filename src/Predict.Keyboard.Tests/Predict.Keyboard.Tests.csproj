@@ -1,0 +1,112 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Pure parts of Predict.Keyboard, compiled from linked sources (no reference to the WPF project). -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Predict.Keyboard.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Predict.Keyboard\ContextExtractor.cs" Link="ContextExtractor.cs" />
+    <Compile Include="..\Predict.Keyboard\WordTracker.cs" Link="WordTracker.cs" />
+    <Compile Include="..\Predict.Keyboard\KeyboardPolicy.cs" Link="KeyboardPolicy.cs" />
+    <Compile Include="..\Predict.Keyboard\Inserter.cs" Link="Inserter.cs" />
+    <Compile Include="..\Predict.Keyboard\SoundAlikeCorrection.cs" Link="SoundAlikeCorrection.cs" />
+    <Compile Include="..\Predict.Keyboard\Native.cs" Link="Native.cs" />
+    <Compile Include="..\Predict.Keyboard\ReadQueue.cs" Link="ReadQueue.cs" />
+    <Compile Include="..\Predict.Keyboard\PictureStore.cs" Link="PictureStore.cs" />
+    <Compile Include="..\Predict.Keyboard\TrayPromotion.cs" Link="TrayPromotion.cs" />
+    <Compile Include="..\Predict.Keyboard\Strings.cs" Link="Strings.cs" />
+    <Compile Include="..\Predict.Keyboard\Settings.cs" Link="Settings.cs" />
+    <Compile Include="..\Predict.Keyboard\SettingsStore.cs" Link="SettingsStore.cs" />
+    <Compile Include="..\Predict.Keyboard\SettingsLayering.cs" Link="SettingsLayering.cs" />
+    <Compile Include="..\Predict.Keyboard\BarLayout.cs" Link="BarLayout.cs" />
+    <Compile Include="..\Predict.Keyboard\SpeechEcho.cs" Link="SpeechEcho.cs" />
+    <Compile Include="..\Predict.Keyboard\SpeechQueue.cs" Link="SpeechQueue.cs" />
+    <Compile Include="..\Predict.Keyboard\SpacedLayout.cs" Link="SpacedLayout.cs" />
+    <Compile Include="..\Predict.Keyboard\PasswordGuards.cs" Link="PasswordGuards.cs" />
+    <Compile Include="..\Predict.Keyboard\EditSession.cs" Link="EditSession.cs" />
+    <Compile Include="..\Predict.Keyboard\EditClassifier.cs" Link="EditClassifier.cs" />
+    <Compile Include="..\Predict.Keyboard\ReadingDocument.cs" Link="ReadingDocument.cs" />
+    <Compile Include="..\Predict.Keyboard\ReadingController.cs" Link="ReadingController.cs" />
+    <Compile Include="..\Predict.Keyboard\SelectionPolicy.cs" Link="SelectionPolicy.cs" />
+    <!-- plan 08a: Piper voices (pure parts + the espeak P/Invoke for the golden test) -->
+    <Compile Include="..\Predict.Keyboard\PiperPhonemizer.cs" Link="PiperPhonemizer.cs" />
+    <Compile Include="..\Predict.Keyboard\EspeakNative.cs" Link="EspeakNative.cs" />
+    <Compile Include="..\Predict.Keyboard\PiperWordMap.cs" Link="PiperWordMap.cs" />
+    <Compile Include="..\Predict.Keyboard\PlaybackClock.cs" Link="PlaybackClock.cs" />
+    <Compile Include="..\Predict.Keyboard\VoiceId.cs" Link="VoiceId.cs" />
+    <Compile Include="..\Predict.Keyboard\PiperVoicePack.cs" Link="PiperVoicePack.cs" />
+    <Compile Include="..\Predict.Keyboard\EngineRouter.cs" Link="EngineRouter.cs" />
+    <Compile Include="..\Predict.Keyboard\PiperResidency.cs" Link="PiperResidency.cs" />
+    <Compile Include="..\Predict.Keyboard\PiperWordCache.cs" Link="PiperWordCache.cs" />
+    <Compile Include="..\Predict.Keyboard\SentenceEchoGate.cs" Link="SentenceEchoGate.cs" />
+    <Compile Include="..\Predict.Keyboard\Liaison.cs" Link="Liaison.cs" />
+    <Compile Include="..\Predict.Keyboard\AudioSink.cs" Link="AudioSink.cs" />
+    <!-- single instance and start-up feedback (welcome window) -->
+    <Compile Include="..\Predict.Keyboard\StartupPolicy.cs" Link="StartupPolicy.cs" />
+    <Compile Include="..\Predict.Keyboard\SingleInstance.cs" Link="SingleInstance.cs" />
+    <!-- plan « aide intégrée »: help targets, the fallback chain, the tray menu order -->
+    <Compile Include="..\Predict.Keyboard\HelpLinks.cs" Link="HelpLinks.cs" />
+    <!-- plan 09: profiles, teacher PIN (pure parts) -->
+    <Compile Include="..\Predict.Keyboard\JsonFileStore.cs" Link="JsonFileStore.cs" />
+    <Compile Include="..\Predict.Keyboard\AppPaths.cs" Link="AppPaths.cs" />
+    <Compile Include="..\Predict.Keyboard\Profile.cs" Link="Profile.cs" />
+    <Compile Include="..\Predict.Keyboard\ProfileStore.cs" Link="ProfileStore.cs" />
+    <Compile Include="..\Predict.Keyboard\ProfileMigration.cs" Link="ProfileMigration.cs" />
+    <Compile Include="..\Predict.Keyboard\TeacherMode.cs" Link="TeacherMode.cs" />
+    <Compile Include="..\Predict.Keyboard\TeacherLock.cs" Link="TeacherLock.cs" />
+    <Compile Include="..\Predict.Keyboard\SettingsGate.cs" Link="SettingsGate.cs" />
+    <Compile Include="..\Predict.Keyboard\SettingsService.cs" Link="SettingsService.cs" />
+    <Compile Include="..\Predict.Keyboard\ProfileService.cs" Link="ProfileService.cs" />
+    <!-- plan 09B: export / import, session returns -->
+    <Compile Include="..\Predict.Keyboard\ProfileArchive.cs" Link="ProfileArchive.cs" />
+    <Compile Include="..\Predict.Keyboard\SessionPolicy.cs" Link="SessionPolicy.cs" />
+    <!-- plan 10A: personal word lists (pure parts) -->
+    <Compile Include="..\Predict.Keyboard\WordList.cs" Link="WordList.cs" />
+    <Compile Include="..\Predict.Keyboard\WordLayering.cs" Link="WordLayering.cs" />
+    <Compile Include="..\Predict.Keyboard\WordListStore.cs" Link="WordListStore.cs" />
+    <Compile Include="..\Predict.Keyboard\WordListService.cs" Link="WordListService.cs" />
+    <Compile Include="..\Predict.Keyboard\WordTextFile.cs" Link="WordTextFile.cs" />
+    <!-- plan 10C: names databases and pictures of names (pure parts; the WPF re-encoder is injected) -->
+    <Compile Include="..\Predict.Keyboard\NamesImport.cs" Link="NamesImport.cs" />
+    <Compile Include="..\Predict.Keyboard\WordPictures.cs" Link="WordPictures.cs" />
+    <!-- 0.7.2: pierre's word carrier and phoneme fix; the engine itself (fake model) for the word path -->
+    <Compile Include="..\Predict.Keyboard\PiperCarrier.cs" Link="PiperCarrier.cs" />
+    <Compile Include="..\Predict.Keyboard\PiperModel.cs" Link="PiperModel.cs" />
+    <Compile Include="..\Predict.Keyboard\PiperSynth.cs" Link="PiperSynth.cs" />
+    <!-- plan 12: installer hooks in the app (pure parts) -->
+    <Compile Include="..\Predict.Keyboard\DataSearch.cs" Link="DataSearch.cs" />
+    <Compile Include="..\Predict.Keyboard\CommandLine.cs" Link="CommandLine.cs" />
+    <Compile Include="..\Predict.Keyboard\OpenRequest.cs" Link="OpenRequest.cs" />
+    <Compile Include="..\Predict.Keyboard\InstallInfo.cs" Link="InstallInfo.cs" />
+    <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="host\**" />
+    <None Include="..\Predict.Keyboard\Assets\*.ico" Link="Assets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- the golden native test runs only when Data.Build/build_espeak.ps1 has staged espeak-ng (git-ignored) -->
+  <PropertyGroup Condition="Exists('..\Data.Build\out\espeak\libespeak-ng.dll')">
+    <DefineConstants>$(DefineConstants);HAVE_ESPEAK</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="Exists('..\Data.Build\out\espeak\libespeak-ng.dll')">
+    <None Include="..\Data.Build\out\espeak\libespeak-ng.dll" Link="libespeak-ng.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data.Build\out\espeak\espeak-ng-data\**" Link="espeak-ng-data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Predict.Core is pure .NET (no WPF): referenced, not linked (Elision, Tokenizer, Suggestion) -->
+    <ProjectReference Include="..\Predict.Core\Predict.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.25" />
+    <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+    <PackageReference Include="NAudio.Core" Version="2.2.1" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <!-- the engine's model type (0.7.2 tests run a fake model; same package and version as the app) -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
+  </ItemGroup>
+</Project>

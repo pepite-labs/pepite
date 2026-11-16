@@ -1,0 +1,12 @@
+# Belgian regions, provinces and municipalities by their NIS / INS (REFNIS) code (P1567): French label (else the
+# multilingual one), French aliases, population (P1082, the most recent value), flag (P41). Joined to Statbel REFNIS by code.
+SELECT ?item ?nis ?fr ?mul (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) (MAX(?pop) AS ?population) (SAMPLE(?flag) AS ?flagFile) (GROUP_CONCAT(DISTINCT STRAFTER(STR(?type), "entity/"); separator="|") AS ?types) WHERE {
+  ?item wdt:P1567 ?nis ; wdt:P17 wd:Q31 .
+  ?item wdt:P31 ?type .
+  VALUES ?type { wd:Q493522 wd:Q83116 wd:Q83057 wd:Q3920906 }
+  OPTIONAL { ?item rdfs:label ?fr FILTER(LANG(?fr) = "fr") }
+  OPTIONAL { ?item rdfs:label ?mul FILTER(LANG(?mul) = "mul") }
+  OPTIONAL { ?item skos:altLabel ?alias FILTER(LANG(?alias) = "fr") }
+  OPTIONAL { ?item wdt:P1082 ?pop }
+  OPTIONAL { ?item wdt:P41 ?flag }
+} GROUP BY ?item ?nis ?fr ?mul

@@ -1,0 +1,2054 @@
+{
+ "note": "phrases inventées pour Pépite, GPL-3.0-or-later",
+ "about": "P-agreement (plan 11, 10D-0): the bar should rank `intended` first after `context`; `wrong` is the sibling a pupil types (null: none). Split: dev = even ids, test = odd ids. `fam-ces` is information only (the language model decides ces / ses). `precision` holds the contexts where a rule must not fire (clitics, inversion, a determiner of the other gender before a noun). Names only from personal-fixture.json; no pupil text.",
+ "cases": [
+  {
+   "id": 1,
+   "cat": "det-num",
+   "domain": "conv",
+   "context": "Hier au parc, j'ai vu les",
+   "intended": "chats",
+   "wrong": "chat"
+  },
+  {
+   "id": 2,
+   "cat": "det-num",
+   "domain": "conv",
+   "context": "Pour le goûter, elle a acheté des",
+   "intended": "pommes",
+   "wrong": "pomme"
+  },
+  {
+   "id": 3,
+   "cat": "det-num",
+   "domain": "conv",
+   "context": "Avant de dormir, il range ses",
+   "intended": "jouets",
+   "wrong": "jouet"
+  },
+  {
+   "id": 4,
+   "cat": "det-num",
+   "domain": "conv",
+   "context": "À la fête, on a mangé des",
+   "intended": "bonbons",
+   "wrong": "bonbon"
+  },
+  {
+   "id": 5,
+   "cat": "det-num",
+   "domain": "conv",
+   "context": "Regarde ces",
+   "intended": "oiseaux",
+   "wrong": "oiseau"
+  },
+  {
+   "id": 6,
+   "cat": "det-num",
+   "domain": "conv",
+   "context": "Ce matin, j'ai perdu mes",
+   "intended": "clés",
+   "wrong": "clé"
+  },
+  {
+   "id": 7,
+   "cat": "det-num",
+   "domain": "conv",
+   "context": "Tu as vu le",
+   "intended": "chien",
+   "wrong": "chiens"
+  },
+  {
+   "id": 8,
+   "cat": "det-num",
+   "domain": "conv",
+   "context": "Dimanche, maman prépare des",
+   "intended": "crêpes",
+   "wrong": "crêpe"
+  },
+  {
+   "id": 9,
+   "cat": "det-num",
+   "domain": "conv",
+   "context": "À la maison, nous avons deux",
+   "intended": "lapins",
+   "wrong": "lapin"
+  },
+  {
+   "id": 10,
+   "cat": "det-num",
+   "domain": "school",
+   "context": "Les élèves ouvrent leurs",
+   "intended": "cahiers",
+   "wrong": "cahier"
+  },
+  {
+   "id": 11,
+   "cat": "det-num",
+   "domain": "school",
+   "context": "La maîtresse distribue les",
+   "intended": "feuilles",
+   "wrong": "feuille"
+  },
+  {
+   "id": 12,
+   "cat": "det-num",
+   "domain": "school",
+   "context": "Avec la lunette, on observe les",
+   "intended": "planètes",
+   "wrong": "planète"
+  },
+  {
+   "id": 13,
+   "cat": "det-num",
+   "domain": "school",
+   "context": "Au printemps, les abeilles butinent les",
+   "intended": "fleurs",
+   "wrong": "fleur"
+  },
+  {
+   "id": 14,
+   "cat": "det-num",
+   "domain": "school",
+   "context": "Pendant l'éruption, le volcan crache des",
+   "intended": "cendres",
+   "wrong": "cendre"
+  },
+  {
+   "id": 15,
+   "cat": "det-num",
+   "domain": "school",
+   "context": "Cette année, nous étudions les",
+   "intended": "animaux",
+   "wrong": "animal"
+  },
+  {
+   "id": 16,
+   "cat": "det-num",
+   "domain": "school",
+   "context": "Les soldats construisent des",
+   "intended": "routes",
+   "wrong": "route"
+  },
+  {
+   "id": 17,
+   "cat": "det-num",
+   "domain": "school",
+   "context": "La nuit, on compte les",
+   "intended": "étoiles",
+   "wrong": "étoile"
+  },
+  {
+   "id": 18,
+   "cat": "adj-gender",
+   "domain": "conv",
+   "context": "Pour mon anniversaire, j'ai eu une",
+   "intended": "petite",
+   "wrong": "petit"
+  },
+  {
+   "id": 19,
+   "cat": "adj-gender",
+   "domain": "conv",
+   "context": "Dans le jardin, il y a une",
+   "intended": "grande",
+   "wrong": "grand"
+  },
+  {
+   "id": 20,
+   "cat": "adj-gender",
+   "domain": "conv",
+   "context": "Elle a dessiné une",
+   "intended": "jolie",
+   "wrong": "joli"
+  },
+  {
+   "id": 21,
+   "cat": "adj-gender",
+   "domain": "conv",
+   "context": "Ce soir, nous regardons une",
+   "intended": "nouvelle",
+   "wrong": "nouveau"
+  },
+  {
+   "id": 22,
+   "cat": "adj-gender",
+   "domain": "conv",
+   "context": "Léa est arrivée la",
+   "intended": "première",
+   "wrong": "premier"
+  },
+  {
+   "id": 23,
+   "cat": "adj-gender",
+   "domain": "conv",
+   "context": "Zoé est ma",
+   "intended": "meilleure",
+   "wrong": "meilleur"
+  },
+  {
+   "id": 24,
+   "cat": "adj-gender",
+   "domain": "conv",
+   "context": "C'est une",
+   "intended": "vraie",
+   "wrong": "vrai"
+  },
+  {
+   "id": 25,
+   "cat": "adj-gender",
+   "domain": "conv",
+   "context": "On a raté la",
+   "intended": "dernière",
+   "wrong": "dernier"
+  },
+  {
+   "id": 26,
+   "cat": "adj-gender",
+   "domain": "conv",
+   "context": "Mamie a fait une",
+   "intended": "bonne",
+   "wrong": "bon"
+  },
+  {
+   "id": 27,
+   "cat": "adj-gender",
+   "domain": "school",
+   "context": "Le conteur raconte une",
+   "intended": "longue",
+   "wrong": "long"
+  },
+  {
+   "id": 28,
+   "cat": "adj-gender",
+   "domain": "school",
+   "context": "Le château a une",
+   "intended": "haute",
+   "wrong": "haut"
+  },
+  {
+   "id": 29,
+   "cat": "adj-gender",
+   "domain": "school",
+   "context": "Le chevalier porte une",
+   "intended": "lourde",
+   "wrong": "lourd"
+  },
+  {
+   "id": 30,
+   "cat": "adj-gender",
+   "domain": "school",
+   "context": "Nous visitons une",
+   "intended": "ancienne",
+   "wrong": "ancien"
+  },
+  {
+   "id": 31,
+   "cat": "adj-gender",
+   "domain": "school",
+   "context": "La baleine est une",
+   "intended": "grosse",
+   "wrong": "gros"
+  },
+  {
+   "id": 32,
+   "cat": "adj-gender",
+   "domain": "school",
+   "context": "Le loup a une",
+   "intended": "mauvaise",
+   "wrong": "mauvais"
+  },
+  {
+   "id": 33,
+   "cat": "adj-gender",
+   "domain": "school",
+   "context": "La classe prépare la",
+   "intended": "seconde",
+   "wrong": "second"
+  },
+  {
+   "id": 34,
+   "cat": "adj-gender",
+   "domain": "school",
+   "context": "Le désert est une",
+   "intended": "immense",
+   "wrong": null
+  },
+  {
+   "id": 35,
+   "cat": "post-adj",
+   "domain": "conv",
+   "context": "Pour la fête, j'ai mis des chaussures",
+   "intended": "noires",
+   "wrong": "noir"
+  },
+  {
+   "id": 36,
+   "cat": "post-adj",
+   "domain": "conv",
+   "context": "Ma sœur a les cheveux",
+   "intended": "longs",
+   "wrong": "long"
+  },
+  {
+   "id": 37,
+   "cat": "post-adj",
+   "domain": "conv",
+   "context": "Inès porte une robe",
+   "intended": "bleue",
+   "wrong": "bleu"
+  },
+  {
+   "id": 38,
+   "cat": "post-adj",
+   "domain": "conv",
+   "context": "Ce sont des amies",
+   "intended": "gentilles",
+   "wrong": "gentil"
+  },
+  {
+   "id": 39,
+   "cat": "post-adj",
+   "domain": "conv",
+   "context": "Papa a une voiture",
+   "intended": "verte",
+   "wrong": "vert"
+  },
+  {
+   "id": 40,
+   "cat": "post-adj",
+   "domain": "conv",
+   "context": "Mon chat a des yeux",
+   "intended": "bleus",
+   "wrong": "bleu"
+  },
+  {
+   "id": 41,
+   "cat": "post-adj",
+   "domain": "conv",
+   "context": "Le soir, on mange une soupe",
+   "intended": "chaude",
+   "wrong": "chaud"
+  },
+  {
+   "id": 42,
+   "cat": "post-adj",
+   "domain": "conv",
+   "context": "Dans ma rue, les maisons",
+   "intended": "blanches",
+   "wrong": "blanc"
+  },
+  {
+   "id": 43,
+   "cat": "post-adj",
+   "domain": "conv",
+   "context": "J'ai cueilli des fleurs",
+   "intended": "jaunes",
+   "wrong": "jaune"
+  },
+  {
+   "id": 44,
+   "cat": "post-adj",
+   "domain": "school",
+   "context": "Le robot explore une planète",
+   "intended": "lointaine",
+   "wrong": "lointain"
+  },
+  {
+   "id": 45,
+   "cat": "post-adj",
+   "domain": "school",
+   "context": "Sur le volcan, on trouve des roches",
+   "intended": "volcaniques",
+   "wrong": "volcanique"
+  },
+  {
+   "id": 46,
+   "cat": "post-adj",
+   "domain": "school",
+   "context": "Dans la savane vivent des animaux",
+   "intended": "sauvages",
+   "wrong": "sauvage"
+  },
+  {
+   "id": 47,
+   "cat": "post-adj",
+   "domain": "school",
+   "context": "Le chevalier traverse une forêt",
+   "intended": "épaisse",
+   "wrong": "épais"
+  },
+  {
+   "id": 48,
+   "cat": "post-adj",
+   "domain": "school",
+   "context": "Les baleines nagent dans les eaux",
+   "intended": "froides",
+   "wrong": "froid"
+  },
+  {
+   "id": 49,
+   "cat": "post-adj",
+   "domain": "school",
+   "context": "Ces sommets sont des montagnes",
+   "intended": "hautes",
+   "wrong": "haut"
+  },
+  {
+   "id": 50,
+   "cat": "post-adj",
+   "domain": "school",
+   "context": "Le désert est une région",
+   "intended": "sèche",
+   "wrong": "sec"
+  },
+  {
+   "id": 51,
+   "cat": "post-adj",
+   "domain": "school",
+   "context": "Au printemps, les plantes",
+   "intended": "vertes",
+   "wrong": "vert"
+  },
+  {
+   "id": 52,
+   "cat": "subj-verb",
+   "domain": "conv",
+   "context": "À la cantine, ils",
+   "intended": "mangent",
+   "wrong": "mange"
+  },
+  {
+   "id": 53,
+   "cat": "subj-verb",
+   "domain": "conv",
+   "context": "Dans la cour, elles",
+   "intended": "jouent",
+   "wrong": "joue"
+  },
+  {
+   "id": 54,
+   "cat": "subj-verb",
+   "domain": "conv",
+   "context": "Le soir, tu",
+   "intended": "manges",
+   "wrong": "mange"
+  },
+  {
+   "id": 55,
+   "cat": "subj-verb",
+   "domain": "conv",
+   "context": "Pour la fête, nous",
+   "intended": "chantons",
+   "wrong": "chante"
+  },
+  {
+   "id": 56,
+   "cat": "subj-verb",
+   "domain": "conv",
+   "context": "Demain, vous",
+   "intended": "chantez",
+   "wrong": "chanter"
+  },
+  {
+   "id": 57,
+   "cat": "subj-verb",
+   "domain": "conv",
+   "context": "Après le repas, je",
+   "intended": "veux",
+   "wrong": "veut"
+  },
+  {
+   "id": 58,
+   "cat": "subj-verb",
+   "domain": "conv",
+   "context": "Le mercredi, ils",
+   "intended": "font",
+   "wrong": "fait"
+  },
+  {
+   "id": 59,
+   "cat": "subj-verb",
+   "domain": "conv",
+   "context": "Au parc, on",
+   "intended": "joue",
+   "wrong": "jouent"
+  },
+  {
+   "id": 60,
+   "cat": "subj-verb",
+   "domain": "conv",
+   "context": "Pendant le spectacle, elles",
+   "intended": "dansent",
+   "wrong": "danse"
+  },
+  {
+   "id": 61,
+   "cat": "subj-verb",
+   "domain": "school",
+   "context": "Pendant la dictée, ils",
+   "intended": "écrivent",
+   "wrong": "écrit"
+  },
+  {
+   "id": 62,
+   "cat": "subj-verb",
+   "domain": "school",
+   "context": "Chaque matin, nous",
+   "intended": "lisons",
+   "wrong": "lis"
+  },
+  {
+   "id": 63,
+   "cat": "subj-verb",
+   "domain": "school",
+   "context": "Quand la cloche sonne, ils",
+   "intended": "finissent",
+   "wrong": "finit"
+  },
+  {
+   "id": 64,
+   "cat": "subj-verb",
+   "domain": "school",
+   "context": "En arts plastiques, vous",
+   "intended": "dessinez",
+   "wrong": "dessiner"
+  },
+  {
+   "id": 65,
+   "cat": "subj-verb",
+   "domain": "school",
+   "context": "Dans l'océan, elles",
+   "intended": "vivent",
+   "wrong": "vit"
+  },
+  {
+   "id": 66,
+   "cat": "subj-verb",
+   "domain": "school",
+   "context": "Sur ton cahier, tu",
+   "intended": "écris",
+   "wrong": "écrit"
+  },
+  {
+   "id": 67,
+   "cat": "subj-verb",
+   "domain": "school",
+   "context": "Avant la récréation, je",
+   "intended": "finis",
+   "wrong": "finit"
+  },
+  {
+   "id": 68,
+   "cat": "subj-verb",
+   "domain": "school",
+   "context": "Avec une loupe, ils",
+   "intended": "peuvent",
+   "wrong": "peut"
+  },
+  {
+   "id": 69,
+   "cat": "noun-subj",
+   "domain": "conv",
+   "context": "À midi, les enfants",
+   "intended": "mangent",
+   "wrong": "mange"
+  },
+  {
+   "id": 70,
+   "cat": "noun-subj",
+   "domain": "conv",
+   "context": "Le matin, mes parents",
+   "intended": "travaillent",
+   "wrong": "travaille"
+  },
+  {
+   "id": 71,
+   "cat": "noun-subj",
+   "domain": "conv",
+   "context": "Sur le canapé, les chats",
+   "intended": "dorment",
+   "wrong": "dort"
+  },
+  {
+   "id": 72,
+   "cat": "noun-subj",
+   "domain": "conv",
+   "context": "La nuit, le chien",
+   "intended": "aboie",
+   "wrong": "aboient"
+  },
+  {
+   "id": 73,
+   "cat": "noun-subj",
+   "domain": "conv",
+   "context": "Ce soir, mes copains",
+   "intended": "arrivent",
+   "wrong": "arrive"
+  },
+  {
+   "id": 74,
+   "cat": "noun-subj",
+   "domain": "conv",
+   "context": "Dans la chorale, les filles",
+   "intended": "chantent",
+   "wrong": "chante"
+  },
+  {
+   "id": 75,
+   "cat": "noun-subj",
+   "domain": "conv",
+   "context": "Dans son lit, le bébé",
+   "intended": "pleure",
+   "wrong": "pleurent"
+  },
+  {
+   "id": 76,
+   "cat": "noun-subj",
+   "domain": "conv",
+   "context": "Demain, les voisins",
+   "intended": "partent",
+   "wrong": "part"
+  },
+  {
+   "id": 77,
+   "cat": "noun-subj",
+   "domain": "school",
+   "context": "Dans la ruche, les abeilles",
+   "intended": "fabriquent",
+   "wrong": "fabrique"
+  },
+  {
+   "id": 78,
+   "cat": "noun-subj",
+   "domain": "school",
+   "context": "Pendant une éruption, les volcans",
+   "intended": "crachent",
+   "wrong": "crache"
+  },
+  {
+   "id": 79,
+   "cat": "noun-subj",
+   "domain": "school",
+   "context": "Au soleil, la plante",
+   "intended": "pousse",
+   "wrong": "poussent"
+  },
+  {
+   "id": 80,
+   "cat": "noun-subj",
+   "domain": "school",
+   "context": "En silence, les élèves",
+   "intended": "écoutent",
+   "wrong": "écoute"
+  },
+  {
+   "id": 81,
+   "cat": "noun-subj",
+   "domain": "school",
+   "context": "En automne, les oiseaux",
+   "intended": "volent",
+   "wrong": "vole"
+  },
+  {
+   "id": 82,
+   "cat": "noun-subj",
+   "domain": "school",
+   "context": "Vers la mer, les fleuves",
+   "intended": "coulent",
+   "wrong": "coule"
+  },
+  {
+   "id": 83,
+   "cat": "noun-subj",
+   "domain": "school",
+   "context": "Autour du soleil, notre planète",
+   "intended": "tourne",
+   "wrong": "tournent"
+  },
+  {
+   "id": 84,
+   "cat": "noun-subj",
+   "domain": "school",
+   "context": "La nuit, les loups",
+   "intended": "chassent",
+   "wrong": "chasse"
+  },
+  {
+   "id": 85,
+   "cat": "noun-subj",
+   "domain": "school",
+   "context": "Autour du soleil, les planètes",
+   "intended": "tournent",
+   "wrong": "tourne"
+  },
+  {
+   "id": 86,
+   "cat": "etre-part",
+   "domain": "conv",
+   "context": "Ce matin, elle est",
+   "intended": "allée",
+   "wrong": "allé"
+  },
+  {
+   "id": 87,
+   "cat": "etre-part",
+   "domain": "conv",
+   "context": "Mes cousins sont",
+   "intended": "partis",
+   "wrong": "parti"
+  },
+  {
+   "id": 88,
+   "cat": "etre-part",
+   "domain": "conv",
+   "context": "Après le match, elles sont",
+   "intended": "contentes",
+   "wrong": "content"
+  },
+  {
+   "id": 89,
+   "cat": "etre-part",
+   "domain": "conv",
+   "context": "Après la course, elle est",
+   "intended": "fatiguée",
+   "wrong": "fatigué"
+  },
+  {
+   "id": 90,
+   "cat": "etre-part",
+   "domain": "conv",
+   "context": "Enfin, nous sommes",
+   "intended": "arrivés",
+   "wrong": "arrivé"
+  },
+  {
+   "id": 91,
+   "cat": "etre-part",
+   "domain": "conv",
+   "context": "Dans la cour, Chloé est",
+   "intended": "tombée",
+   "wrong": "tombé"
+  },
+  {
+   "id": 92,
+   "cat": "etre-part",
+   "domain": "conv",
+   "context": "Hier, ils sont",
+   "intended": "venus",
+   "wrong": "venu"
+  },
+  {
+   "id": 93,
+   "cat": "etre-part",
+   "domain": "conv",
+   "context": "Ce soir, la porte est",
+   "intended": "fermée",
+   "wrong": "fermé"
+  },
+  {
+   "id": 94,
+   "cat": "etre-part",
+   "domain": "conv",
+   "context": "Mes sœurs sont",
+   "intended": "parties",
+   "wrong": "parti"
+  },
+  {
+   "id": 95,
+   "cat": "etre-part",
+   "domain": "school",
+   "context": "Pendant la guerre, la ville est",
+   "intended": "détruite",
+   "wrong": "détruit"
+  },
+  {
+   "id": 96,
+   "cat": "etre-part",
+   "domain": "school",
+   "context": "Après l'orage, les récoltes sont",
+   "intended": "abîmées",
+   "wrong": "abîmé"
+  },
+  {
+   "id": 97,
+   "cat": "etre-part",
+   "domain": "school",
+   "context": "La princesse est",
+   "intended": "née",
+   "wrong": "né"
+  },
+  {
+   "id": 98,
+   "cat": "etre-part",
+   "domain": "school",
+   "context": "Les pyramides sont",
+   "intended": "construites",
+   "wrong": "construit"
+  },
+  {
+   "id": 99,
+   "cat": "etre-part",
+   "domain": "school",
+   "context": "Dans le conte, la reine est",
+   "intended": "morte",
+   "wrong": "mort"
+  },
+  {
+   "id": 100,
+   "cat": "etre-part",
+   "domain": "school",
+   "context": "Après la bataille, les soldats sont",
+   "intended": "rentrés",
+   "wrong": "rentré"
+  },
+  {
+   "id": 101,
+   "cat": "etre-part",
+   "domain": "school",
+   "context": "Cette lettre est",
+   "intended": "écrite",
+   "wrong": "écrit"
+  },
+  {
+   "id": 102,
+   "cat": "etre-part",
+   "domain": "school",
+   "context": "Au printemps, les graines sont",
+   "intended": "plantées",
+   "wrong": "planté"
+  },
+  {
+   "id": 103,
+   "cat": "avoir-ppas",
+   "domain": "conv",
+   "context": "À midi, il a",
+   "intended": "mangé",
+   "wrong": "manger"
+  },
+  {
+   "id": 104,
+   "cat": "avoir-ppas",
+   "domain": "conv",
+   "context": "Hier, j'ai",
+   "intended": "joué",
+   "wrong": "jouer"
+  },
+  {
+   "id": 105,
+   "cat": "avoir-ppas",
+   "domain": "conv",
+   "context": "Ce soir, elle a",
+   "intended": "regardé",
+   "wrong": "regarder"
+  },
+  {
+   "id": 106,
+   "cat": "avoir-ppas",
+   "domain": "conv",
+   "context": "Au foot, nous avons",
+   "intended": "gagné",
+   "wrong": "gagner"
+  },
+  {
+   "id": 107,
+   "cat": "avoir-ppas",
+   "domain": "conv",
+   "context": "Est-ce que tu as",
+   "intended": "fini",
+   "wrong": "finir"
+  },
+  {
+   "id": 108,
+   "cat": "avoir-ppas",
+   "domain": "conv",
+   "context": "Dans le grenier, ils ont",
+   "intended": "trouvé",
+   "wrong": "trouver"
+  },
+  {
+   "id": 109,
+   "cat": "avoir-ppas",
+   "domain": "conv",
+   "context": "À la fête, on a",
+   "intended": "dansé",
+   "wrong": "danser"
+  },
+  {
+   "id": 110,
+   "cat": "avoir-ppas",
+   "domain": "conv",
+   "context": "Ce matin, j'ai",
+   "intended": "oublié",
+   "wrong": "oublier"
+  },
+  {
+   "id": 111,
+   "cat": "avoir-ppas",
+   "domain": "conv",
+   "context": "Avec la maîtresse, vous avez",
+   "intended": "parlé",
+   "wrong": "parler"
+  },
+  {
+   "id": 112,
+   "cat": "avoir-ppas",
+   "domain": "school",
+   "context": "Il y a longtemps, les soldats romains ont",
+   "intended": "construit",
+   "wrong": "construire"
+  },
+  {
+   "id": 113,
+   "cat": "avoir-ppas",
+   "domain": "school",
+   "context": "Le navigateur a",
+   "intended": "traversé",
+   "wrong": "traverser"
+  },
+  {
+   "id": 114,
+   "cat": "avoir-ppas",
+   "domain": "school",
+   "context": "Avec la loupe, les élèves ont",
+   "intended": "observé",
+   "wrong": "observer"
+  },
+  {
+   "id": 115,
+   "cat": "avoir-ppas",
+   "domain": "school",
+   "context": "Au tableau, la maîtresse a",
+   "intended": "expliqué",
+   "wrong": "expliquer"
+  },
+  {
+   "id": 116,
+   "cat": "avoir-ppas",
+   "domain": "school",
+   "context": "Pendant l'éruption, le volcan a",
+   "intended": "détruit",
+   "wrong": "détruire"
+  },
+  {
+   "id": 117,
+   "cat": "avoir-ppas",
+   "domain": "school",
+   "context": "Avec la règle, nous avons",
+   "intended": "mesuré",
+   "wrong": "mesurer"
+  },
+  {
+   "id": 118,
+   "cat": "avoir-ppas",
+   "domain": "school",
+   "context": "Les savants ont",
+   "intended": "découvert",
+   "wrong": "découvrir"
+  },
+  {
+   "id": 119,
+   "cat": "avoir-ppas",
+   "domain": "school",
+   "context": "Ce jour-là, le roi a",
+   "intended": "signé",
+   "wrong": "signer"
+  },
+  {
+   "id": 120,
+   "cat": "prep-inf",
+   "domain": "conv",
+   "context": "Je vais à la piscine pour",
+   "intended": "nager",
+   "wrong": "nagé"
+  },
+  {
+   "id": 121,
+   "cat": "prep-inf",
+   "domain": "conv",
+   "context": "Venez, il est l'heure de",
+   "intended": "manger",
+   "wrong": "mangé"
+  },
+  {
+   "id": 122,
+   "cat": "prep-inf",
+   "domain": "conv",
+   "context": "Elle est partie sans",
+   "intended": "parler",
+   "wrong": "parlé"
+  },
+  {
+   "id": 123,
+   "cat": "prep-inf",
+   "domain": "conv",
+   "context": "Ce soir, j'ai envie de",
+   "intended": "jouer",
+   "wrong": "joué"
+  },
+  {
+   "id": 124,
+   "cat": "prep-inf",
+   "domain": "conv",
+   "context": "Ce jeu est facile à",
+   "intended": "trouver",
+   "wrong": "trouvé"
+  },
+  {
+   "id": 125,
+   "cat": "prep-inf",
+   "domain": "conv",
+   "context": "On a fini de",
+   "intended": "ranger",
+   "wrong": "rangé"
+  },
+  {
+   "id": 126,
+   "cat": "prep-inf",
+   "domain": "conv",
+   "context": "Mon frère commence à",
+   "intended": "chanter",
+   "wrong": "chanté"
+  },
+  {
+   "id": 127,
+   "cat": "prep-inf",
+   "domain": "conv",
+   "context": "On s'entraîne pour",
+   "intended": "gagner",
+   "wrong": "gagné"
+  },
+  {
+   "id": 128,
+   "cat": "prep-inf",
+   "domain": "conv",
+   "context": "Le bébé essaie de",
+   "intended": "marcher",
+   "wrong": "marché"
+  },
+  {
+   "id": 129,
+   "cat": "prep-inf",
+   "domain": "school",
+   "context": "Il faut de l'eau pour",
+   "intended": "arroser",
+   "wrong": "arrosé"
+  },
+  {
+   "id": 130,
+   "cat": "prep-inf",
+   "domain": "school",
+   "context": "Les élèves apprennent à",
+   "intended": "compter",
+   "wrong": "compté"
+  },
+  {
+   "id": 131,
+   "cat": "prep-inf",
+   "domain": "school",
+   "context": "Nous cherchons à",
+   "intended": "comprendre",
+   "wrong": "compris"
+  },
+  {
+   "id": 132,
+   "cat": "prep-inf",
+   "domain": "school",
+   "context": "Le chevalier part pour",
+   "intended": "combattre",
+   "wrong": "combattu"
+  },
+  {
+   "id": 133,
+   "cat": "prep-inf",
+   "domain": "school",
+   "context": "On utilise une loupe pour",
+   "intended": "observer",
+   "wrong": "observé"
+  },
+  {
+   "id": 134,
+   "cat": "prep-inf",
+   "domain": "school",
+   "context": "Les castors servent à",
+   "intended": "construire",
+   "wrong": "construit"
+  },
+  {
+   "id": 135,
+   "cat": "prep-inf",
+   "domain": "school",
+   "context": "Au musée, il est interdit de",
+   "intended": "toucher",
+   "wrong": "touché"
+  },
+  {
+   "id": 136,
+   "cat": "prep-inf",
+   "domain": "school",
+   "context": "Ne réponds pas sans",
+   "intended": "réfléchir",
+   "wrong": "réfléchi"
+  },
+  {
+   "id": 137,
+   "cat": "modal-inf",
+   "domain": "conv",
+   "context": "Ce soir, je vais",
+   "intended": "manger",
+   "wrong": "mangé"
+  },
+  {
+   "id": 138,
+   "cat": "modal-inf",
+   "domain": "conv",
+   "context": "Samedi, tu peux",
+   "intended": "venir",
+   "wrong": "venu"
+  },
+  {
+   "id": 139,
+   "cat": "modal-inf",
+   "domain": "conv",
+   "context": "Mon petit frère veut",
+   "intended": "jouer",
+   "wrong": "joué"
+  },
+  {
+   "id": 140,
+   "cat": "modal-inf",
+   "domain": "conv",
+   "context": "Il est tard, on doit",
+   "intended": "partir",
+   "wrong": "parti"
+  },
+  {
+   "id": 141,
+   "cat": "modal-inf",
+   "domain": "conv",
+   "context": "Après le dîner, nous allons",
+   "intended": "regarder",
+   "wrong": "regardé"
+  },
+  {
+   "id": 142,
+   "cat": "modal-inf",
+   "domain": "conv",
+   "context": "Ma sœur sait",
+   "intended": "nager",
+   "wrong": "nagé"
+  },
+  {
+   "id": 143,
+   "cat": "modal-inf",
+   "domain": "conv",
+   "context": "Il pleut, vous pouvez",
+   "intended": "entrer",
+   "wrong": "entré"
+  },
+  {
+   "id": 144,
+   "cat": "modal-inf",
+   "domain": "conv",
+   "context": "Avant de sortir, il faut",
+   "intended": "ranger",
+   "wrong": "rangé"
+  },
+  {
+   "id": 145,
+   "cat": "modal-inf",
+   "domain": "conv",
+   "context": "Demain, je veux",
+   "intended": "aller",
+   "wrong": "allé"
+  },
+  {
+   "id": 146,
+   "cat": "modal-inf",
+   "domain": "school",
+   "context": "Pendant la leçon, les élèves doivent",
+   "intended": "écouter",
+   "wrong": "écouté"
+  },
+  {
+   "id": 147,
+   "cat": "modal-inf",
+   "domain": "school",
+   "context": "Avec un microscope, on peut",
+   "intended": "observer",
+   "wrong": "observé"
+  },
+  {
+   "id": 148,
+   "cat": "modal-inf",
+   "domain": "school",
+   "context": "Pour la planète, il faut",
+   "intended": "protéger",
+   "wrong": "protégé"
+  },
+  {
+   "id": 149,
+   "cat": "modal-inf",
+   "domain": "school",
+   "context": "Dans cet exercice, nous devons",
+   "intended": "mesurer",
+   "wrong": "mesuré"
+  },
+  {
+   "id": 150,
+   "cat": "modal-inf",
+   "domain": "school",
+   "context": "Sans lumière, les plantes ne peuvent pas",
+   "intended": "pousser",
+   "wrong": "poussé"
+  },
+  {
+   "id": 151,
+   "cat": "modal-inf",
+   "domain": "school",
+   "context": "Pour la fête, tu vas",
+   "intended": "dessiner",
+   "wrong": "dessiné"
+  },
+  {
+   "id": 152,
+   "cat": "modal-inf",
+   "domain": "school",
+   "context": "Les explorateurs veulent",
+   "intended": "découvrir",
+   "wrong": "découvert"
+  },
+  {
+   "id": 153,
+   "cat": "modal-inf",
+   "domain": "school",
+   "context": "Pour moins polluer, il faut",
+   "intended": "recycler",
+   "wrong": "recyclé"
+  },
+  {
+   "id": 154,
+   "cat": "fam-a",
+   "domain": "conv",
+   "context": "Mon frère",
+   "intended": "a",
+   "wrong": "à"
+  },
+  {
+   "id": 155,
+   "cat": "fam-a",
+   "domain": "conv",
+   "context": "Ce matin, elle",
+   "intended": "a",
+   "wrong": "à"
+  },
+  {
+   "id": 156,
+   "cat": "fam-a",
+   "domain": "conv",
+   "context": "Cet après-midi, on va",
+   "intended": "à",
+   "wrong": "a"
+  },
+  {
+   "id": 157,
+   "cat": "fam-a",
+   "domain": "conv",
+   "context": "Léa",
+   "intended": "a",
+   "wrong": "à"
+  },
+  {
+   "id": 158,
+   "cat": "fam-a",
+   "domain": "conv",
+   "context": "Le soir, je pense",
+   "intended": "à",
+   "wrong": "a"
+  },
+  {
+   "id": 159,
+   "cat": "fam-a",
+   "domain": "conv",
+   "context": "Dans mon sac, il y",
+   "intended": "a",
+   "wrong": "à"
+  },
+  {
+   "id": 160,
+   "cat": "fam-a",
+   "domain": "conv",
+   "context": "Hier, on",
+   "intended": "a",
+   "wrong": "à"
+  },
+  {
+   "id": 161,
+   "cat": "fam-a",
+   "domain": "conv",
+   "context": "Le mercredi, il joue",
+   "intended": "à",
+   "wrong": "a"
+  },
+  {
+   "id": 162,
+   "cat": "fam-a",
+   "domain": "conv",
+   "context": "Au téléphone, elle parle",
+   "intended": "à",
+   "wrong": "a"
+  },
+  {
+   "id": 163,
+   "cat": "fam-a",
+   "domain": "school",
+   "context": "Le volcan se trouve",
+   "intended": "à",
+   "wrong": "a"
+  },
+  {
+   "id": 164,
+   "cat": "fam-a",
+   "domain": "school",
+   "context": "Notre planète",
+   "intended": "a",
+   "wrong": "à"
+  },
+  {
+   "id": 165,
+   "cat": "fam-a",
+   "domain": "school",
+   "context": "Dans le château, le roi",
+   "intended": "a",
+   "wrong": "à"
+  },
+  {
+   "id": 166,
+   "cat": "fam-a",
+   "domain": "school",
+   "context": "Les marchands vont",
+   "intended": "à",
+   "wrong": "a"
+  },
+  {
+   "id": 167,
+   "cat": "fam-a",
+   "domain": "school",
+   "context": "Le chevalier",
+   "intended": "a",
+   "wrong": "à"
+  },
+  {
+   "id": 168,
+   "cat": "fam-a",
+   "domain": "school",
+   "context": "La princesse habite",
+   "intended": "à",
+   "wrong": "a"
+  },
+  {
+   "id": 169,
+   "cat": "fam-a",
+   "domain": "school",
+   "context": "Pour la sortie, nous allons",
+   "intended": "à",
+   "wrong": "a"
+  },
+  {
+   "id": 170,
+   "cat": "fam-a",
+   "domain": "school",
+   "context": "L'abeille",
+   "intended": "a",
+   "wrong": "à"
+  },
+  {
+   "id": 171,
+   "cat": "fam-et",
+   "domain": "conv",
+   "context": "Il",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 172,
+   "cat": "fam-et",
+   "domain": "conv",
+   "context": "Aujourd'hui, elle",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 173,
+   "cat": "fam-et",
+   "domain": "conv",
+   "context": "Regarde, c'",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 174,
+   "cat": "fam-et",
+   "domain": "conv",
+   "context": "Tom",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 175,
+   "cat": "fam-et",
+   "domain": "conv",
+   "context": "Mon frère",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 176,
+   "cat": "fam-et",
+   "domain": "conv",
+   "context": "Pour le goûter, du pain",
+   "intended": "et",
+   "wrong": "est"
+  },
+  {
+   "id": 177,
+   "cat": "fam-et",
+   "domain": "conv",
+   "context": "Au marché, des pommes",
+   "intended": "et",
+   "wrong": "est"
+  },
+  {
+   "id": 178,
+   "cat": "fam-et",
+   "domain": "conv",
+   "context": "Après le sport, il a faim",
+   "intended": "et",
+   "wrong": "est"
+  },
+  {
+   "id": 179,
+   "cat": "fam-et",
+   "domain": "conv",
+   "context": "Ce gâteau",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 180,
+   "cat": "fam-et",
+   "domain": "school",
+   "context": "Notre planète",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 181,
+   "cat": "fam-et",
+   "domain": "school",
+   "context": "Le soleil",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 182,
+   "cat": "fam-et",
+   "domain": "school",
+   "context": "Un volcan",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 183,
+   "cat": "fam-et",
+   "domain": "school",
+   "context": "En été, il fait chaud",
+   "intended": "et",
+   "wrong": "est"
+  },
+  {
+   "id": 184,
+   "cat": "fam-et",
+   "domain": "school",
+   "context": "L'eau",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 185,
+   "cat": "fam-et",
+   "domain": "school",
+   "context": "Le désert",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 186,
+   "cat": "fam-et",
+   "domain": "school",
+   "context": "Dans le château vivent des rois",
+   "intended": "et",
+   "wrong": "est"
+  },
+  {
+   "id": 187,
+   "cat": "fam-et",
+   "domain": "school",
+   "context": "La baleine",
+   "intended": "est",
+   "wrong": "et"
+  },
+  {
+   "id": 188,
+   "cat": "fam-son",
+   "domain": "conv",
+   "context": "Mes amis",
+   "intended": "sont",
+   "wrong": "son"
+  },
+  {
+   "id": 189,
+   "cat": "fam-son",
+   "domain": "conv",
+   "context": "Ce soir, elles",
+   "intended": "sont",
+   "wrong": "son"
+  },
+  {
+   "id": 190,
+   "cat": "fam-son",
+   "domain": "conv",
+   "context": "Avant de dormir, il range",
+   "intended": "son",
+   "wrong": "sont"
+  },
+  {
+   "id": 191,
+   "cat": "fam-son",
+   "domain": "conv",
+   "context": "Pour l'école, elle prend",
+   "intended": "son",
+   "wrong": "sont"
+  },
+  {
+   "id": 192,
+   "cat": "fam-son",
+   "domain": "conv",
+   "context": "Ils",
+   "intended": "sont",
+   "wrong": "son"
+  },
+  {
+   "id": 193,
+   "cat": "fam-son",
+   "domain": "conv",
+   "context": "Dans le bus, Tom a perdu",
+   "intended": "son",
+   "wrong": "sont"
+  },
+  {
+   "id": 194,
+   "cat": "fam-son",
+   "domain": "conv",
+   "context": "Aujourd'hui, ils ne",
+   "intended": "sont",
+   "wrong": "son"
+  },
+  {
+   "id": 195,
+   "cat": "fam-son",
+   "domain": "conv",
+   "context": "Sur le canapé, les chats",
+   "intended": "sont",
+   "wrong": "son"
+  },
+  {
+   "id": 196,
+   "cat": "fam-son",
+   "domain": "conv",
+   "context": "Ma sœur aime",
+   "intended": "son",
+   "wrong": "sont"
+  },
+  {
+   "id": 197,
+   "cat": "fam-son",
+   "domain": "school",
+   "context": "Les volcans",
+   "intended": "sont",
+   "wrong": "son"
+  },
+  {
+   "id": 198,
+   "cat": "fam-son",
+   "domain": "school",
+   "context": "Pour la fête, le roi porte",
+   "intended": "son",
+   "wrong": "sont"
+  },
+  {
+   "id": 199,
+   "cat": "fam-son",
+   "domain": "school",
+   "context": "Les planètes",
+   "intended": "sont",
+   "wrong": "son"
+  },
+  {
+   "id": 200,
+   "cat": "fam-son",
+   "domain": "school",
+   "context": "Au printemps, l'oiseau construit",
+   "intended": "son",
+   "wrong": "sont"
+  },
+  {
+   "id": 201,
+   "cat": "fam-son",
+   "domain": "school",
+   "context": "Les dinosaures",
+   "intended": "sont",
+   "wrong": "son"
+  },
+  {
+   "id": 202,
+   "cat": "fam-son",
+   "domain": "school",
+   "context": "Chaque élève ouvre",
+   "intended": "son",
+   "wrong": "sont"
+  },
+  {
+   "id": 203,
+   "cat": "fam-son",
+   "domain": "school",
+   "context": "Ces animaux",
+   "intended": "sont",
+   "wrong": "son"
+  },
+  {
+   "id": 204,
+   "cat": "fam-son",
+   "domain": "school",
+   "context": "Avant la bataille, le chevalier prend",
+   "intended": "son",
+   "wrong": "sont"
+  },
+  {
+   "id": 205,
+   "cat": "fam-on",
+   "domain": "conv",
+   "context": "Ils",
+   "intended": "ont",
+   "wrong": "on"
+  },
+  {
+   "id": 206,
+   "cat": "fam-on",
+   "domain": "conv",
+   "context": "Hier, elles",
+   "intended": "ont",
+   "wrong": "on"
+  },
+  {
+   "id": 207,
+   "cat": "fam-on",
+   "domain": "conv",
+   "context": "Mes parents",
+   "intended": "ont",
+   "wrong": "on"
+  },
+  {
+   "id": 208,
+   "cat": "fam-on",
+   "domain": "conv",
+   "context": "Demain,",
+   "intended": "on",
+   "wrong": "ont"
+  },
+  {
+   "id": 209,
+   "cat": "fam-on",
+   "domain": "conv",
+   "context": "Les enfants",
+   "intended": "ont",
+   "wrong": "on"
+  },
+  {
+   "id": 210,
+   "cat": "fam-on",
+   "domain": "conv",
+   "context": "Après l'école,",
+   "intended": "on",
+   "wrong": "ont"
+  },
+  {
+   "id": 211,
+   "cat": "fam-on",
+   "domain": "conv",
+   "context": "Pour l'instant, ils n'",
+   "intended": "ont",
+   "wrong": "on"
+  },
+  {
+   "id": 212,
+   "cat": "fam-on",
+   "domain": "conv",
+   "context": "Est-ce qu'",
+   "intended": "on",
+   "wrong": "ont"
+  },
+  {
+   "id": 213,
+   "cat": "fam-on",
+   "domain": "conv",
+   "context": "Le soir, quand",
+   "intended": "on",
+   "wrong": "ont"
+  },
+  {
+   "id": 214,
+   "cat": "fam-on",
+   "domain": "school",
+   "context": "Les soldats romains",
+   "intended": "ont",
+   "wrong": "on"
+  },
+  {
+   "id": 215,
+   "cat": "fam-on",
+   "domain": "school",
+   "context": "Les abeilles",
+   "intended": "ont",
+   "wrong": "on"
+  },
+  {
+   "id": 216,
+   "cat": "fam-on",
+   "domain": "school",
+   "context": "Autrefois,",
+   "intended": "on",
+   "wrong": "ont"
+  },
+  {
+   "id": 217,
+   "cat": "fam-on",
+   "domain": "school",
+   "context": "Les volcans",
+   "intended": "ont",
+   "wrong": "on"
+  },
+  {
+   "id": 218,
+   "cat": "fam-on",
+   "domain": "school",
+   "context": "Les élèves",
+   "intended": "ont",
+   "wrong": "on"
+  },
+  {
+   "id": 219,
+   "cat": "fam-on",
+   "domain": "school",
+   "context": "En classe,",
+   "intended": "on",
+   "wrong": "ont"
+  },
+  {
+   "id": 220,
+   "cat": "fam-on",
+   "domain": "school",
+   "context": "Les savants",
+   "intended": "ont",
+   "wrong": "on"
+  },
+  {
+   "id": 221,
+   "cat": "fam-on",
+   "domain": "school",
+   "context": "Avec une loupe,",
+   "intended": "on",
+   "wrong": "ont"
+  },
+  {
+   "id": 222,
+   "cat": "fam-ces",
+   "domain": "conv",
+   "context": "Pour l'interro, il",
+   "intended": "sait",
+   "wrong": "ses"
+  },
+  {
+   "id": 223,
+   "cat": "fam-ces",
+   "domain": "conv",
+   "context": "Elle",
+   "intended": "sait",
+   "wrong": "ces"
+  },
+  {
+   "id": 224,
+   "cat": "fam-ces",
+   "domain": "conv",
+   "context": "Avant de partir, Tom range",
+   "intended": "ses",
+   "wrong": "ces"
+  },
+  {
+   "id": 225,
+   "cat": "fam-ces",
+   "domain": "conv",
+   "context": "Regarde",
+   "intended": "ces",
+   "wrong": "ses"
+  },
+  {
+   "id": 226,
+   "cat": "fam-ces",
+   "domain": "conv",
+   "context": "On ne",
+   "intended": "sait",
+   "wrong": "ces"
+  },
+  {
+   "id": 227,
+   "cat": "fam-ces",
+   "domain": "school",
+   "context": "Le roi part avec",
+   "intended": "ses",
+   "wrong": "ces"
+  },
+  {
+   "id": 228,
+   "cat": "fam-ces",
+   "domain": "school",
+   "context": "J'aime beaucoup",
+   "intended": "ces",
+   "wrong": "ses"
+  },
+  {
+   "id": 229,
+   "cat": "fam-ces",
+   "domain": "school",
+   "context": "Le savant ne",
+   "intended": "sait",
+   "wrong": "ses"
+  },
+  {
+   "id": 230,
+   "cat": "fam-ces",
+   "domain": "school",
+   "context": "Le chevalier prend",
+   "intended": "ses",
+   "wrong": "ces"
+  },
+  {
+   "id": 231,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Les pommes, je les",
+   "intended": "mange",
+   "wrong": "mangent"
+  },
+  {
+   "id": 232,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Tes bonbons, tu les",
+   "intended": "manges",
+   "wrong": "mangent"
+  },
+  {
+   "id": 233,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Ton vélo, je le",
+   "intended": "vois",
+   "wrong": "voit"
+  },
+  {
+   "id": 234,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Depuis sa fenêtre, il nous",
+   "intended": "voit",
+   "wrong": "voient"
+  },
+  {
+   "id": 235,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Chaque matin, il vous",
+   "intended": "parle",
+   "wrong": "parlez"
+  },
+  {
+   "id": 236,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Ses poupées, elle les",
+   "intended": "regarde",
+   "wrong": "regardent"
+  },
+  {
+   "id": 237,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Nos voisins, nous les",
+   "intended": "aimons",
+   "wrong": "aiment"
+  },
+  {
+   "id": 238,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Les étoiles, on les",
+   "intended": "voit",
+   "wrong": "voient"
+  },
+  {
+   "id": 239,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Que mange-t-il ? Mange-t-il",
+   "intended": "une",
+   "wrong": null
+  },
+  {
+   "id": 240,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Il viendra, dit-il",
+   "intended": "que",
+   "wrong": null
+  },
+  {
+   "id": 241,
+   "cat": "precision",
+   "domain": "school",
+   "context": "Regarde le",
+   "intended": "maison",
+   "wrong": "mais"
+  },
+  {
+   "id": 242,
+   "cat": "precision",
+   "domain": "school",
+   "context": "Au fond du jardin, il y a un",
+   "intended": "maison",
+   "wrong": null
+  },
+  {
+   "id": 243,
+   "cat": "precision",
+   "domain": "school",
+   "context": "Ces gâteaux, ils les",
+   "intended": "mangent",
+   "wrong": "mange"
+  },
+  {
+   "id": 244,
+   "cat": "precision",
+   "domain": "school",
+   "context": "Ses cahiers, je leur",
+   "intended": "donne",
+   "wrong": "donnent"
+  },
+  {
+   "id": 245,
+   "cat": "precision",
+   "domain": "school",
+   "context": "Avant de manger, elle se",
+   "intended": "lave",
+   "wrong": "lavent"
+  },
+  {
+   "id": 246,
+   "cat": "precision",
+   "domain": "school",
+   "context": "Après le sport, ils se",
+   "intended": "lavent",
+   "wrong": "lave"
+  },
+  {
+   "id": 247,
+   "cat": "precision",
+   "domain": "school",
+   "context": "La réponse, je ne",
+   "intended": "sais",
+   "wrong": "sait"
+  },
+  {
+   "id": 248,
+   "cat": "precision",
+   "domain": "school",
+   "context": "J'ai invité mon",
+   "intended": "amie",
+   "wrong": null
+  },
+  {
+   "id": 249,
+   "cat": "precision",
+   "domain": "school",
+   "context": "Les pommes, il les a",
+   "intended": "mangées",
+   "wrong": null
+  },
+  {
+   "id": 250,
+   "cat": "precision",
+   "domain": "school",
+   "context": "On a préparé un goûter pour les",
+   "intended": "enfants",
+   "wrong": null
+  },
+  {
+   "id": 251,
+   "cat": "precision",
+   "domain": "school",
+   "context": "Ce matin, le maître nous",
+   "intended": "a",
+   "wrong": null
+  },
+  {
+   "id": 252,
+   "cat": "precision",
+   "domain": "school",
+   "context": "C'est le livre qui nous",
+   "intended": "plaît",
+   "wrong": null
+  },
+  {
+   "id": 253,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "Hier, la maîtresse vous",
+   "intended": "a",
+   "wrong": null
+  },
+  {
+   "id": 254,
+   "cat": "precision",
+   "domain": "conv",
+   "context": "À la récré, Léa nous",
+   "intended": "raconte",
+   "wrong": null
+  },
+  {
+   "id": 255,
+   "cat": "precision",
+   "domain": "school",
+   "context": "Mon vélo neuf",
+   "intended": "est",
+   "wrong": null
+  },
+  {
+   "id": 256,
+   "cat": "precision",
+   "domain": "school",
+   "context": "Le chien et le chat",
+   "intended": "sont",
+   "wrong": "son"
+  }
+ ]
+}

@@ -1,0 +1,45 @@
+# Plan 05 voice test text (D20, D25). One item per line: id <TAB> category <TAB> text.
+# Categories: liaison (TODO « The voice does not make French liaisons »), school (school-level sentences,
+# questions and exclamations), homophone (dyslexia-typical homophones), number (numbers and dates),
+# word (isolated words: latency of the word echo).
+# The liaisons expected in each item are listed in tools/voice-lab/liaisons.py.
+L01	liaison	Les amis arrivent ce soir.
+L02	liaison	Il y a un enfant dans la cour.
+L03	liaison	Ils ont fini leurs devoirs.
+L04	liaison	Le train part dans deux heures.
+L05	liaison	C'est mon petit ami.
+L06	liaison	C'est un bon exemple.
+L07	liaison	Nous avons des idées.
+L08	liaison	Mon ami est très gentil.
+L09	liaison	Elle a trois enfants.
+L10	liaison	C'était un grand homme.
+L11	liaison	Les héros sont fatigués.
+L12	liaison	Il a un chat et un chien.
+S01	school	Le chat dort sur le canapé.
+S02	school	Ce matin, je suis allé à l'école à pied.
+S03	school	Est-ce que tu as fini tes devoirs ?
+S04	school	Quelle belle journée !
+S05	school	La maîtresse lit une histoire aux élèves.
+S06	school	Pourquoi le ciel est-il bleu ?
+S07	school	Nous allons à la piscine mercredi après-midi.
+S08	school	Mon frère joue au football avec ses copains.
+S09	school	Il faut bien se laver les mains avant de manger.
+S10	school	J'ai oublié mon cahier à la maison.
+S11	school	Les enfants jouent dans la cour pendant la récréation.
+S12	school	Attention, le sol est glissant !
+S13	school	Qu'est-ce qu'il y a dans ton cartable ?
+S14	school	Ma grand-mère prépare une tarte aux pommes.
+S15	school	Demain, nous irons visiter le musée du château.
+H01	homophone	Il a mangé à la cantine.
+H02	homophone	Ils sont allés voir leurs cousins.
+H03	homophone	On est content, ils ont gagné.
+H04	homophone	Ce chien et ce chat se regardent.
+H05	homophone	Il y a des vers verts dans le verre.
+N01	number	Nous sommes le 10 novembre 2026.
+N02	number	Le livre coûte 15,50 euros.
+N03	number	Il est 8 h 30 et j'ai 9 ans.
+W01	word	maison
+W02	word	école
+W03	word	éléphant
+W04	word	bonjour
+W05	word	pourquoi

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 420" width="880" height="420" role="img" font-family="Segoe UI, Arial, sans-serif">
+<title>Comment Pépite choisit les mots. Tu écris : le chat mai. Trois aides travaillent ensemble : le dictionnaire (les mots qui existent), les statistiques (les mots qui suivent souvent le chat), les sons (mai se dit comme mè). Ensemble, elles donnent la barre de mots, du plus probable au moins probable.</title>
+
+<rect width="880" height="420" rx="18" fill="#FBEBD0"/>
+<rect x="260" y="20" width="360" height="64" rx="12" fill="#fff" stroke="#8A7055" stroke-width="2"/>
+<text x="440" y="63" text-anchor="middle" font-family="Consolas, monospace" font-size="30" fill="#2B1B12">le chat mai|</text>
+<path d="M440 86 v22 M155 108 h570 M155 108 v20 M440 108 v20 M725 108 v20" fill="none" stroke="#5A4636" stroke-width="4"/>
+<rect x="30" y="130" width="250" height="96" rx="14" fill="#fff"/><text x="155" y="170" text-anchor="middle" font-size="25" font-weight="700" fill="#2B1B12">Le dictionnaire</text><text x="155" y="202" text-anchor="middle" font-size="20" fill="#5A4636">les mots qui existent</text><rect x="315" y="130" width="250" height="96" rx="14" fill="#fff"/><text x="440" y="170" text-anchor="middle" font-size="25" font-weight="700" fill="#2B1B12">Les statistiques</text><text x="440" y="202" text-anchor="middle" font-size="20" fill="#5A4636">après « le chat »…</text><rect x="600" y="130" width="250" height="96" rx="14" fill="#fff"/><text x="725" y="170" text-anchor="middle" font-size="25" font-weight="700" fill="#2B1B12">Les sons</text><text x="725" y="202" text-anchor="middle" font-size="20" fill="#5A4636">« mai » se dit « mè »</text>
+<path d="M155 228 v20 M440 228 v20 M725 228 v20 M155 248 h570 M440 248 v22" fill="none" stroke="#5A4636" stroke-width="4"/>
+<path d="M428 262 l12 12 l12 -12" fill="none" stroke="#5A4636" stroke-width="4"/>
+<rect x="150" y="286" width="580" height="112" rx="12" fill="#1F2937"/>
+<rect x="164" y="298" width="176" height="88" rx="10" fill="#2D7DD2"/><text x="252.0" y="322" text-anchor="middle" font-size="16" fill="#fff">F1</text><text x="252.0" y="366" text-anchor="middle" font-size="30" font-weight="700" fill="#fff">mange</text><rect x="352" y="298" width="176" height="88" rx="10" fill="#2D7DD2"/><text x="440.0" y="322" text-anchor="middle" font-size="16" fill="#fff">F2</text><text x="440.0" y="366" text-anchor="middle" font-size="30" font-weight="700" fill="#fff">maigre</text><rect x="540" y="298" width="176" height="88" rx="10" fill="#2E9E5B"/><text x="628.0" y="322" text-anchor="middle" font-size="16" fill="#fff">F3</text><text x="628.0" y="366" text-anchor="middle" font-size="30" font-weight="700" fill="#fff">mêle</text>
+</svg>

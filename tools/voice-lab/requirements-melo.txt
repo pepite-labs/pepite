@@ -1,0 +1,3 @@
+# Plan 05 voice lab, melo venv (Python 3.10). Install torch==2.5.1 / torchaudio==2.5.1 from the PyTorch CPU index first (run_all.ps1 does).
+melotts @ git+https://github.com/myshell-ai/MeloTTS@209145371cff8fc3bd60d7be902ea69cbdb7965a
+psutil==7.2.2

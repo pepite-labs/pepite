@@ -1,0 +1,61 @@
+{
+  "comment": "The prebuilt data pack (owner 2026-11-16): normal builds do not rebuild the word base from the corpora; they put these files into src/Data.Build/out/ and check them with « python -I src/Data.Build/verify_data_pack.py ». Rebuilding them (data.lock.json, corpus/, build_*.py) is the maintainers' path. The « Noms propres » pack has its own edition and lock (pepite-noms/names.lock.json); the pictures and voices have their own fetch scripts.",
+  "pack": {
+    "id": "pepite-data",
+    "version": "2026.11.1",
+    "url": "https://github.com/pepite-labs/pepite/releases/download/data-2026.11/pepite-data-2026.11.1.zip",
+    "url_note": "the asset pepite-data-2026.11.1.zip of the data release data-2026.11 (plan 13): fetched, checked and unpacked by fetch_data_release.py (data-release.lock.json), then checked file by file here",
+    "built_from": "src/Data.Build/data.lock.json (corpus inputs), grammar.lock.json (French.lex); plan corpus-light Phase 2; spelling.sqlite: build_spelling_ref.py (same French.lex pin)",
+    "change_note": "2026.11.1 (publication cleanup, 2026-11-16): the spelling tables moved out of prediction.sqlite (CC BY-SA 4.0) into spelling.sqlite (MPL-2.0, derived from French.lex) with its notices; prediction.sqlite otherwise unchanged (same words and n-gram rows, VACUUMed); prediction-SOURCES.txt header updated."
+  },
+  "files": [
+    {
+      "path": "prediction.sqlite",
+      "sha256": "1ea686f124fbc9b13de52b5b454af750a884a335f16cc52ea0d773a510f42992",
+      "bytes": 156585984,
+      "licence": "CC BY-SA 4.0 (data: Lexique 3.83 word list + n-gram counts; sources in prediction-SOURCES.txt)"
+    },
+    {
+      "path": "prediction-SOURCES.txt",
+      "sha256": "f7d0eba25bee1213b74db366d3437f3346c39d2d37476abd85087c362cf7b1bc",
+      "bytes": 15243,
+      "licence": "the sources and credits of prediction.sqlite (written by corpus/write_sources.py)"
+    },
+    {
+      "path": "spelling.sqlite",
+      "sha256": "0633b9639cd911bba07bd9236a3f1f29b3b0149c67911874ebec39fa56bacda9",
+      "bytes": 143360,
+      "licence": "MPL-2.0 (derived from Grammalecte French.lex v7.7; the spelling indicator reference)"
+    },
+    {
+      "path": "spelling/SOURCE.txt",
+      "sha256": "f3afebe44c0bbd83a8a7480bbd4de7192db54591bd63209bee3893142df158be",
+      "bytes": 1604,
+      "licence": "notice of spelling.sqlite"
+    },
+    {
+      "path": "spelling/MPL-2.0.txt",
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
+      "bytes": 16726,
+      "licence": "MPL-2.0 text"
+    },
+    {
+      "path": "grammar.sqlite",
+      "sha256": "d0c4122a093b98e2280984e83703b6f6be3f2e59b55ad076a209e8af63488301",
+      "bytes": 28131328,
+      "licence": "MPL-2.0 (derived from Grammalecte French.lex v7.7)"
+    },
+    {
+      "path": "grammar/SOURCE.txt",
+      "sha256": "09d04ad8082792aaaf685adc7958086e3bea9b8be20d86bc9b1bf3486f7ed2a4",
+      "bytes": 2131,
+      "licence": "notice of grammar.sqlite"
+    },
+    {
+      "path": "grammar/MPL-2.0.txt",
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
+      "bytes": 16726,
+      "licence": "MPL-2.0 text"
+    }
+  ]
+}

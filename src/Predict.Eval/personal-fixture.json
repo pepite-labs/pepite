@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "remarque": "Plan 10A test fixture: an invented class (first names, a school, a town, two lessons, spelling pairs). Same format as the app's mots.json.",
+  "listes": [
+    {
+      "id": "l-classe",
+      "nom": "Mots de la classe",
+      "active": true,
+      "type": "perso",
+      "mots": [
+        { "w": "Léa" }, { "w": "Tom" }, { "w": "Inès" }, { "w": "Noah" }, { "w": "Chloé" },
+        { "w": "Maël" }, { "w": "Yasmine" }, { "w": "Lucas" }, { "w": "Zoé" }, { "w": "Ilyes" },
+        { "w": "Romane" }, { "w": "Nathan" }, { "w": "Jade" }, { "w": "Adam" }, { "w": "Kenza" },
+        { "w": "Gabriel" }, { "w": "Emma" }, { "w": "Rayan" }, { "w": "Louise" }, { "w": "Sacha" },
+        { "w": "Anaïs" }, { "w": "Bilal" }, { "w": "Clémence" }, { "w": "Éloïse" }, { "w": "Jean-Baptiste" },
+        { "w": "Clairefontaine" }, { "w": "Valbrune-les-Pins" }
+      ]
+    },
+    {
+      "id": "l-volcans",
+      "nom": "Les volcans",
+      "active": true,
+      "type": "lecon",
+      "mots": [
+        { "w": "Vésuve" }, { "w": "Etna" }, { "w": "Pompéi" }, { "w": "magma" }, { "w": "lave" },
+        { "w": "cratère" }, { "w": "éruption" }, { "w": "volcanologue" }, { "w": "stratovolcan" }, { "w": "lapilli" },
+        { "w": "fumerolle" }, { "w": "cheminée" }, { "w": "magmatique" }, { "w": "pyroclastique" }, { "w": "basalte" }
+      ]
+    },
+    {
+      "id": "l-digestion",
+      "nom": "La digestion",
+      "active": true,
+      "type": "lecon",
+      "mots": [
+        { "w": "œsophage" }, { "w": "estomac" }, { "w": "intestin" }, { "w": "salive" }, { "w": "digestion" },
+        { "w": "pancréas" }, { "w": "foie" }, { "w": "nutriments" }, { "w": "molaire" }, { "w": "incisive" },
+        { "w": "canine" }, { "w": "enzyme" }, { "w": "duodénum" }, { "w": "chyme" }, { "w": "villosités" }
+      ]
+    }
+  ],
+  "fautes": [
+    { "ecrit": "pace", "mot": "parce" },
+    { "ecrit": "kan", "mot": "quand" },
+    { "ecrit": "ojourdui", "mot": "aujourd'hui" },
+    { "ecrit": "bocou", "mot": "beaucoup" },
+    { "ecrit": "sest", "mot": "c'est" },
+    { "ecrit": "malgrer", "mot": "malgré" },
+    { "ecrit": "toujour", "mot": "toujours" },
+    { "ecrit": "otre", "mot": "autre" },
+    { "ecrit": "dabor", "mot": "d'abord" },
+    { "ecrit": "kelke", "mot": "quelque" },
+    { "ecrit": "comencer", "mot": "commencer" },
+    { "ecrit": "maintenan", "mot": "maintenant" },
+    { "ecrit": "ecol", "mot": "école" },
+    { "ecrit": "apré", "mot": "après" },
+    { "ecrit": "enfain", "mot": "enfin" },
+    { "ecrit": "peutetre", "mot": "peut-être" },
+    { "ecrit": "kom", "mot": "comme" },
+    { "ecrit": "ossi", "mot": "aussi" },
+    { "ecrit": "pourkoi", "mot": "pourquoi" },
+    { "ecrit": "jamai", "mot": "jamais" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "comment": "Inno Setup, the installer compiler (plan 12, D6). Licence: « use this software for any purpose, including commercial applications » (https://jrsoftware.org/files/is/license.txt); a build tool, never shipped. Pinned by fetch_innosetup.ps1 -Pin (Authenticode checked once, then the SHA-256). expectedSigner: the Authenticode subject the download must carry (checked at -Pin and at every run).",
+  "version": "7.1.1",
+  "url": "https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe",
+  "expectedSigner": "CN=Pyrsys B.V., O=Pyrsys B.V., S=Noord-Holland, C=NL",
+  "sha256": "8a5a6711c3766a6e5fb74f280ba0e3551e719ce94538d901fdbd1f8f9920b3f0",
+  "signer": "CN=Pyrsys B.V., O=Pyrsys B.V., S=Noord-Holland, C=NL",
+  "pinned": "2026-11-15"
+}

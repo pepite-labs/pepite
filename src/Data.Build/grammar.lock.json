@@ -1,0 +1,34 @@
+{
+  "_comment": "Plan 11 (10D-0): the pinned Grammalecte sources read by build_grammar.py. Only French.lex goes into grammar.sqlite (MPL-2.0); the tagset is documentation for the tag decoding; rules.grx and phonet_simil.txt are pinned for later steps (10D-4, 10D-2) and not used yet.",
+  "grammalecte": {
+    "version": "2.3.0",
+    "mirror": "https://github.com/Pofilo/grammalecte",
+    "commit": "08511c222029b3be20bf547563315d10fb48d44b",
+    "archive": {
+      "url": "https://codeload.github.com/Pofilo/grammalecte/tar.gz/08511c222029b3be20bf547563315d10fb48d44b",
+      "sha256": "065affe4063e3940e44f415c0749b295504775728400b84691b8ead26a90a077"
+    },
+    "files": {
+      "lexicons/French.lex": {
+        "sha256": "5938d8180b64e4f5320c358dab64e2eea1298c6c5967b147d5506f0ac4562c4a",
+        "licence": "MPL-2.0",
+        "use": "10D-0"
+      },
+      "lexicons/French.tagset.txt": {
+        "sha256": "9cae2365e4c23538018d5ff47164c5a8a1d93e0a9932f97fd10df5284209520a",
+        "licence": "MPL-2.0 (doc)",
+        "use": "mapping"
+      },
+      "gc_lang/fr/rules.grx": {
+        "sha256": "08e8aaa48e43b2fc9cd860ba0916a4d9aed3aa49e4feffe7d60a09354374e77c",
+        "licence": "GPL-3.0-or-later",
+        "use": "10D-4"
+      },
+      "gc_lang/fr/data/phonet_simil.txt": {
+        "sha256": "4de6b017222ee74218fc0c978b095f7f8e37b66a091bfd67257bfd7532858890",
+        "licence": "GPL-3.0-or-later",
+        "use": "10D-2"
+      }
+    }
+  }
+}

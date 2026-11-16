@@ -1,0 +1,320 @@
+[
+  {
+    "category": "phonetic",
+    "context": "vers l'",
+    "typed": "orizon",
+    "intended": "horizon"
+  },
+  {
+    "category": "phonetic",
+    "context": "la",
+    "typed": "maizon",
+    "intended": "maison"
+  },
+  {
+    "category": "completion",
+    "context": "une",
+    "typed": "sou",
+    "intended": "souris"
+  },
+  {
+    "category": "phonetic",
+    "context": "il fait",
+    "typed": "bo",
+    "intended": "beau"
+  },
+  {
+    "category": "phonetic",
+    "typed": "boku",
+    "intended": "beaucoup"
+  },
+  {
+    "category": "phonetic",
+    "typed": "koi",
+    "intended": "quoi"
+  },
+  {
+    "category": "phonetic",
+    "typed": "kestion",
+    "intended": "question"
+  },
+  {
+    "category": "phonetic",
+    "typed": "jirafe",
+    "intended": "girafe"
+  },
+  {
+    "category": "phonetic",
+    "typed": "chapo",
+    "intended": "chapeau"
+  },
+  {
+    "category": "phonetic",
+    "typed": "foto",
+    "intended": "photo"
+  },
+  {
+    "category": "phonetic",
+    "typed": "elikopter",
+    "intended": "hélicoptère"
+  },
+  {
+    "category": "phonetic",
+    "typed": "ortograf",
+    "intended": "orthographe"
+  },
+  {
+    "category": "phonetic",
+    "typed": "oto",
+    "intended": "auto"
+  },
+  {
+    "category": "phonetic",
+    "typed": "famme",
+    "intended": "femme"
+  },
+  {
+    "category": "phonetic",
+    "typed": "sertin",
+    "intended": "certain"
+  },
+  {
+    "category": "completion",
+    "typed": "enfan",
+    "intended": "enfant"
+  },
+  {
+    "category": "completion",
+    "typed": "ordi",
+    "intended": "ordinateur"
+  },
+  {
+    "category": "completion",
+    "typed": "merc",
+    "intended": "merci"
+  },
+  {
+    "category": "completion",
+    "typed": "télé",
+    "intended": "téléphone"
+  },
+  {
+    "category": "completion",
+    "typed": "tortu",
+    "intended": "tortue"
+  },
+  {
+    "category": "context2",
+    "context": "je ne sais",
+    "typed": "pa",
+    "intended": "pas"
+  },
+  {
+    "category": "context2",
+    "context": "il y a",
+    "typed": "lontan",
+    "intended": "longtemps"
+  },
+  {
+    "category": "context2",
+    "context": "merci",
+    "typed": "boku",
+    "intended": "beaucoup"
+  },
+  {
+    "category": "context2",
+    "context": "bonne",
+    "typed": "ane",
+    "intended": "année"
+  },
+  {
+    "category": "context2",
+    "context": "il était une",
+    "typed": "foi",
+    "intended": "fois"
+  },
+  {
+    "category": "transposition",
+    "typed": "lbeu",
+    "intended": "bleu"
+  },
+  {
+    "category": "transposition",
+    "typed": "porbleme",
+    "intended": "problème"
+  },
+  {
+    "category": "transposition",
+    "typed": "jadrin",
+    "intended": "jardin"
+  },
+  {
+    "category": "transposition",
+    "typed": "bojnour",
+    "intended": "bonjour"
+  },
+  {
+    "category": "transposition",
+    "typed": "masion",
+    "intended": "maison"
+  },
+  {
+    "category": "transposition",
+    "typed": "oridnateur",
+    "intended": "ordinateur"
+  },
+  {
+    "category": "elision",
+    "context": "vers",
+    "typed": "",
+    "intended": "l'"
+  },
+  {
+    "category": "elision",
+    "context": "vers l'",
+    "typed": "h",
+    "intended": "horizon"
+  },
+  {
+    "category": "elision",
+    "context": "de l'",
+    "typed": "",
+    "intended": "eau"
+  },
+  {
+    "category": "elision",
+    "context": "de l'",
+    "typed": "h",
+    "intended": "homme"
+  },
+  {
+    "category": "elision",
+    "context": "parce",
+    "typed": "",
+    "intended": "qu'"
+  },
+  {
+    "category": "elision",
+    "context": "parce qu'",
+    "typed": "",
+    "intended": "il"
+  },
+  {
+    "category": "elision",
+    "context": "je pense",
+    "typed": "q",
+    "intended": "qu'"
+  },
+  {
+    "category": "elision",
+    "context": "je pense qu'",
+    "typed": "",
+    "intended": "il"
+  },
+  {
+    "category": "elision",
+    "context": "c'",
+    "typed": "",
+    "intended": "est"
+  },
+  {
+    "category": "elision",
+    "context": "j'",
+    "typed": "",
+    "intended": "ai"
+  },
+  {
+    "category": "elision",
+    "context": "jusqu'",
+    "typed": "",
+    "intended": "à"
+  },
+  {
+    "category": "elision",
+    "context": "je",
+    "typed": "m",
+    "intended": "m'"
+  },
+  {
+    "category": "elision",
+    "context": "il",
+    "typed": "s",
+    "intended": "s'"
+  },
+  {
+    "category": "elision",
+    "context": "l'",
+    "typed": "hu",
+    "intended": "huile"
+  },
+  {
+    "category": "elision",
+    "context": "d'",
+    "typed": "h",
+    "intended": "habitude"
+  },
+  {
+    "category": "sounded-e",
+    "context": "si je",
+    "typed": "fè",
+    "intended": "fais"
+  },
+  {
+    "category": "sounded-e",
+    "context": "je",
+    "typed": "mè",
+    "intended": "mets"
+  },
+  {
+    "category": "sounded-e",
+    "typed": "jamè",
+    "intended": "jamais"
+  },
+  {
+    "category": "sounded-e",
+    "context": "il est",
+    "typed": "tré",
+    "intended": "très"
+  },
+  {
+    "category": "sounded-e",
+    "typed": "sé",
+    "intended": "ces"
+  },
+  {
+    "category": "sounded-e",
+    "context": "il a",
+    "typed": "sé",
+    "intended": "ses"
+  },
+  {
+    "category": "sounded-e",
+    "context": "il veut",
+    "typed": "alé",
+    "intended": "aller"
+  },
+  {
+    "category": "sounded-e",
+    "context": "je suis",
+    "typed": "alé",
+    "intended": "allé"
+  },
+  {
+    "category": "sounded-e",
+    "context": "je vais",
+    "typed": "parlé",
+    "intended": "parler"
+  },
+  {
+    "category": "sounded-e",
+    "context": "il",
+    "typed": "fé",
+    "intended": "fait"
+  },
+  {
+    "category": "sounded-e",
+    "context": "tu",
+    "typed": "fé",
+    "intended": "fais"
+  }
+]

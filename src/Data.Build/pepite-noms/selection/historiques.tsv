@@ -1,0 +1,378 @@
+# Historical figures of the « Noms propres » pack: Wikidata QIDs, one per line (plan 10C, study Q5).
+# Selection rule: deceased, taught at school (history, sciences, arts, literature; Belgium and France first), no
+# religious founders, no entertainers or athletes. The name shown comes from Wikidata (French label, else the
+# multilingual one), never from this file: the second column is only a reading aid for reviewers.
+# Columns: qid <TAB> label when reviewed <TAB> theme <TAB> note. Note « sensible »: a figure taught for the harm done
+# (dictators, collaboration) — kept because pupils write about them in history; the owner may remove them.
+Q8409	Alexandre le Grand	antiquite
+Q12847	Ambiorix	antiquite
+Q8739	Archimède	antiquite
+Q868	Aristote	antiquite
+Q36724	Attila	antiquite
+Q1405	Auguste	antiquite
+Q1409	Caligula	antiquite
+Q1541	Cicéron	antiquite
+Q635	Cléopâtre	antiquite
+Q4604	Confucius	antiquite
+Q8413	Constantin Ier	antiquite
+Q8423	Cyrus II	antiquite
+Q44387	Darius Ier	antiquite
+Q8747	Euclide	antiquite
+Q36359	Hammurabi	antiquite
+Q36456	Hannibal Barca	antiquite
+Q5264	Hippocrate	antiquite
+Q6691	Homère	antiquite
+Q26825	Hérodote	antiquite
+Q1048	Jules César	antiquite
+Q41866	Justinien	antiquite
+Q1430	Marc Aurèle	antiquite
+Q40930	Néfertiti	antiquite
+Q1413	Néron	antiquite
+Q859	Platon	antiquite
+Q10261	Pythagore	antiquite
+Q80398	Périclès	antiquite
+Q7192	Qin Shi Huang	antiquite
+Q1523	Ramsès II	antiquite
+Q913	Socrate	antiquite
+Q83406	Spartacus	antiquite
+Q36303	Thalès	antiquite
+Q204843	Théodora	antiquite
+Q12154	Toutânkhamon	antiquite
+Q178953	Vercingétorix	antiquite
+Q1398	Virgile	antiquite
+Q43423	Ésope	antiquite
+Q9038	Al-Khawarizmi	moyen_age
+Q178525	Aliénor d'Aquitaine	moyen_age
+Q8011	Avicenne	moyen_age
+Q314905	Bertrand du Guesclin	moyen_age
+Q3044	Charlemagne	moyen_age
+Q3301	Charles Martel	moyen_age
+Q133372	Charles VII de France	moyen_age
+Q151120	Charles le Téméraire	moyen_age
+Q234816	Christine de Pizan	moyen_age
+Q4302	Chrétien de Troyes	moyen_age
+Q82339	Clovis Ier	moyen_age
+Q1067	Dante Alighieri	moyen_age
+Q849	François Villon	moyen_age
+Q720	Gengis Khan	moyen_age
+Q76721	Godefroy de Bouillon	moyen_age
+Q37594	Guillaume le Conquérant	moyen_age
+Q159575	Hugues Capet	moyen_age
+Q5656	Héloïse	moyen_age
+Q7331	Ibn Battuta	moyen_age
+Q102272	Jan van Eyck	moyen_age
+Q7226	Jeanne d'Arc	moyen_age
+Q8958	Johannes Gutenberg	moyen_age
+Q346	Louis IX de France	moyen_age
+Q8058	Louis XI de France	moyen_age
+Q309333	Mansa Moussa	moyen_age
+Q6101	Marco Polo	moyen_age
+Q157073	Marie de Bourgogne	moyen_age
+Q34428	Philippe II Auguste	moyen_age
+Q239337	Philippe III de Bourgogne	moyen_age
+Q4295	Pierre Abélard	moyen_age
+Q42305	Richard Cœur de Lion	moyen_age
+Q8581	Saladin	moyen_age
+Q175772	Soundiata Keïta	moyen_age
+Q9438	Thomas d’Aquin	moyen_age
+Q7333	Zheng He	moyen_age
+Q47674	Amerigo Vespucci	temps_modernes
+Q170267	André Vésale	temps_modernes
+Q151209	Anne d'Autriche	temps_modernes
+Q1340	Antonio Vivaldi	temps_modernes
+Q26702	Armand Jean du Plessis de Richelieu	temps_modernes
+Q1290	Blaise Pascal	temps_modernes
+Q36450	Catherine II de Russie	temps_modernes
+Q131552	Catherine de Médicis	temps_modernes
+Q128460	Charles Perrault	temps_modernes
+Q32500	Charles Quint	temps_modernes
+Q39599	Christian Huygens	temps_modernes
+Q7322	Christophe Colomb	temps_modernes
+Q297	Diego Vélasquez	temps_modernes
+Q1496	Fernand de Magellan	temps_modernes
+Q44741	Francisco Pizarro	temps_modernes
+Q129857	François Ier de France	temps_modernes
+Q131018	François Rabelais	temps_modernes
+Q33550	Frédéric II de Prusse	temps_modernes
+Q307	Galilée	temps_modernes
+Q7302	Georg Friedrich Haendel	temps_modernes
+Q6353	Gérard Mercator	temps_modernes
+Q936976	Henri IV de France	temps_modernes
+Q38370	Henri VIII	temps_modernes
+Q7326	Hernán Cortés	temps_modernes
+Q935	Isaac Newton	temps_modernes
+Q7321	Jacques Cartier	temps_modernes
+Q37577	Jean Calvin	temps_modernes
+Q742	Jean Racine	temps_modernes
+Q49496	Jean de La Fontaine	temps_modernes
+Q188971	Jean-Baptiste Colbert	temps_modernes
+Q1192	Jean-Baptiste Lully	temps_modernes
+Q1339	Jean-Sébastien Bach	temps_modernes
+Q8963	Johannes Kepler	temps_modernes
+Q166056	Jules Mazarin	temps_modernes
+Q737533	Louis XIII	temps_modernes
+Q7742	Louis XIV	temps_modernes
+Q7738	Louis XV	temps_modernes
+Q762	Léonard de Vinci	temps_modernes
+Q182021	Marie de Médicis	temps_modernes
+Q131706	Marie-Thérèse d'Autriche	temps_modernes
+Q9554	Martin Luther	temps_modernes
+Q41568	Michel de Montaigne	temps_modernes
+Q5592	Michel-Ange Buronarroti	temps_modernes
+Q5682	Miguel de Cervantes	temps_modernes
+Q687	Molière	temps_modernes
+Q619	Nicolas Copernic	temps_modernes
+Q1399	Nicolas Machiavel	temps_modernes
+Q39978	Nostradamus	temps_modernes
+Q34417	Philippe II	temps_modernes
+Q747	Pierre Corneille	temps_modernes
+Q8479	Pierre Ier de Russie	temps_modernes
+Q5599	Pierre Paul Rubens	temps_modernes
+Q49752	Pierre de Ronsard	temps_modernes
+Q43270	Pieter Brueghel l'Ancien	temps_modernes
+Q5597	Raphaël	temps_modernes
+Q5598	Rembrandt	temps_modernes
+Q9191	René Descartes	temps_modernes
+Q68529	Samuel de Champlain	temps_modernes
+Q23696	Simon Stevin	temps_modernes
+Q8474	Soliman le Magnifique	temps_modernes
+Q192839	Sébastien Le Prestre de Vauban	temps_modernes
+Q7328	Vasco de Gama	temps_modernes
+Q692	William Shakespeare	temps_modernes
+Q7207	Élisabeth Ire	temps_modernes
+Q43499	Érasme	temps_modernes
+Q39607	Antoine Lavoisier	lumieres_revolution
+Q34969	Benjamin Franklin	lumieres_revolution
+Q1043	Carl von Linné	lumieres_revolution
+Q216063	Charlotte Corday	lumieres_revolution
+Q40946	Daniel Defoe	lumieres_revolution
+Q448	Denis Diderot	lumieres_revolution
+Q9312	Emmanuel Kant	lumieres_revolution
+Q5432	Francisco de Goya	lumieres_revolution
+Q23	George Washington	lumieres_revolution
+Q184623	Georges Jacques Danton	lumieres_revolution
+Q186652	Gilbert du Motier de La Fayette	lumieres_revolution
+Q83155	Jacques-Louis David	lumieres_revolution
+Q7324	James Cook	lumieres_revolution
+Q9041	James Watt	lumieres_revolution
+Q153232	Jean Le Rond d'Alembert	lumieres_revolution
+Q260	Jean-François Champollion	lumieres_revolution
+Q6527	Jean-Jacques Rousseau	lumieres_revolution
+Q122290	Jean-Paul Marat	lumieres_revolution
+Q5879	Johann Wolfgang von Goethe	lumieres_revolution
+Q41166	Jonathan Swift	lumieres_revolution
+Q7349	Joseph Haydn	lumieres_revolution
+Q171480	Joséphine de Beauharnais	lumieres_revolution
+Q7732	Louis XVI	lumieres_revolution
+Q7750	Louis XVIII	lumieres_revolution
+Q255	Ludwig van Beethoven	lumieres_revolution
+Q47365	Marie-Antoinette	lumieres_revolution
+Q44197	Maximilien de Robespierre	lumieres_revolution
+Q15975	Montesquieu	lumieres_revolution
+Q517	Napoléon Ier	lumieres_revolution
+Q206972	Olympe de Gouges	lumieres_revolution
+Q11812	Thomas Jefferson	lumieres_revolution
+Q9068	Voltaire	lumieres_revolution
+Q254	Wolfgang Amadeus Mozart	lumieres_revolution
+Q179825	Abd el-Kader	xixe
+Q91	Abraham Lincoln	xixe
+Q20012	Adolphe Quetelet	xixe
+Q181995	Adolphe Sax	xixe
+Q34286	Alexander Graham Bell	xixe
+Q38337	Alexandre Dumas	xixe
+Q123920	Alexandre Yersin	xixe
+Q23810	Alfred Nobel	xixe
+Q179680	Alfred de Musset	xixe
+Q228546	Alphonse Daudet	xixe
+Q188697	Alphonse de Lamartine	xixe
+Q675	André-Marie Ampère	xixe
+Q493	Arthur Rimbaud	xixe
+Q39931	Auguste Renoir	xixe
+Q30755	Auguste Rodin	xixe
+Q120582	Camille Claudel	xixe
+Q40224	Carl Benz	xixe
+Q501	Charles Baudelaire	xixe
+Q1035	Charles Darwin	xixe
+Q5686	Charles Dickens	xixe
+Q81716	Charles-Augustin Coulomb	xixe
+Q296	Claude Monet	xixe
+Q313078	Clément Ader	xixe
+Q50187	César Franck	xixe
+Q9106	Dmitri Mendeleïev	xixe
+Q46373	Edgar Degas	xixe
+Q311665	Ernest Solvay	xixe
+Q33477	Eugène Delacroix	xixe
+Q991	Fiodor Dostoïevski	xixe
+Q37103	Florence Nightingale	xixe
+Q7312	Franz Schubert	xixe
+Q49767	François-René de Chateaubriand	xixe
+Q34787	Friedrich Engels	xixe
+Q1268	Frédéric Chopin	xixe
+Q3816	George Sand	xixe
+Q56158	Georges Bizet	xixe
+Q152272	Georges Méliès	xixe
+Q539	Giuseppe Garibaldi	xixe
+Q7317	Giuseppe Verdi	xixe
+Q57098	Gottlieb Daimler	xixe
+Q37970	Gregor Mendel	xixe
+Q20882	Gustave Eiffel	xixe
+Q43444	Gustave Flaubert	xixe
+Q9327	Guy de Maupassant	xixe
+Q5673	Hans Christian Andersen	xixe
+Q1151	Hector Berlioz	xixe
+Q315003	Hector Malot	xixe
+Q41269	Henri Becquerel	xixe
+Q82445	Henri de Toulouse-Lautrec	xixe
+Q12091	Henry Dunant	xixe
+Q9711	Honoré de Balzac	xixe
+Q6701	Jacob Grimm	xixe
+Q158840	James Ensor	xixe
+Q12688	Jean Jaurès	xixe
+Q23380	Jean-Auguste-Dominique Ingres	xixe
+Q7294	Johannes Brahms	xixe
+Q379993	Joseph Plateau	xixe
+Q959708	Jules Ferry	xixe
+Q33977	Jules Verne	xixe
+Q9061	Karl Marx	xixe
+Q38082	Lewis Carroll	xixe
+Q93182	Louis Braille	xixe
+Q131405	Louis Daguerre	xixe
+Q529	Louis Pasteur	xixe
+Q7771	Louis-Philippe Ier	xixe
+Q7243	Léon Tolstoï	xixe
+Q12967	Léopold II de Belgique	xixe
+Q12971	Léopold Ier de Belgique	xixe
+Q7245	Mark Twain	xixe
+Q8750	Michael Faraday	xixe
+Q7721	Napoléon III	xixe
+Q188342	Nicéphore Niépce	xixe
+Q9036	Nikola Tesla	xixe
+Q8442	Otto von Bismarck	xixe
+Q35548	Paul Cézanne	xixe
+Q37693	Paul Gauguin	xixe
+Q755	Paul Verlaine	xixe
+Q82984	Pierre de Coubertin	xixe
+Q7315	Piotr Ilitch Tchaïkovski	xixe
+Q1511	Richard Wagner	xixe
+Q37193	Robert Koch	xixe
+Q1512	Robert Louis Stevenson	xixe
+Q12674	Rudolf Diesel	xixe
+Q34743	Rudyard Kipling	xixe
+Q8605	Simón Bolívar	xixe
+Q43527	Sitting Bull	xixe
+Q502	Stendhal	xixe
+Q8743	Thomas Edison	xixe
+Q205783	Toussaint Louverture	xixe
+Q535	Victor Hugo	xixe
+Q120417	Victor Schœlcher	xixe
+Q9439	Victoria	xixe
+Q5582	Vincent van Gogh	xixe
+Q6714	Wilhelm Grimm	xixe
+Q35149	Wilhelm Röntgen	xixe
+Q247603	Zénobe Gramme	xixe
+Q40599	Édouard Manet	xixe
+Q504	Émile Zola	xixe
+Q12935	Étienne Lenoir	xixe
+Q352	Adolf Hitler	xxe	sensible
+Q35064	Agatha Christie	xxe
+Q34670	Albert Camus	xxe
+Q937	Albert Einstein	xxe
+Q55008046	Albert Ier de Belgique	xxe
+Q49325	Albert Schweitzer	xxe
+Q37064	Alexander Fleming	xxe
+Q3355	Amelia Earhart	xxe
+Q281411	André Franquin	xxe
+Q5603	Andy Warhol	xxe
+Q4583	Anne Frank	xxe
+Q2908	Antoine de Saint-Exupéry	xxe
+Q25328	Antoni Gaudí	xxe
+Q230238	Astrid de Suède	xxe
+Q12976	Baudouin Ier de Belgique	xxe
+Q23559	Benito Mussolini	xxe	sensible
+Q41532	Carl Gustav Jung	xxe
+Q1618	Charles Lindbergh	xxe
+Q2042	Charles de Gaulle	xxe
+Q234590	Christian de Duve	xxe
+Q4700	Claude Debussy	xxe
+Q218679	Colette	xxe
+Q9916	Dwight David Eisenhower	xxe
+Q470422	Edgar P. Jacobs	xxe
+Q9123	Ernest Rutherford	xxe
+Q192615	Ferdinand Foch	xxe
+Q11256	Fidel Castro	xxe
+Q8007	Franklin Delano Roosevelt	xxe
+Q2038	François Mitterrand	xxe
+Q5588	Frida Kahlo	xxe
+Q3335	George Orwell	xxe
+Q171730	Georges Clemenceau	xxe
+Q12998	Georges Lemaître	xxe
+Q128790	Georges Simenon	xxe
+Q133855	Guillaume Apollinaire	xxe
+Q5589	Henri Matisse	xxe
+Q8768	Henry Ford	xxe
+Q52985	Hergé	xxe
+Q34479	Hirohito	xxe
+Q36014	Hô Chi Minh	xxe
+Q7314	Igor Stravinsky	xxe
+Q183509	Ilya Prigogine	xxe
+Q7504	Irène Joliot-Curie	xxe
+Q892	J. R. R. Tolkien	xxe
+Q1666	Jacques Brel	xxe
+Q165274	Jacques Prévert	xxe
+Q83233	Jacques-Yves Cousteau	xxe
+Q159700	Jean Monnet	xxe
+Q632	Jean Moulin	xxe
+Q9696	John Fitzgerald Kennedy	xxe
+Q855	Joseph Staline	xxe	sensible
+Q151972	Joséphine Baker	xxe
+Q211787	Jules Bordet	xxe
+Q2492	Konrad Adenauer	xxe
+Q4724	Le Corbusier	xxe
+Q243442	Leo Baekeland	xxe
+Q5396	Louis Blériot	xxe
+Q1394	Lénine	xxe	sensible
+Q12973	Léopold III de Belgique	xxe
+Q154545	Léopold Sédar Senghor	xxe
+Q5816	Mao Zedong	xxe	sensible
+Q93284	Marc Chagall	xxe
+Q236630	Marcel Pagnol	xxe
+Q7199	Marcel Proust	xxe
+Q163118	Marguerite Yourcenar	xxe
+Q7186	Marie Curie	xxe
+Q8027	Martin Luther King	xxe
+Q49747	Maurice Maeterlinck	xxe
+Q1178	Maurice Ravel	xxe
+Q9021	Max Planck	xxe
+Q30487	Mikhaïl Gorbatchev	xxe
+Q1001	Mohandas Karamchand Gandhi	xxe
+Q312835	Morris	xxe
+Q5152	Mustafa Kemal Atatürk	xxe
+Q1615	Neil Armstrong	xxe
+Q8023	Nelson Mandela	xxe
+Q40787	Nicolas II de Russie	xxe
+Q7085	Niels Bohr	xxe
+Q35314	Nikita Khrouchtchev	xxe
+Q5593	Pablo Picasso	xxe
+Q161672	Patrice Lumumba	xxe
+Q164712	Paul Delvaux	xxe
+Q155691	Paul-Henri Spaak	xxe
+Q309945	Peyo	xxe
+Q5721	Philippe Pétain	xxe	sensible
+Q37463	Pierre Curie	xxe
+Q7836	René Magritte	xxe
+Q926	Roald Amundsen	xxe
+Q25161	Roald Dahl	xxe
+Q15981	Robert Schuman	xxe
+Q41921	Rosa Parks	xxe
+Q5577	Salvador Dalí	xxe
+Q9215	Sigmund Freud	xxe
+Q298180	Simone Veil	xxe
+Q17714	Stephen Hawking	xxe
+Q61064	Vassily Kandinsky	xxe
+Q49744	Victor Horta	xxe
+Q8016	Winston Churchill	xxe
+Q34296	Woodrow Wilson	xxe
+Q7327	Youri Gagarine	xxe
+Q1631	Édith Piaf	xxe
+Q9682	Élisabeth II	xxe
+Q193680	Émile Verhaeren	xxe

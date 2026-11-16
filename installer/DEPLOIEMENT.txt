@@ -1,0 +1,253 @@
+====================================================================
+  PÉPITE — DÉPLOIEMENT DANS UN ÉTABLISSEMENT
+  Guide pour le service informatique
+====================================================================
+
+Pépite est un programme de prédiction de mots pour élèves, logiciel
+libre (GPL-3.0-or-later). Un seul fichier d'installation :
+Pepite-<version>-installation.exe (Inno Setup, pas de MSI).
+Windows 11 64 bits (x64) seulement.
+
+
+1. AUCUN FLUX RÉSEAU
+--------------------------------------------------------------------
+  Ni l'installation ni Pépite n'utilisent le réseau : pas de
+  téléchargement, pas de mise à jour automatique, pas de
+  télémétrie, pas de licence à activer. Aucune règle de pare-feu ni
+  de proxy n'est nécessaire. Les mises à jour se font en déployant
+  la nouvelle version par-dessus l'ancienne.
+
+
+2. INSTALLATION SANS QUESTION (TOUS LES POSTES)
+--------------------------------------------------------------------
+  Pour tous les utilisateurs (conseillé, en administrateur ou en
+  compte SYSTEM) :
+
+    Pepite-<version>-installation.exe /VERYSILENT /SUPPRESSMSGBOXES
+        /NORESTART /ALLUSERS /CONFIG="\\serveur\pepite\settings.json"
+        /LOG="C:\Windows\Temp\pepite-install.log"
+
+  Paramètres :
+    /VERYSILENT /SUPPRESSMSGBOXES  aucune fenêtre, aucune question
+    /NORESTART                     jamais de redémarrage
+    /ALLUSERS                      pour tous les utilisateurs
+                                   (C:\Program Files\Pepite-Prediction)
+    /CURRENTUSER                   pour le compte qui lance seulement
+                                   (%LOCALAPPDATA%\Programs\Pepite-Prediction)
+    /DIR="<dossier>"               autre dossier : seulement pour une
+                                   installation « pour moi »
+                                   (/CURRENTUSER). Pour tous les
+                                   utilisateurs, Pépite s'installe
+                                   uniquement dans un dossier placé
+                                   directement dans « Program Files »
+                                   (C:\Program Files\Pepite-Prediction) ;
+                                   un autre dossier est refusé
+                                   (code 7). Une ancienne version de
+                                   test installée pour tous dans un
+                                   autre dossier : désinstallez-la
+                                   d'abord.
+    /COMPONENTS="images,voix\siwis"  composants : app (toujours),
+                                   images (pictogrammes), voix\siwis
+                                   et voix\pierre (voix naturelles). Exemple sans
+                                   voix ni images : /COMPONENTS="app"
+    /TASKS="demarrage,pepite"      tâches : demarrage (démarrer avec
+                                   Windows), pepite (ouvrir les
+                                   fichiers .pepite), bureau (icône
+                                   sur le Bureau). Exemple sans
+                                   démarrage automatique :
+                                   /TASKS="pepite"
+    /CONFIG="<fichier>"            configuration de l'établissement
+                                   (voir § 5), seulement avec /ALLUSERS
+                                   (sans /ALLUSERS : refusée, code 2).
+                                   Chemin absolu recommandé ; un chemin
+                                   relatif est cherché dans le dossier
+                                   courant, puis à côté de l'installeur
+    /LOG="<fichier>"               journal de l'installation
+    /FORCECLOSEAPPLICATIONS        fermer de force un Pépite ouvert
+                                   qui ne s'est pas fermé seul
+
+  Une installation silencieuse ne lance jamais Pépite : chaque
+  utilisateur l'a à sa prochaine ouverture de session (démarrage avec
+  Windows, clé Run de HKLM pour une installation pour tous).
+
+  Un Pépite ouvert est fermé proprement avant la mise à jour (même
+  utilisateur). Celui d'une autre session est fermé par le
+  gestionnaire de redémarrage de Windows (/FORCECLOSEAPPLICATIONS si
+  nécessaire).
+
+  Ne mélangez pas les deux modes : si Pépite est déjà installé « pour
+  moi » sur un compte, l'installation « pour tous » est refusée sur
+  ce compte (et inversement), code de sortie 1. Désinstallez d'abord
+  les installations par utilisateur.
+
+
+3. CODES DE SORTIE
+--------------------------------------------------------------------
+    0   installation réussie
+    1   l'installation n'a pas démarré (dont : Pépite déjà installé
+        dans l'autre mode ; Windows 10 ; processeur non x64)
+    2   Pépite est installé, mais le fichier /CONFIG a été refusé
+        (JSON non valable ou schéma inconnu, installation sans
+        /ALLUSERS, ou dossier %PROGRAMDATA%\Pepite-Prediction déjà
+        créé par un autre compte que les administrateurs — à
+        supprimer, puis relancer) : aucun fichier de configuration
+        n'a été écrit
+        (sans /CONFIG, 2 = annulé par l'utilisateur avant
+        l'installation : impossible en /VERYSILENT)
+    6   processus d'installation terminé de force depuis l'outil de
+        compilation (ne survient pas lors d'un déploiement)
+    7   installation refusée avant la copie : pour tous les
+        utilisateurs, un dossier qui n'est pas placé directement
+        dans « Program Files » (/DIR), ou un dossier qui est un
+        lien (voir le journal /LOG)
+    3, 4, 8   erreur pendant la préparation ou l'installation
+        (voir le journal /LOG)
+    5   annulé pendant l'installation
+
+
+4. DÉSINSTALLATION SANS QUESTION
+--------------------------------------------------------------------
+  Le désinstallateur est dans le dossier d'installation :
+
+    "C:\Program Files\Pepite-Prediction\unins000.exe" /VERYSILENT
+        /SUPPRESSMSGBOXES /NORESTART
+
+  Sans autre paramètre, AUCUNE donnée des élèves n'est supprimée.
+    /SUPPRIMERDONNEES  supprime aussi les réglages, profils et mots
+                       du compte qui lance la désinstallation
+                       (%APPDATA%\Pepite-Prediction,
+                       %LOCALAPPDATA%\Pepite-Prediction,
+                       %APPDATA%\PredictKeyboard) ;
+                       les autres comptes ne sont pas touchés
+    /SUPPRIMERCONFIG   supprime aussi la configuration de
+                       l'établissement (%PROGRAMDATA%\Pepite-Prediction)
+
+  La commande exacte est aussi dans le registre :
+  HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\
+  {999AA879-43C2-4C22-9785-691AA95A3455}_is1, valeur
+  QuietUninstallString (HKCU pour une installation par utilisateur).
+
+
+5. CONFIGURATION DE L'ÉTABLISSEMENT (FACULTATIVE)
+--------------------------------------------------------------------
+  Un fichier JSON propose (« defaults ») ou impose (« locked ») des
+  réglages à tous les comptes du poste. Exemple complet :
+  exemple-etablissement.json (taille L, police OpenDyslexic,
+  indicateur d'orthographe imposé, pas de fenêtre de bienvenue).
+
+    {
+      "schema": 1,
+      "defaults": { "words": { "count": 6, "size": "L" } },
+      "locked":   { "words": { "spellingIndicator": true } }
+    }
+
+  Réglages possibles (mêmes noms que %APPDATA%\Pepite-Prediction) :
+    words.count (1 à 8), words.size (S, M, L, XL), words.pictures,
+    words.keys (F1-F8, off), words.font (segoe-ui, opendyslexic,
+    lexend, andika), words.spacing (normal, wider, widest),
+    words.spellingIndicator, words.namePictures,
+    bar.position (caret, top, bottom, free),
+    text.punctuationSpace (french, french-nbsp, none),
+    speech.speakInserted, speech.speakWords,
+    speech.speakSentences, speech.voice, speech.rate, speech.volume,
+    speech.rereadEdits, reading.enabled, reading.clipboardFallback,
+    reading.pictures, start.welcome.
+
+  L'installation (avec /ALLUSERS) :
+    - vérifie le fichier avec "Pepite.exe --check-config <fichier>"
+      (code 0 valable, 2 JSON non valable ou schéma inconnu,
+      3 illisible) ; un fichier refusé n'est jamais écrit ;
+    - le copie dans %PROGRAMDATA%\Pepite-Prediction\settings.json ;
+    - protège le dossier : propriétaire Administrateurs, sans
+      héritage, Administrateurs et SYSTEM contrôle total,
+      Utilisateurs lecture seule. Pépite ignore un fichier que
+      d'autres comptes pourraient modifier ;
+    - refuse (code 2) un dossier %PROGRAMDATA%\Pepite-Prediction
+      déjà présent qui est un lien ou qui n'appartient pas aux
+      administrateurs : supprimez-le, puis relancez l'installation.
+  Sans /CONFIG, un fichier déjà présent est gardé tel quel. Vous
+  pouvez vérifier un fichier avant le déploiement (Pepite.exe est
+  une application fenêtrée : attendez sa fin pour lire le code) :
+    invite de commandes :
+      start /wait "" "C:\Program Files\Pepite-Prediction\Pepite.exe" --check-config settings.json
+      echo %ERRORLEVEL%
+    PowerShell :
+      (Start-Process "C:\Program Files\Pepite-Prediction\Pepite.exe" -ArgumentList '--check-config','settings.json' -Wait -PassThru).ExitCode
+
+
+6. INTUNE (APPLICATION WIN32), SCCM / CONFIGMGR, SCRIPTS
+--------------------------------------------------------------------
+  Pas de MSI : pas de déploiement par GPO « Installation de
+  logiciel ». Intune Win32, SCCM ou un script de démarrage
+  conviennent.
+
+  Intune (Win32, .intunewin) :
+    Installation  : Pepite-<version>-installation.exe /VERYSILENT
+                    /SUPPRESSMSGBOXES /NORESTART /ALLUSERS
+    Désinstallation : "C:\Program Files\Pepite-Prediction\unins000.exe"
+                    /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+    Comportement  : Système (System context)
+    Redémarrage   : aucun
+    Règle de détection : fichier
+                    C:\Program Files\Pepite-Prediction\Pepite.exe,
+                    version de fichier >= <version>.0
+                    (ou clé de registre HKLM ...\Uninstall\
+                    {999AA879-43C2-4C22-9785-691AA95A3455}_is1,
+                    valeur DisplayVersion = <version>)
+    Codes de retour : 0 succès ; 2 à signaler (configuration refusée).
+  Pour /CONFIG, mettez settings.json dans le paquet .intunewin et
+  passez /CONFIG="settings.json".
+
+
+7. APPLOCKER, SMARTSCREEN, ANTIVIRUS
+--------------------------------------------------------------------
+  - AppLocker / WDAC : les règles par défaut autorisent
+    C:\Program Files\ mais pas %LOCALAPPDATA%\Programs : installez
+    avec /ALLUSERS. Les versions de test ne sont pas signées : une
+    règle « éditeur » est impossible, utilisez une règle de chemin
+    (C:\Program Files\Pepite-Prediction\*) ou de hachage.
+  - SmartScreen / Smart App Control : la version de test non signée
+    peut être bloquée au premier lancement de l'installation. Un
+    déploiement par Intune / SCCM / script n'est pas concerné par
+    SmartScreen (pas de fichier « venant d'Internet »).
+  - Pépite surveille le clavier (pour proposer les mots) et insère
+    du texte : certains antivirus peuvent le signaler. Rien n'est
+    enregistré ni envoyé ; ajoutez une exclusion si nécessaire.
+
+
+8. DONNÉES PERSONNELLES (RGPD)
+--------------------------------------------------------------------
+  - Tout reste sur le poste : réglages et profils dans
+    %APPDATA%\Pepite-Prediction de chaque compte, sauvegardes dans
+    %LOCALAPPDATA%\Pepite-Prediction\sauvegardes. Rien n'est envoyé.
+  - Les profils contiennent les prénoms des élèves (et, si
+    l'enseignant en ajoute, des listes de mots). Pas de photo
+    (seulement des pictogrammes ou dessins).
+  - Pépite n'enregistre pas ce que les élèves écrivent (sauf le mode
+    journal --log, réservé aux tests, qui ne garde jamais les mots
+    de passe ni les prénoms des profils ; un prénom tapé dans le
+    texte y est enregistré comme le reste).
+  - Les fichiers .pepite (export des profils) contiennent les
+    prénoms : à garder sur un support de l'établissement.
+  - Effacement : désinstallation avec /SUPPRIMERDONNEES, ou
+    suppression du dossier %APPDATA%\Pepite-Prediction du compte.
+
+
+9. RÉSUMÉ DES EMPLACEMENTS
+--------------------------------------------------------------------
+    Programme (pour tous)   C:\Program Files\Pepite-Prediction
+    Programme (par compte)  %LOCALAPPDATA%\Programs\Pepite-Prediction
+    Démarrage avec Windows  HKLM (ou HKCU)\Software\Microsoft\Windows\
+                            CurrentVersion\Run, valeur
+                            « Pepite-Prediction »
+                            = "<dossier>\Pepite.exe" --autostart
+    Fichiers .pepite        HKLM (ou HKCU)\Software\Classes\.pepite
+                            -> Pepite-Prediction.Profils
+    Configuration           %PROGRAMDATA%\Pepite-Prediction\settings.json
+    Données par compte      %APPDATA%\Pepite-Prediction,
+                            %LOCALAPPDATA%\Pepite-Prediction
+
+
+--------------------------------------------------------------------
+© 2026 Les auteurs de Pépite
+====================================================================

@@ -1,0 +1,8 @@
+# Regions and departments of France (current: no dissolution date P576). French label, else the multilingual one; French aliases.
+SELECT ?item ?fr ?mul (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) (SAMPLE(?k) AS ?kind) WHERE {
+  { ?item wdt:P31 wd:Q36784 . BIND("region-fr" AS ?k) } UNION { ?item wdt:P31 wd:Q6465 . BIND("departement-fr" AS ?k) }
+  FILTER NOT EXISTS { ?item wdt:P576 [] }
+  OPTIONAL { ?item rdfs:label ?fr FILTER(LANG(?fr) = "fr") }
+  OPTIONAL { ?item rdfs:label ?mul FILTER(LANG(?mul) = "mul") }
+  OPTIONAL { ?item skos:altLabel ?alias FILTER(LANG(?alias) = "fr") }
+} GROUP BY ?item ?fr ?mul

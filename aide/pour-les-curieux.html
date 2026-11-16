@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="enfant">
+<title>Pour les curieux — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html" aria-current="page">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Pour les curieux</h1>
+<p class="chapeau">Comment Pépite trouve-t-il les mots ? Et où vont tes mots ? Des réponses simples, pour les grands et les petits.</p>
+
+<h2 id="deviner">Trois aides qui travaillent ensemble</h2>
+<figure><img src="img/moteur.svg" alt="Tu écris le chat mai. Trois aides travaillent ensemble : le dictionnaire, les statistiques, les sons. Ensemble, elles donnent la barre de mots, du plus probable au moins probable." width="880" height="420"></figure>
+<div class="grille">
+  <div class="carte"><h3>Le dictionnaire</h3><p>Pépite connaît plus de 100 000 mots français, et sait lesquels on emploie souvent. Ils viennent de <b>Lexique</b>, une grande base de mots faite par des chercheurs.</p></div>
+  <div class="carte"><h3>Les statistiques</h3><p>Pépite a compté quels mots se suivent dans des textes écrits. Ces textes sont des livres anciens pour enfants, l'encyclopédie <b>Vikidia</b>, des phrases d'exemple et des articles d'actualité. Après « il fait », on trouve souvent « beau ». Seuls ces comptes sont gardés, pas les textes.</p></div>
+  <div class="carte"><h3>Les sons</h3><p>Pépite sait comment chaque mot se prononce. Tu écris « orizon » ? Il entend « horizon ». C'est la case <span class="mot vert">verte</span>.</p></div>
+</div>
+<p>Il repère aussi les lettres inversées ou oubliées : la case <span class="mot orange">orange</span>.</p>
+<p>Pépite n'est pas une machine qui pense. C'est un dictionnaire, des comptes de mots et des sons, rangés avec soin.</p>
+
+<h2 id="accords">Les accords et l'orthographe</h2>
+<p>Pour accorder les mots, Pépite doit savoir si un mot est un nom, un verbe, s'il est au pluriel… Il le lit dans le lexique de <b>Grammalecte</b>, un correcteur libre. Les règles d'accord sont celles de Pépite.</p>
+<p>Le rond d'orthographe ✓ utilise aussi la liste de mots de Grammalecte.</p>
+
+<h2 id="images">Les images</h2>
+<p>Les images des mots viennent d'<b>ARASAAC</b>, une collection de pictogrammes faite pour aider à communiquer. Leur auteur est Sergio Palao. Elles sont gratuites, mais seulement pour un usage non commercial.</p>
+<p>Les petits mots abstraits (« le », « de », « est »…) n'ont pas d'image : une image fausse gênerait plus qu'elle n'aiderait.</p>
+
+<h2 id="voix">Les voix</h2>
+<p>Les voix <b>Siwis</b> (une femme) et <b>Pierre</b> (un homme) sont des voix de synthèse. Un programme fabrique la voix sur ton ordinateur, sans Internet. Il a été préparé avec des heures d'enregistrements d'une vraie personne qui lit des phrases.</p>
+<p>La voix Pierre a été fabriquée à partir d'une voix anglaise. Les enregistrements de cette voix anglaise sont réservés à la recherche. Si cela pose un problème, la voix Pierre pourra être retirée d'une version future.</p>
+<p>Les voix de Windows (comme Hortense) marchent aussi.</p>
+
+<h2 id="prive">Ce qui reste privé</h2>
+<figure><img src="img/vie-privee.svg" alt="Tout reste dans l'ordinateur : Pépite travaille sans Internet et n'envoie rien." width="700" height="300"></figure>
+<ul>
+  <li>Pépite <b>n'utilise jamais Internet</b>. Rien ne sort de l'ordinateur.</li>
+  <li>Ce que tu tapes <b>n'est pas enregistré</b>. Pépite garde seulement tes réglages et les mots que tu as ajoutés.</li>
+  <li>Dans un champ de <b>mot de passe</b>, Pépite ne regarde rien.</li>
+  <li>Pépite est un <b>logiciel libre</b> : tout le monde peut lire son code et vérifier.</li>
+</ul>
+<p>Pour les adultes : <a href="vie-privee.html">Vie privée</a>.</p>
+<p class="suivant"><a href="questions.html">← Un souci ?</a><span></span></p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

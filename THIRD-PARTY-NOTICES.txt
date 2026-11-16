@@ -1,0 +1,307 @@
+Pépite — third-party components
+====================================
+
+Pépite is free software under the GNU General Public License, version 3 or (at your option) any later version
+(GPL-3.0-or-later): see COPYING. It contains or ships the components below. Versions and SHA-256 are the ones the
+release was built with.
+
+Piper / piper1-gpl 1.8.0 — GPL-3.0-or-later
+  https://github.com/OHF-Voice/piper1-gpl (tag v1.8.0)
+  Copyright: The Home Assistant Authors (package author of piper-tts 1.8.0; the repository has no other copyright line).
+  Ported to C# in Predict.Keyboard (PiperPhonemizer.cs): phonemize_espeak.py (clauses to sentences, vowel clusters),
+  phoneme_ids.py (phonemes to ids), the alignment grouping of voice.py, the CLAUSE_* constants of espeakbridge.c.
+  Licence text: COPYING (GPL-3.0).
+
+espeak-ng 1.52.0.1 (commit 724808c5a83f9ef95fdd0db886ba7ba537ff224a) — GPL-3.0-or-later
+  https://github.com/espeak-ng/espeak-ng/commit/724808c5a83f9ef95fdd0db886ba7ba537ff224a
+  Shipped: libespeak-ng.dll (built from that commit by src/Data.Build/build_espeak.ps1, pinned MSYS2 UCRT64 toolchain,
+  SHA-256 b2178353e1e346b6563346e7ed70fffc80c9ad6888918162e4c6a30326ab619f) and the French + English data subset in
+  espeak-ng-data\ (byte-identical to the data of piper-tts 1.8.0).
+  Corresponding source: the commit above (archive:
+  https://github.com/espeak-ng/espeak-ng/archive/724808c5a83f9ef95fdd0db886ba7ba537ff224a.tar.gz) and the build script;
+  details and every SHA-256 in licenses\espeak-ng\SOURCE.txt; licence in licenses\espeak-ng\COPYING.
+
+ONNX Runtime 1.31.1 (NuGet Microsoft.ML.OnnxRuntime) — MIT
+  Copyright (c) Microsoft Corporation. https://github.com/microsoft/onnxruntime
+  Shipped: onnxruntime.dll, onnxruntime_providers_shared.dll, Microsoft.ML.OnnxRuntime.dll.
+  Licence and its own third-party notices: licenses\onnxruntime\LICENSE, licenses\onnxruntime\ThirdPartyNotices.txt.
+  Telemetry is switched off by the app.
+
+NAudio 2.2.1 (NuGet NAudio.Core, NAudio.Wasapi) — MIT
+  Copyright 2020 Mark Heath. https://github.com/naudio/NAudio
+  Licence: licenses\naudio\license.txt.
+
+Microsoft Visual C++ 2015-2022 x64 runtime 14.51.36231 — Microsoft redistributable
+  msvcp140.dll, msvcp140_1.dll, vcruntime140.dll, vcruntime140_1.dll, needed by onnxruntime.dll on a PC without the
+  Visual C++ Redistributable; shipped app-local under the Visual Studio redistribution terms
+  (https://learn.microsoft.com/visualstudio/releases/2022/redistribution). Versions and SHA-256:
+  licenses\vcruntime\SOURCE.txt. These are « System Libraries » in the sense of GPL-3 § 1.
+
+Piper voice « fr_FR-siwis-medium » — CC BY 4.0, modified
+  https://huggingface.co/rhasspy/piper-voices (revision cf910fb59f1d79ab3b625a63993a108751c6c25d), fr/fr_FR/siwis/medium
+  Upstream model SHA-256 b1d946fd68d0347155fa59bce0a018924abbef3c1561181db45ca463d83963ef.
+  Modification: the model's Ceil tensor is marked as a graph output (/Ceil_output_0, onnx 1.23.2, as
+  piper.patch_voice_with_alignment does), so the app knows where each word starts; modified model SHA-256
+  d1120aceb629668ffc742c69e6e183b45ccb379e8de3dee78a9261451f9ed9ff. No other change.
+  Files, licence and change notice: voices\siwis\ (LICENSE.txt, SOURCE.txt, MODEL_CARD).
+
+SIWIS French Speech Synthesis Database — CC BY 4.0
+  University of Edinburgh DataShare, https://hdl.handle.net/10283/2353 . Citation (from the DataShare page, 2026-11-11):
+  Yamagishi, Junichi; Honnet, Pierre-Edouard; Garner, Philip; Lazaridis, Alexandros. (2017). The SIWIS French Speech
+  Synthesis Database, 2016 [dataset]. University of Edinburgh. School of Informatics. The Centre for Speech Technology
+  Research. https://doi.org/10.7488/ds/1705.
+
+Hi-Fi TTS (base model hifi_tts_92 of the siwis voice) — CC BY 4.0
+  OpenSLR 109, https://www.openslr.org/109/ (Hi-Fi TTS, reader 92). The siwis voice was fine-tuned from a Piper model
+  trained on it (MODEL_CARD).
+
+Piper voice « fr_FR-upmc-medium », speaker pierre — CC BY-SA 4.0, modified (public since 2026-11-16, see the note below)
+  https://huggingface.co/rhasspy/piper-voices (revision cf910fb59f1d79ab3b625a63993a108751c6c25d), fr/fr_FR/upmc/medium
+  Upstream model SHA-256 9abb3800c199148897a9ed64e100d224f3de83579f100044174ad19418f1786f.
+  Modification: the same alignment output as siwis (/Ceil_output_0, onnx 1.23.2); modified model SHA-256
+  7f763f70ddf9148ecb878346e03133fc9779e45b69c5a0ddad8768cf203b496a. No other change. ShareAlike: the modified model is
+  distributed under CC BY-SA 4.0 too. The model also holds a second speaker, « jessica », which the app does not use.
+  Files, licence and change notice: voices\pierre\ (LICENSE.txt, DATASET-LICENSE.md, DATASET-README.md, SOURCE.txt,
+  MODEL_CARD).
+
+UPMC Pierre Voice Data — CC BY-SA 4.0
+  https://github.com/marytts/upmc-pierre-data (commit 93d6429be8001839f4a1ca22afab009f79891afb). From its README: « A
+  French speech corpus designed for synthesis, recorded in 2013 at the Institut des Systèmes Intelligents et de Robotique
+  (ISIR), Université Pierre et Marie Curie (UPMC) by Pierre Chauvin, a male native speaker of French. »
+  Licence: voices\pierre\DATASET-LICENSE.md (that commit's LICENSE.md); the README quoted above is
+  voices\pierre\DATASET-README.md (same commit, SHA-256 eeac4783f84f941c995a593c52750b586184ba022e90e1f7758ffee306861e8f).
+
+Base model of the pierre voice: Piper « lessac » (U.S. English) — research-only training data
+  The upmc voice was « Finetuned from U.S. English lessac voice (medium quality) » (its MODEL_CARD). lessac was trained
+  on the Lessac Technologies data for Blizzard 2013, https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/ ,
+  released for non-commercial research use under the licence at
+  https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html . The pierre voice model itself is
+  distributed under CC BY-SA 4.0 by its authors; the project owner decided to ship it in public releases while accepting
+  the risk that the base model's training data licence is held to reach it (decision D28, changed 2026-11-16). If that
+  licence is challenged, the voice is withdrawn: its card is set back to "public": false and a new release is published
+  without voices\pierre\.
+
+CC BY-SA 4.0 and the GPL: Creative Commons lists GPLv3 as a compatible licence for adaptations of BY-SA 4.0 material
+(« ShareAlike compatibility: GPLv3 », creativecommons.org/share-your-work/licensing-considerations/compatible-licenses,
+2015). The voice models are separate data files, not linked code; each keeps its own licence.
+
+« Noms propres » open-data pack, edition 2026.1 — CC BY 4.0 (a separate data component in noms\)
+  Built by src/Data.Build/pepite-noms/build_names.py from the pinned inputs of names.lock.json (versions, URLs and SHA-256
+  in noms\SOURCES.md); licence text and the notices below in noms\LICENCE.txt; the attribution shown in « À propos »:
+    Noms propres — paquet de données ouvertes « Noms propres (données ouvertes) », édition 2026.1, licence CC BY 4.0
+    (https://creativecommons.org/licenses/by/4.0/deed.fr). Données modifiées : sélection, mise en forme et classement par Pépite.
+    • Prénoms (France) — Source : Insee, Fichier des prénoms, édition juillet 2026 (naissances 1900-2025), mise à jour du
+      16/07/2026. Licence Ouverte / Open Licence 2.0 (Etalab).
+    • Prénoms (Belgique) — Source : Statbel (Direction générale Statistique – Statistics Belgium), Prénoms de la population
+      totale par commune, 2026. Licence CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Données modifiées
+      (agrégées par prénom).
+    • Prénoms des nouveau-nés (Belgique) — Source : Statbel (Direction générale Statistique – Statistics Belgium), Prénoms
+      des nouveau-nés par commune, 2016-2025. Licence CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Données
+      modifiées (additionnées par prénom).
+    • Communes, provinces et régions de Belgique — Source : Statbel, Code REFNIS au 1er janvier 2025. Licence CC BY 4.0.
+      Données modifiées (sélection).
+    • Noms des pays — Unicode CLDR 49, © 2015-2024 Unicode, Inc., licence Unicode v3 (https://www.unicode.org/license.txt).
+    • Villes, personnages historiques — Wikidata (https://www.wikidata.org), données CC0 1.0.
+    • Drapeaux des pays — flag-icons 7.6.0 (https://github.com/lipis/flag-icons), licence MIT.
+    • Drapeaux des régions et provinces — Wikimedia Commons, domaine public ou CC0 (liste des fichiers et auteurs :
+      noms/SOURCES.md).
+    Statbel et l'Insee ne cautionnent pas Pépite ni l'usage fait de leurs données.
+  Inputs (SHA-256 in names.lock.json): INSEE prenoms-2025-nat_csv.zip (4c3662bb…cfee512e); Statbel TA_POP_MALE_2026.zip,
+  TA_POP_FEMALE_2026.zip, TA_BIRTHS_FEMALE_2016_2025.zip (52b1729d…e5e569c6), TA_BIRTHS_MALE_2016_2025.zip
+  (c1ff4ea4…e878a852), TU_COM_REFNIS-20250101.zip; cldr-json 49.0.0 fr/territories.json; flag-icons v7.6.0 (flags/4x3);
+  12 Commons flag files (public domain / CC0; the Liège province flag, CC BY-SA 3.0, is left out); Wikidata query
+  snapshots (CC0) of 2026-11-14. Build-time tool, never shipped: resvg 0.50.0 (Apache-2.0 OR MIT).
+
+  flag-icons 7.6.0 — MIT (country flags, rendered to 128 × 96 PNG thumbnails):
+    The MIT License (MIT)
+
+    Copyright (c) 2013 Panayiotis Lipiridis
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the "Software"), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+    of the Software, and to permit persons to whom the Software is furnished to do
+    so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+  Unicode CLDR 49 (French country names) — Unicode License v3:
+    UNICODE LICENSE V3
+
+    COPYRIGHT AND PERMISSION NOTICE
+
+    Copyright © 2015-2024 Unicode, Inc.
+
+    NOTICE TO USER: Carefully read the following legal agreement. BY
+    DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+    SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+    TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+    DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of data files and any associated documentation (the "Data Files") or
+    software and any associated documentation (the "Software") to deal in the
+    Data Files or Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, and/or sell
+    copies of the Data Files or Software, and to permit persons to whom the
+    Data Files or Software are furnished to do so, provided that either (a)
+    this copyright and permission notice appear with all copies of the Data
+    Files or Software, or (b) this copyright and permission notice appear in
+    associated Documentation.
+
+    THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+    KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+    THIRD PARTY RIGHTS.
+
+    IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+    BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+    OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+    WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+    ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+    FILES OR SOFTWARE.
+
+    Except as contained in this notice, the name of a copyright holder shall
+    not be used in advertising or otherwise to promote the sale, use or other
+    dealings in these Data Files or Software without prior written
+    authorization of the copyright holder.
+
+    SPDX-License-Identifier: Unicode-3.0
+
+spelling.sqlite — the spelling indicator's reference list, derived from Grammalecte « Lexique simplifié » v7.7
+(lexicons/French.lex) — MPL-2.0 (since 0.8.3; a separate file since the publication cleanup of 2026-11-16)
+    French.lex itself is not shipped. spelling.sqlite (table spelling_unlisted) holds the Lexique 3.83 forms (words of
+    letters) that are absent from French.lex, also after « oe » is written « œ » — a list computed by comparing the two
+    lexicons by src/Data.Build/build_spelling_ref.py (GPL-3.0-or-later). Up to data pack 2026.11 these tables were inside
+    prediction.sqlite; they now live in their own MPL-2.0 file, so prediction.sqlite holds CC BY-SA 4.0 data only.
+    spelling.sqlite is Covered Software under the MPL-2.0 (a Modification of French.lex, distributed in Executable Form,
+    MPL-2.0 § 3.2); this GPL-3.0-or-later program is the Larger Work (MPL-2.0 § 3.3). It is distributed with
+    spelling/SOURCE.txt (source URL, commit, SHA-256 of French.lex and of the file, counts) and spelling/MPL-2.0.txt.
+    Source form of French.lex:
+    https://github.com/Pofilo/grammalecte (a GitHub mirror of the Grammalecte project; release 2.3.0 state),
+    commit 08511c222029b3be20bf547563315d10fb48d44b, file lexicons/French.lex,
+    SHA-256 5938d8180b64e4f5320c358dab64e2eea1298c6c5967b147d5506f0ac4562c4a.
+    Notice of that file: « This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy
+    of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/. »
+    The derived file stays under the MPL-2.0; MPL-2.0 § 3.3 allows it next to this GPL-3.0-or-later program.
+
+grammar.sqlite — morphology table derived from Grammalecte « Lexique simplifié » v7.7 — MPL-2.0 (plan 11, from 10D-0)
+    A separate data file built by src/Data.Build/build_grammar.py (GPL-3.0-or-later) from the same pinned French.lex
+    (commit 08511c222029b3be20bf547563315d10fb48d44b, SHA-256 5938d8180b64e4f5320c358dab64e2eea1298c6c5967b147d5506f0ac4562c4a):
+    every analysis of every form (form, lemma, tag) with the tags decoded into our own feature bits, and an index of the
+    prediction lexicon's forms. Content: MPL-2.0 data derived from French.lex, indexed by the prediction lexicon's
+    spellings (the index keys come from Lexique 3.83, CC BY-SA 4.0, see above: « coeur », « aujourd'hui »).
+    grammar.sqlite is Covered Software under the MPL-2.0 (a Modification of French.lex, distributed in Executable Form,
+    MPL-2.0 § 3.2); this GPL-3.0-or-later program is the Larger Work (MPL-2.0 § 3.3). Its Source Code Form is French.lex at
+    the URL above plus the converter src/Data.Build/build_grammar.py. It is distributed with grammar/SOURCE.txt (source
+    URL, commit, SHA-256 of the inputs and of the file, counts) and grammar/MPL-2.0.txt (the licence text, also in
+    licenses/mpl-2.0/LICENSE.txt). Shipped next to Pepite.exe since test release 0.9.0 (plan 11, 10D-1: the agreement of
+    the proposed words); credited in « À propos » as « Grammalecte — lexique (MPL-2.0) ».
+    Pinned for later steps, not used nor shipped yet: gc_lang/fr/rules.grx and gc_lang/fr/data/phonet_simil.txt of the same
+    commit (GPL-3.0-or-later), lexicons/French.tagset.txt (documentation of the tags). See src/Data.Build/grammar.lock.json.
+
+Pictures of a teacher's names database: any licence, at the teacher's responsibility; the licence is required, stored with
+each picture and shown in Espace enseignant → Mots (plan 10C). They stay on the PC and are never part of a shared pack.
+
+ARASAAC pictograms and the licences (D19, amended 2026-11-14): the word pictures are kept under CC BY-NC-SA 4.0 as a
+separately licensed data component (pictos.sqlite + ARASAAC-LICENCE.txt), apart from the GPL-3 program and from the CC BY
+4.0 « Noms propres » pack; a name never shows an ARASAAC picture.
+
+Corpora of the word and context frequencies in prediction.sqlite (credited since 0.10.0, owner decision 2026-11-15)
+  The database stores counts (how often a word, or a word after one or two others, occurs), computed by
+  src/Data.Build/build_ngrams.py from these sentence collections; no sentence is shipped.
+  - Tatoeba, French sentences (fra_sentences.tsv, https://downloads.tatoeba.org/exports/per_language/fra/) —
+    CC BY 2.0 FR (https://creativecommons.org/licenses/by/2.0/fr/), « Tatoeba » and its contributors
+    (https://tatoeba.org).
+  - Leipzig Corpora Collection, French news 2023, 1 M sentences (fra_news_2023_1M) — Wortschatz, Universität Leipzig
+    (https://wortschatz.uni-leipzig.de/en/download/French), licence CC BY. The provider's terms page
+    (https://wortschatz.uni-leipzig.de/en/usage, read on 2026-11-16) says: « The text corpora offered for download are
+    made available under the Creative Commons licence CC BY ». The CC BY-NC clause of that page covers the online data and
+    applications, not the downloaded corpora; no licence version is stated. D. Goldhahn, T. Eckart, U. Quasthoff: « Building Large Monolingual Dictionaries at the
+    Leipzig Corpora Collection: From 100 to 200 Languages », LREC 2012.
+  - Vikidia, l'encyclopédie des 8-13 ans (https://fr.vikidia.org), Kiwix archive vikidia_fr_all_nopic_2026-09.zim —
+    CC BY-SA 3.0 (and GFDL), « Vikidia » and its contributors; the paragraph text of the articles, without the 5 % of
+    articles kept apart for testing.
+  - Public-domain children's books from Project Gutenberg (https://www.gutenberg.org): every author and translator died
+    in 1955 or earlier; the list of books, with their eBook numbers, is in prediction-SOURCES.txt and
+    src/Data.Build/corpus/pd-books.tsv. No Project Gutenberg text or licence is distributed; the name only identifies
+    the source.
+  Since the written-corpus rebuild (plan corpus-light, Phase 2) no film subtitles are counted. prediction.sqlite is a
+  separately licensed data component under CC BY-SA 4.0 (its word list comes from Lexique 3.83, CC BY-SA 4.0, and the
+  counts are treated as adapted from Vikidia's CC BY-SA text); prediction-SOURCES.txt, written from
+  src/Data.Build/data.lock.json, lists every source with its version, URL, licence and SHA-256. The spelling reference
+  is not in it any more: see spelling.sqlite above.
+  Build-time tool, never shipped: python-libzim 4.1.0 (GPL-3.0-or-later), which reads the Vikidia archive.
+  Credited in « À propos » (section Lexique) and in LISEZ-MOI.txt.
+
+Inno Setup 7.1.1 — the installer (Pepite-<version>-installation.exe) is built with Inno Setup, Copyright (C) 1997-2026
+  Jordan Russell, portions Copyright (C) 2000-2026 Martijn Laan (https://jrsoftware.org); its licence allows any use,
+  including commercial (https://jrsoftware.org/files/is/license.txt). Its setup program is the installer itself, and its
+  uninstaller (unins000.exe, with unins000.dat) is installed next to Pepite.exe.
+
+Lexique 3.83 — CC BY-SA 4.0 (the word list of prediction.sqlite)
+  B. New, C. Pallier et al., http://www.lexique.org ; file Lexique383.tsv of Lexique383.zip (version 3.83, 2019-06-04;
+  SHA-256 of the archive in prediction-SOURCES.txt). Citation: New, B., Pallier, C., Brysbaert, M., Ferrand, L. (2004).
+  Lexique 2 : A New French Lexical Database. Behavior Research Methods, Instruments, & Computers, 36(3), 516-524.
+  Licence: https://creativecommons.org/licenses/by-sa/4.0/ . Changes: one row per spelling (deduplicated, normalised),
+  frequencies kept; pronunciations used for the phonetic keys. Credited in « À propos » and in LISEZ-MOI.txt.
+
+ARASAAC pictograms — CC BY-NC-SA 4.0 (pictos.sqlite, a separate non-commercial component, outside the GPL)
+  Attribution (fr, verbatim from https://arasaac.org/terms-of-use, read on 2026-11-08): « Les symboles pictographiques
+  utilisés sont la propriété du Gouvernement d'Aragon et ont été créés par Sergio Palao pour ARASAAC
+  (http://www.arasaac.org), qui les distribuent sous Licence Creative Commons BY-NC-SA. »
+  Licence: https://creativecommons.org/licenses/by-nc-sa/4.0/ . Changes: resized (128 px) and palette-reduced, packed
+  into pictos.sqlite by src/Data.Build/build_pictos.py; pictograms flagged « sex » or « violence » are left out.
+  pictos.sqlite is a separate component under CC BY-NC-SA 4.0, shipped with ARASAAC-LICENCE.txt; it is not covered by
+  the GPL and the GPL does not apply to it. NON-COMMERCIAL USE ONLY: anyone reusing Pépite's code in a commercial product
+  must leave the pictograms out (the app runs without pictos.sqlite) or obtain ARASAAC's permission.
+
+Fonts — SIL Open Font License 1.1, shipped unmodified in fonts\<family>\ with their OFL.txt
+  - OpenDyslexic v0.91.12 (Abbie Gonzalez, Reserved Font Name OpenDyslexic), https://github.com/antijingoist/opendyslexic
+    — OpenDyslexic-Regular.otf, OpenDyslexic-Bold.otf.
+  - Lexend, googlefonts/lexend commit 7894f02b2e7eabc48595f1d4eff3b17b48c6e651 (The Lexend Project Authors, Reserved Font
+    Name « RevReading Lexend ») — Lexend-Regular.ttf, Lexend-SemiBold.ttf.
+  - Andika 7.000 (SIL Global, Reserved Font Names « Andika » and « SIL »), https://software.sil.org/andika/ —
+    Andika-Regular.ttf, Andika-SemiBold.ttf.
+  Fetched with pinned URLs and SHA-256 by src/Data.Build/fetch_fonts.py (each folder's SOURCE.txt). The OFL covers the
+  font files only, not the program; the fonts are loaded privately by the app and credited in « À propos ».
+
+.NET runtime 6.0.32 and Windows Desktop runtime 6.0.32 (self-contained publish) — MIT
+  Copyright (c) .NET Foundation and Contributors. https://github.com/dotnet/runtime , https://github.com/dotnet/wpf ,
+  https://github.com/dotnet/winforms . Packages Microsoft.NETCore.App.Runtime.win-x64 6.0.32 and
+  Microsoft.WindowsDesktop.App.Runtime.win-x64 6.0.32. Licences and the runtime's own third-party notices:
+  licenses\dotnet\LICENSE.TXT, licenses\dotnet\THIRD-PARTY-NOTICES.TXT, licenses\windowsdesktop\LICENSE.
+
+System.Speech 6.0.0 (NuGet) — MIT
+  Copyright (c) .NET Foundation and Contributors. https://github.com/dotnet/runtime
+  Licence and notices: licenses\system-speech\LICENSE.TXT, licenses\system-speech\THIRD-PARTY-NOTICES.TXT.
+
+Microsoft.Data.Sqlite 6.0.25 (NuGet Microsoft.Data.Sqlite, Microsoft.Data.Sqlite.Core) — MIT
+  Copyright (c) .NET Foundation and Contributors. https://github.com/dotnet/efcore
+  Same MIT licence text as licenses\dotnet\LICENSE.TXT.
+
+SQLitePCLRaw 2.1.2 (NuGet SQLitePCLRaw.bundle_e_sqlite3, .core, .provider.e_sqlite3, .lib.e_sqlite3) — Apache-2.0
+  Copyright 2014-2022 SourceGear, LLC. https://github.com/ericsink/SQLitePCL.raw
+  Licence text: licenses\apache-2.0\LICENSE.txt. No NOTICE file is distributed with these packages.
+
+SQLite 3.39.2 (e_sqlite3.dll, from SQLitePCLRaw.lib.e_sqlite3 2.1.2; source id 2022-07-21 15:24:47 698edb77) — public domain
+  https://www.sqlite.org/copyright.html : « All of the code and documentation in SQLite has been dedicated to the public
+  domain by the authors. »
+
+Build-time tools, never shipped (listed for completeness)
+  Python 3.12 (PSF License); Pillow (MIT-CMU, pictures and icons); onnx 1.23.2 (Apache-2.0, the alignment output of the
+  voices); python-libzim 4.1.0 (GPL-3.0-or-later, reads the Vikidia archive); resvg 0.50.0 (Apache-2.0 OR MIT, flags);
+  MSYS2 UCRT64 toolchain (GCC and friends, various free licences; builds libespeak-ng.dll from source); Inno Setup 7.1.1
+  (see its entry).
+
+Also credited in « À propos » and LISEZ-MOI.txt: ARASAAC, Lexique 3.83, the corpora, the voices and the fonts.

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="enfant">
+<title>Lire un texte — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html" aria-current="page">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Lire un texte</h1>
+<p class="chapeau">Un texte long ou difficile ? Pépite te le lit, mot après mot.</p>
+<ol class="etapes">
+  <li><p><b>Sélectionne</b> le texte : avec la souris, par un double clic sur un mot, ou <kbd>Ctrl</kbd>+<kbd>A</kbd> pour tout.</p></li>
+  <li><p>La barre devient la <b>barre de lecture</b> : le texte en cases, avec les images.</p></li>
+  <li><p>Appuie sur <kbd>Espace</kbd>, sur <kbd>F9</kbd> ou sur le bouton ▶. Pépite lit, et le mot lu devient <b>jaune</b>.</p></li>
+</ol>
+<figure><img src="img/barre-lecture.svg" alt="La barre de lecture : les boutons Lire, Phrase précédente, Phrase suivante et Grande fenêtre, puis les mots en cases. Le mot sommes, en train d'être lu, est en jaune." width="924" height="190"></figure>
+<div class="astuce"><p>Pépite ne lit jamais tout seul : rien ne se passe tant que tu n'appuies pas sur ▶, <kbd>Espace</kbd> ou <kbd>F9</kbd>.</p></div>
+
+<h2 id="boutons">Les boutons</h2>
+<table>
+  <thead><tr><th scope="col">Bouton ou touche</th><th scope="col">Ce qu'il fait</th></tr></thead>
+  <tbody>
+    <tr><td>▶ / ❚❚, <kbd>Espace</kbd> ou <kbd>F9</kbd></td><td>Lire, ou faire une pause</td></tr>
+    <tr><td>⏮</td><td>Relire la phrase d'avant</td></tr>
+    <tr><td>⏭</td><td>Passer à la phrase suivante</td></tr>
+    <tr><td>⤢</td><td>Ouvrir la <b>Grande fenêtre</b></td></tr>
+    <tr><td>Un clic sur une case</td><td>Écouter ce mot seul</td></tr>
+    <tr><td><kbd>Échap</kbd></td><td>Revenir aux mots proposés</td></tr>
+  </tbody>
+</table>
+<p><kbd>Espace</kbd> et <kbd>F9</kbd> lisent seulement quand la barre de lecture est là. Sinon, <kbd>Espace</kbd> écrit une espace, comme d'habitude.</p>
+
+<h2 id="grande-fenetre">La grande fenêtre</h2>
+<p>Pour un long texte, clique sur ⤢. Les cases s'affichent dans une grande fenêtre. Tu peux l'agrandir comme tu veux. Elle suit le mot lu.</p>
+
+<h2 id="fin">Revenir aux mots</h2>
+<p>Recommence à écrire, clique ailleurs dans le texte, ou appuie sur <kbd>Échap</kbd>.</p>
+
+<h2 id="limites">Bon à savoir</h2>
+<ul>
+  <li>Pépite lit jusqu'à 1000 mots à la fois. Au-delà, il affiche <q>Texte trop long, seuls les 1000 premiers mots sont lus</q>.</li>
+  <li>Dans un champ de mot de passe, Pépite ne lit rien.</li>
+  <li>Quelques programmes ne donnent pas le texte sélectionné. Un adulte peut cocher, dans les réglages, <b>Copier la sélection par Ctrl+C si l'application ne la donne pas (presse-papiers rétabli)</b>.</li>
+</ul>
+<p class="suivant"><a href="mes-mots.html">← Mes mots</a><a href="reglages.html">Les réglages →</a></p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

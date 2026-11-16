@@ -1,0 +1,24 @@
+﻿Pépite — prédiction de mots
+
+Pépite propose des mots pendant que vous écrivez, dans toutes les applications
+Windows, avec une image au-dessus des mots et une voix qui peut les lire.
+
+  - Logiciel libre : licence GNU GPL version 3 ou plus récente.
+  - Fonctionne sans Internet. Pépite n'envoie aucune donnée : ni les mots tapés,
+    ni les prénoms des élèves, ni statistiques. Il ne se met pas à jour tout seul.
+  - Les réglages et les profils des élèves restent sur cet ordinateur, dans le
+    dossier de chaque compte Windows.
+
+Configuration recommandée (provisoire)
+  - Windows 11, 64 bits (processeur Intel ou AMD).
+  - Mémoire : 8 Go conseillés (un avertissement s'affiche sous 4 Go).
+  - Un disque SSD est conseillé.
+  - Place sur le disque : environ 460 Mo (400 Mo sans la voix naturelle).
+
+Installer « pour moi » : Pépite est installé pour ce compte Windows seulement,
+sans mot de passe administrateur. « Pour tous les utilisateurs » : il faut un
+compte administrateur ; c'est le choix conseillé dans une école.
+
+Version de test non signée : si Windows affiche « Windows a protégé votre
+ordinateur », cliquez sur « Informations complémentaires », puis sur
+« Exécuter quand même ».

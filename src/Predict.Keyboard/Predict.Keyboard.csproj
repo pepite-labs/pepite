@@ -1,0 +1,123 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- the visible name is « Pépite » (owner 2026-11-14); project and namespaces stay Predict.* -->
+    <AssemblyName>Pepite</AssemblyName>
+    <RootNamespace>Predict.Keyboard</RootNamespace>
+    <RollForward>LatestMajor</RollForward>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Version>0.10.1</Version>
+    <Product>Pépite</Product>
+    <!-- FileDescription: the name Windows shows in Task Manager and on notifications -->
+    <AssemblyTitle>Pépite</AssemblyTitle>
+    <Description>Pépite — prédiction de mots</Description>
+    <Company>Les auteurs de Pépite</Company>
+    <!-- D18: no personal name; a code-signing certificate will still show its holder as the publisher -->
+    <Copyright>© 2026 Les auteurs de Pépite</Copyright>
+    <!-- plan 12: French only (D14) — no satellite resource folders (de, es, ja, …) in the publish / the installer -->
+    <SatelliteResourceLanguages>fr</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Predict.Core\Predict.Core.csproj" />
+    <PackageReference Include="System.Speech" Version="6.0.0" />
+    <!-- plan 08a (D19: MIT, GPL-3-compatible): Piper voices on ONNX Runtime, played through WASAPI -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
+    <PackageReference Include="NAudio.Core" Version="2.2.1" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- the « pépite » logo (branding/pepite.svg): tray / windows / À propos icons (Data.Build/make_icon.py), loaded as Predict.Keyboard.Assets.<name> -->
+    <EmbeddedResource Include="Assets\*.ico" LogicalName="Predict.Keyboard.Assets.%(Filename)%(Extension)" />
+    <None Include="Assets\app.svg" />
+  </ItemGroup>
+  <!-- bundled OFL fonts (D16, Data.Build/fetch_fonts.py): byte-identical upstream files, each folder with its OFL.txt -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\fonts')">
+    <None Include="..\Data.Build\out\fonts\**" Link="fonts\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- plan 12: the prediction database (Lexique 3.83 CC BY-SA 4.0 + corpus counts, Data.Build/build_db.py), copied like the other packs (it was copied by hand up to 0.9.0) -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\prediction.sqlite')">
+    <None Include="..\Data.Build\out\prediction.sqlite" Link="prediction.sqlite" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- plan corpus-light (Phase 2): the database's sources, versions, licences and SHA-256 (CC BY-SA 4.0 data; Data.Build/corpus/write_sources.py) -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\prediction-SOURCES.txt')">
+    <None Include="..\Data.Build\out\prediction-SOURCES.txt" Link="prediction-SOURCES.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- ARASAAC picture pack (CC BY-NC-SA 4.0, a separate file): shipped only together with its licence notice -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\pictos.sqlite') And Exists('..\Data.Build\out\ARASAAC-LICENCE.txt')">
+    <None Include="..\Data.Build\out\pictos.sqlite" Link="pictos.sqlite" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data.Build\out\ARASAAC-LICENCE.txt" Link="ARASAAC-LICENCE.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- plan 10C: the « Noms propres » open-data pack (CC BY 4.0, Data.Build/pepite-noms/build_names.py), a separate folder with its licence and sources -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\noms-pack\noms\noms.json') And Exists('..\Data.Build\out\noms-pack\noms\LICENCE.txt')">
+    <None Include="..\Data.Build\out\noms-pack\noms\**" Link="noms\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- plan 11 (10D-1): the morphology table derived from Grammalecte French.lex (MPL-2.0, Data.Build/build_grammar.py), a separate file shipped with its SOURCE.txt and the MPL text -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\grammar.sqlite') And Exists('..\Data.Build\out\grammar\SOURCE.txt') And Exists('..\Data.Build\out\grammar\MPL-2.0.txt')">
+    <None Include="..\Data.Build\out\grammar.sqlite" Link="grammar.sqlite" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data.Build\out\grammar\SOURCE.txt" Link="grammar\SOURCE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data.Build\out\grammar\MPL-2.0.txt" Link="grammar\MPL-2.0.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- publication cleanup (S6): the spelling indicator's reference derived from Grammalecte French.lex (MPL-2.0,
+       Data.Build/build_spelling_ref.py), a separate file shipped with its SOURCE.txt and the MPL text -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\spelling.sqlite') And Exists('..\Data.Build\out\spelling\SOURCE.txt') And Exists('..\Data.Build\out\spelling\MPL-2.0.txt')">
+    <None Include="..\Data.Build\out\spelling.sqlite" Link="spelling.sqlite" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data.Build\out\spelling\SOURCE.txt" Link="spelling\SOURCE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data.Build\out\spelling\MPL-2.0.txt" Link="spelling\MPL-2.0.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- plan 08a: espeak-ng (GPL-3.0-or-later, Data.Build/build_espeak.ps1) with its licence and build record -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\espeak\libespeak-ng.dll')">
+    <None Include="..\Data.Build\out\espeak\libespeak-ng.dll" Link="libespeak-ng.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data.Build\out\espeak\espeak-ng-data\**" Link="espeak-ng-data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data.Build\out\espeak\COPYING" Link="licenses\espeak-ng\COPYING" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data.Build\out\espeak\SOURCE.txt" Link="licenses\espeak-ng\SOURCE.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- plans 08a/08b: Piper voice packs (siwis CC BY 4.0; pierre CC BY-SA 4.0, "public": false = test releases only, D28; Data.Build/fetch_voices.py), each folder with its licence and change notice -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\voices')">
+    <None Include="..\Data.Build\out\voices\**" Exclude="..\Data.Build\out\voices\**\.packed-by-fetch_voices" Link="voices\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- the app's licence and the third-party notices (D19); the MIT notices of ONNX Runtime (from its package) and NAudio -->
+  <ItemGroup>
+    <None Include="..\..\COPYING" Link="COPYING" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(NuGetPackageRoot)microsoft.ml.onnxruntime\1.31.1\LICENSE" Link="licenses\onnxruntime\LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(NuGetPackageRoot)microsoft.ml.onnxruntime\1.31.1\ThirdPartyNotices.txt" Link="licenses\onnxruntime\ThirdPartyNotices.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\licenses\naudio\license.txt" Link="licenses\naudio\license.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- publication cleanup (S6): the licences of what a self-contained publish ships — the .NET and Windows Desktop runtime
+       packs (MIT + their third-party notices), System.Speech (MIT) and the Apache-2.0 text for SQLitePCLRaw; the versions
+       follow THIRD-PARTY-NOTICES.txt (release_lint.py checks them against Pepite.deps.json) -->
+  <ItemGroup>
+    <None Include="$(NuGetPackageRoot)microsoft.netcore.app.runtime.win-x64\6.0.32\LICENSE.TXT" Link="licenses\dotnet\LICENSE.TXT" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(NuGetPackageRoot)microsoft.netcore.app.runtime.win-x64\6.0.32\LICENSE.TXT')" />
+    <None Include="$(NuGetPackageRoot)microsoft.netcore.app.runtime.win-x64\6.0.32\THIRD-PARTY-NOTICES.TXT" Link="licenses\dotnet\THIRD-PARTY-NOTICES.TXT" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(NuGetPackageRoot)microsoft.netcore.app.runtime.win-x64\6.0.32\THIRD-PARTY-NOTICES.TXT')" />
+    <None Include="$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\6.0.32\LICENSE" Link="licenses\windowsdesktop\LICENSE" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\6.0.32\LICENSE')" />
+    <None Include="$(NuGetPackageRoot)system.speech\6.0.0\LICENSE.TXT" Link="licenses\system-speech\LICENSE.TXT" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(NuGetPackageRoot)system.speech\6.0.0\LICENSE.TXT')" />
+    <None Include="$(NuGetPackageRoot)system.speech\6.0.0\THIRD-PARTY-NOTICES.TXT" Link="licenses\system-speech\THIRD-PARTY-NOTICES.TXT" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(NuGetPackageRoot)system.speech\6.0.0\THIRD-PARTY-NOTICES.TXT')" />
+    <None Include="..\..\licenses\apache-2.0\LICENSE.txt" Link="licenses\apache-2.0\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- plan « aide intégrée »: the embedded help (static French pages, CC BY-SA 4.0; prefs.js GPL) in aide\, its
+       contributor notes excepted; the bundled fonts copied again into aide\fonts\ (Firefox refuses a font from a parent
+       folder of a local page), each with its OFL.txt; the school deployment guide next to the exe (owner Q6), linked
+       from the help -->
+  <ItemGroup>
+    <None Include="..\..\aide\**" Exclude="..\..\aide\README.md;..\..\aide\fonts\**" Link="aide\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\installer\DEPLOIEMENT.txt" Link="DEPLOIEMENT.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup Condition="Exists('..\Data.Build\out\fonts')">
+    <None Include="..\Data.Build\out\fonts\**\*.ttf;..\Data.Build\out\fonts\**\*.otf;..\Data.Build\out\fonts\**\OFL.txt" Link="aide\fonts\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- A13: app-local Visual C++ 2015-2022 x64 runtime for onnxruntime.dll (Data.Build/stage_vcruntime.ps1, git-ignored) -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\vcruntime\vcruntime140.dll')">
+    <None Include="..\Data.Build\out\vcruntime\*.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Data.Build\out\vcruntime\SOURCE.txt" Link="licenses\vcruntime\SOURCE.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- the ONNX Runtime package also ships its import libraries (.lib): not needed at run time -->
+  <Target Name="DropOrtImportLibs" AfterTargets="Publish">
+    <Delete Files="$(PublishDir)onnxruntime.lib;$(PublishDir)onnxruntime_providers_shared.lib" />
+  </Target>
+</Project>

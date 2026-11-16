@@ -1,0 +1,157 @@
+/* Aide de Pépite — feuille de style unique ; aucune ressource distante.
+   Licence : CC BY-SA 4.0 (comme les pages de l'aide).
+   Polices : copies de celles de l'application, posées dans aide/fonts/ à la construction (SIL Open Font License 1.1,
+   texte de la licence à côté de chaque police). Firefox refuse une police prise dans un dossier parent d'une page
+   locale : elles sont donc copiées ici. */
+@font-face { font-family: "Lexend"; src: url("fonts/Lexend/Lexend-Regular.ttf"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("fonts/Lexend/Lexend-SemiBold.ttf"); font-weight: 600 700; font-display: swap; }
+@font-face { font-family: "Andika"; src: url("fonts/Andika/Andika-Regular.ttf"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Andika"; src: url("fonts/Andika/Andika-SemiBold.ttf"); font-weight: 600 700; font-display: swap; }
+@font-face { font-family: "OpenDyslexic"; src: url("fonts/OpenDyslexic/OpenDyslexic-Regular.otf"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "OpenDyslexic"; src: url("fonts/OpenDyslexic/OpenDyslexic-Bold.otf"); font-weight: 600 700; font-display: swap; }
+
+:root {
+  --creme: #FFF8EC;
+  --papier: #FFFFFF;
+  --sable: #FBEBD0;
+  --encre: #2B1B12;        /* brun très foncé : contraste 15,7:1 sur la crème */
+  --encre-douce: #5A4636;  /* 8,4:1 */
+  --lien: #1D5FA8;         /* 6,1:1 */
+  --biscuit: #E8A64B;
+  --biscuit-clair: #F2BC66;
+  --pepite: #4A2C1D;
+  /* les couleurs de la barre de mots (texte blanc gras d'au moins 18,66 px : contraste ≥ 3:1) */
+  --bleu: #2D7DD2;
+  --vert: #2E9E5B;
+  --orange: #D97B16;
+  --rouge: #C62828;
+  --focus: #1D5FA8;
+  --texte-corps: "Andika", "Segoe UI", sans-serif;
+  --texte-titre: "Lexend", "Segoe UI", sans-serif;
+  --taille: 1.25rem;       /* 20 px */
+}
+
+* { box-sizing: border-box; }
+html { background: var(--creme); }
+body {
+  margin: 0; color: var(--encre); background: var(--creme);
+  font-family: var(--texte-corps); font-size: var(--taille); line-height: 1.65;
+  letter-spacing: 0.01em; word-spacing: 0.08em;
+  overflow-wrap: break-word;
+}
+
+/* Choix du lecteur : deux cases à cocher en haut de page. Le CSS seul les applique à la page ; prefs.js les garde
+   d'une page à l'autre et d'une ouverture à l'autre. */
+body:has(#choix-od:checked) { --texte-corps: "OpenDyslexic", sans-serif; --texte-titre: "OpenDyslexic", sans-serif; letter-spacing: 0; word-spacing: 0; }  /* la police est déjà large */
+body:has(#choix-grand:checked) { --taille: 1.6rem; }
+
+a { color: var(--lien); text-underline-offset: 0.18em; text-decoration-thickness: 0.08em; }
+a:hover { color: var(--pepite); }
+:focus-visible { outline: 0.2rem solid var(--focus); outline-offset: 0.2rem; border-radius: 0.3rem; }
+q { quotes: "«\00a0" "\00a0»" "“" "”"; }
+
+.saut { position: absolute; left: -9999px; }
+.saut:focus { left: 1rem; top: 1rem; background: var(--papier); padding: 0.5rem 1rem; z-index: 9; }
+
+/* En-tête */
+header.haut {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1.5rem;
+  padding: 0.9rem clamp(1rem, 4vw, 3rem); background: var(--papier);
+  border-bottom: 0.25rem solid var(--biscuit-clair);
+}
+.marque { display: flex; align-items: center; gap: 0.7rem; text-decoration: none; color: var(--encre); }
+.marque img { width: 3rem; height: 3rem; }
+.marque b { font-family: var(--texte-titre); font-weight: 600; font-size: 1.5rem; display: block; line-height: 1.1; }
+.marque span span { display: block; font-size: 0.85rem; color: var(--encre-douce); line-height: 1.1; }
+fieldset.choix { margin: 0 0 0 auto; border: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; font-size: 0.95rem; align-items: center; }
+fieldset.choix legend { float: left; margin-right: 0.6rem; font-family: var(--texte-titre); font-weight: 600; color: var(--encre-douce); }
+.choix label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+.choix input { width: 1.3rem; height: 1.3rem; accent-color: var(--pepite); }
+
+/* Navigation : rangée 1 pour les élèves, rangée 2 pour les adultes */
+nav.menu { background: var(--sable); padding: 0.5rem clamp(1rem, 4vw, 3rem); }
+nav.menu ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+nav.menu .adultes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin-top: 0.4rem;
+  padding-top: 0.4rem; border-top: 1px solid #E4CDA9; font-size: 0.9rem; }
+nav.menu .adultes-titre { font-family: var(--texte-titre); color: var(--encre-douce); margin-right: 0.3rem; }
+nav.menu a {
+  display: block; padding: 0.3rem 0.85rem; border-radius: 2rem; text-decoration: none;
+  color: var(--encre); font-family: var(--texte-titre); font-size: 0.95rem;
+}
+nav.menu .adultes a { font-size: 0.9rem; }
+nav.menu a:hover { background: var(--biscuit-clair); }
+nav.menu a[aria-current="page"] { background: var(--pepite); color: #fff; }
+
+main { max-width: 52rem; margin: 0 auto; padding: 1.5rem clamp(1rem, 4vw, 2rem) 3rem; }
+h1, h2, h3 { font-family: var(--texte-titre); font-weight: 600; line-height: 1.25; color: var(--pepite); }
+h1 { font-size: 2.1em; margin: 0.6em 0 0.3em; }
+h2 { font-size: 1.45em; margin: 2em 0 0.4em; }
+h3 { font-size: 1.15em; margin: 1.4em 0 0.3em; }
+p, li, dd { max-width: 36em; }
+p { margin: 0 0 0.9em; }
+.chapeau { font-size: 1.15em; color: var(--encre-douce); }
+
+/* Une idée = une carte. */
+.carte {
+  background: var(--papier); border-radius: 1.2rem; padding: 1.2rem 1.4rem; margin: 1.2rem 0;
+  box-shadow: 0 0.15rem 0 rgba(74, 44, 29, 0.12);
+}
+.carte > :last-child { margin-bottom: 0; }
+.etapes { list-style: none; padding: 0; margin: 1rem 0; counter-reset: e; display: grid; gap: 1rem; }
+.etapes li { counter-increment: e; display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 1rem; align-items: start;
+  background: var(--papier); border-radius: 1.2rem; padding: 1rem 1.2rem; max-width: none; }
+.etapes li::before { content: counter(e); display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%;
+  background: var(--biscuit-clair); color: var(--pepite); font-family: var(--texte-titre); font-weight: 600; font-size: 1.4rem; }
+.etapes p { margin: 0; }
+
+figure { margin: 1.4rem 0; }
+figure img { display: block; max-width: 100%; height: auto; border-radius: 0.8rem; }
+figure.polices { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+figure.polices figcaption { flex-basis: 100%; }
+figcaption { font-size: 0.9em; color: var(--encre-douce); margin-top: 0.5rem; }
+
+kbd {
+  font-family: var(--texte-titre); font-size: 0.85em; padding: 0.1em 0.5em; border-radius: 0.35em;
+  background: var(--papier); border: 0.08em solid #8A7055; border-bottom-width: 0.2em; white-space: nowrap;
+}
+samp { font-family: Consolas, "Courier New", monospace; font-size: 0.9em; overflow-wrap: anywhere; }
+/* Un mot coloré comme dans la barre : gras et assez grand pour le contraste (≥ 18,66 px gras). */
+.mot { font-weight: 700; font-size: 1em; padding: 0 0.35em; border-radius: 0.3em; color: #fff; white-space: nowrap; }
+.mot.bleu { background: var(--bleu); } .mot.vert { background: var(--vert); } .mot.orange { background: var(--orange); }
+
+.astuce, .attention {
+  border-radius: 1rem; padding: 0.9rem 1.2rem 0.9rem 3.6rem; margin: 1.2rem 0; position: relative;
+}
+.astuce { background: #E9F5EE; } .attention { background: #FDEBDC; }
+.astuce::before, .attention::before {
+  position: absolute; left: 1rem; top: 0.85rem; width: 1.8rem; height: 1.8rem; border-radius: 50%;
+  display: grid; place-items: center; font-family: var(--texte-titre); font-weight: 600; color: #fff;
+}
+.astuce::before { content: "✓"; background: #257046; }
+.attention::before { content: "!"; background: #A85A12; }
+.astuce p, .attention p { margin: 0; }
+
+.grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr)); gap: 1rem; margin: 1.2rem 0; }
+.grille .carte { margin: 0; }
+.grille h2, .grille h3 { margin-top: 0.2em; font-size: 1.15em; }
+.suivant { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-top: 3rem; font-family: var(--texte-titre); max-width: none; }
+
+dl.reglages dt { font-family: var(--texte-titre); font-weight: 600; margin-top: 1rem; }
+dl.reglages dd { margin: 0.2rem 0 0 0; }
+
+table { border-collapse: collapse; width: 100%; font-size: 0.9em; background: var(--papier); border-radius: 0.8rem; overflow: hidden; }
+th, td { text-align: left; padding: 0.5rem 0.8rem; border-bottom: 1px solid #EAD9C2; vertical-align: top; }
+th { font-family: var(--texte-titre); font-weight: 600; background: var(--sable); }
+
+footer.bas { border-top: 0.25rem solid var(--biscuit-clair); background: var(--papier); padding: 1.2rem clamp(1rem, 4vw, 3rem);
+  font-size: 0.85rem; color: var(--encre-douce); line-height: 1.5; }
+footer.bas p { max-width: 60em; margin: 0; }
+
+@media (max-width: 30rem) {
+  .etapes li { grid-template-columns: minmax(0, 1fr); }
+  table, thead, tbody, tr, th, td { display: block; }
+  thead { position: absolute; left: -9999px; }
+  td { border-bottom: 0; } tr { border-bottom: 1px solid #EAD9C2; }
+}
+@media (prefers-reduced-motion: no-preference) { nav.menu a { transition: background 0.15s; } }
+@media print { header.haut .choix, nav.menu, .saut { display: none; } body { background: #fff; } .carte, .etapes li { box-shadow: none; border: 1px solid #ddd; } }

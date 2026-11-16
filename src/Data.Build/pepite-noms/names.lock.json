@@ -1,0 +1,251 @@
+{
+  "comment": "Inputs of the « Noms propres » pack, pinned by SHA-256 (build_names.py fetch refuses a mismatch). A null sha256 is pinned once by « fetch --pin-new » (first edition, or a new input after review); the Wikidata / Commons snapshots are re-made only by the deliberate « snapshot » step, which records their new SHA-256 here.",
+  "pack": {
+    "id": "pepite-noms",
+    "edition": "2026.1",
+    "titre": "Noms propres (données ouvertes)",
+    "licence": "CC BY 4.0",
+    "licence_url": "https://creativecommons.org/licenses/by/4.0/deed.fr"
+  },
+  "inputs": [
+    {
+      "id": "insee",
+      "file": "prenoms-2025-nat_csv.zip",
+      "url": "https://www.insee.fr/fr/statistiques/fichier/8595130/prenoms-2025-nat_csv.zip",
+      "sha256": "4c3662bbc75a021a2203b9bed0beff7e85c7928779b88602814ed407cfee512e",
+      "licence": "Licence Ouverte / Open Licence 2.0 (Etalab)",
+      "version": "Fichier des prénoms, édition juillet 2026 (naissances 1900-2025), mise à jour du 16/07/2026",
+      "page": "https://www.insee.fr/fr/statistiques/8595130",
+      "read": "2026-11-14",
+      "attribution_fr": "Prénoms (France) — Source : Insee, Fichier des prénoms, édition juillet 2026 (naissances 1900-2025), mise à jour du 16/07/2026. Licence Ouverte / Open Licence 2.0 (Etalab)."
+    },
+    {
+      "id": "statbel-prenoms-h",
+      "file": "TA_POP_MALE_2026.zip",
+      "url": "https://statbel.fgov.be/sites/default/files/files/opendata/Voornamen%20bevolking%20per%20gemeente/TA_POP_MALE_2026.zip",
+      "sha256": "6e7d4d8c19d8446bb466e545e8926dd78655eb82a3c29b3030fce2e7f4032ba2",
+      "licence": "CC BY 4.0",
+      "version": "Prénoms de la population totale par commune, 2026 (hommes)",
+      "page": "https://statbel.fgov.be/en/open-data/first-names-total-population-municipality-16",
+      "read": "2026-11-14"
+    },
+    {
+      "id": "statbel-prenoms-f",
+      "file": "TA_POP_FEMALE_2026.zip",
+      "url": "https://statbel.fgov.be/sites/default/files/files/opendata/Voornamen%20bevolking%20per%20gemeente/TA_POP_FEMALE_2026.zip",
+      "sha256": "fbaa9813ad57f2fc6f1a936426d8920864cda23311e5e0393655cb58dd646cff",
+      "licence": "CC BY 4.0",
+      "version": "Prénoms de la population totale par commune, 2026 (femmes)",
+      "page": "https://statbel.fgov.be/en/open-data/first-names-total-population-municipality-16",
+      "read": "2026-11-14",
+      "attribution_fr": "Prénoms (Belgique) — Source : Statbel (Direction générale Statistique – Statistics Belgium), Prénoms de la population totale par commune, 2026. Licence CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Données modifiées (agrégées par prénom)."
+    },
+    {
+      "id": "statbel-naissances-f",
+      "file": "TA_BIRTHS_FEMALE_2016_2025.zip",
+      "url": "https://statbel.fgov.be/sites/default/files/files/opendata/Voornamen%20pasgeborenen%20per%20gemeente/TA_BIRTHS_FEMALE_2016_2025.zip",
+      "sha256": "52b1729db82db459be47929d9357de323b0114e614f2c2d9165fa04ae5e569c6",
+      "licence": "CC BY 4.0",
+      "version": "Prénoms des nouveau-nés par commune, 2016-2025 (filles)",
+      "page": "https://statbel.fgov.be/fr/open-data/prenoms-des-nouveau-nes-par-commune-8",
+      "read": "2026-11-15",
+      "attribution_fr": "Prénoms des nouveau-nés (Belgique) — Source : Statbel (Direction générale Statistique – Statistics Belgium), Prénoms des nouveau-nés par commune, 2016-2025. Licence CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Données modifiées (additionnées par prénom)."
+    },
+    {
+      "id": "statbel-naissances-h",
+      "file": "TA_BIRTHS_MALE_2016_2025.zip",
+      "url": "https://statbel.fgov.be/sites/default/files/files/opendata/Voornamen%20pasgeborenen%20per%20gemeente/TA_BIRTHS_MALE_2016_2025.zip",
+      "sha256": "c1ff4ea47499732478be915c2112499b191df61e9bf4415ad16fd876e878a852",
+      "licence": "CC BY 4.0",
+      "version": "Prénoms des nouveau-nés par commune, 2016-2025 (garçons)",
+      "page": "https://statbel.fgov.be/fr/open-data/prenoms-des-nouveau-nes-par-commune-8",
+      "read": "2026-11-15"
+    },
+    {
+      "id": "statbel-refnis",
+      "file": "TU_COM_REFNIS-20250101.zip",
+      "url": "https://statbel.fgov.be/sites/default/files/files/opendata/REFNIS%20code/TU_COM_REFNIS-20250101.zip",
+      "sha256": "2b4fd9cce780ca1104495dd7e2c81401991bc035ee41024695ca9e91882ebceb",
+      "licence": "CC BY 4.0",
+      "version": "Code REFNIS au 1er janvier 2025 (565 communes, après les fusions de 2025)",
+      "page": "https://statbel.fgov.be/en/open-data/code-refnis",
+      "read": "2026-11-14",
+      "attribution_fr": "Communes, provinces et régions de Belgique — Source : Statbel, Code REFNIS au 1er janvier 2025. Licence CC BY 4.0. Données modifiées (sélection)."
+    },
+    {
+      "id": "cldr-territoires",
+      "file": "cldr-49.0.0-fr-territories.json",
+      "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/49.0.0/cldr-json/cldr-localenames-full/main/fr/territories.json",
+      "sha256": "42d67b78cb74ffe87380db1d702d06be995c3082d7f711ffd6e75a721133c5e0",
+      "licence": "Unicode License v3",
+      "version": "Unicode CLDR 49 (cldr-json 49.0.0)",
+      "page": "https://github.com/unicode-org/cldr-json",
+      "read": "2026-11-14",
+      "attribution_fr": "Noms des pays — Unicode CLDR 49, © 2015-2024 Unicode, Inc., licence Unicode v3 (https://www.unicode.org/license.txt)."
+    },
+    {
+      "id": "cldr-licence",
+      "file": "cldr-49.0.0-LICENSE",
+      "url": "https://raw.githubusercontent.com/unicode-org/cldr-json/49.0.0/LICENSE",
+      "sha256": "220ba0e1c43b99530d2d5bdb892a99dca0989414f51ab695ecd90163eaa1ec3b",
+      "licence": "Unicode License v3",
+      "version": "Unicode CLDR 49 (cldr-json 49.0.0)",
+      "page": "https://github.com/unicode-org/cldr-json",
+      "read": "2026-11-14"
+    },
+    {
+      "id": "flag-icons",
+      "file": "flag-icons-7.6.0.zip",
+      "url": "https://github.com/lipis/flag-icons/archive/refs/tags/v7.6.0.zip",
+      "sha256": "a51bcf3e0c52ed6d1a5f3f7364cc61ac038637efc2e002f83e09a7d7f515acf3",
+      "licence": "MIT",
+      "version": "flag-icons 7.6.0 (2026-10-15), flags/4x3",
+      "page": "https://github.com/lipis/flag-icons",
+      "read": "2026-11-14",
+      "attribution_fr": "Drapeaux des pays — flag-icons 7.6.0 (https://github.com/lipis/flag-icons), licence MIT."
+    },
+    {
+      "id": "cc-by-4.0",
+      "file": "cc-by-4.0-legalcode.txt",
+      "url": "https://creativecommons.org/licenses/by/4.0/legalcode.txt",
+      "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+      "licence": "texte de licence",
+      "version": "Creative Commons Attribution 4.0 International, legal code",
+      "page": "https://creativecommons.org/licenses/by/4.0/",
+      "read": "2026-11-14"
+    },
+    {
+      "id": "resvg",
+      "file": "resvg-0.50.0-win-x86_64.zip",
+      "url": "https://github.com/linebender/resvg/releases/download/v0.50.0/resvg-win-x86_64.zip",
+      "sha256": "e4817e40ac63d3eb5c9e5762526cf6cc91f0cc108de38cd09dd60be765184efd",
+      "licence": "Apache-2.0 OR MIT",
+      "version": "resvg 0.50.0 (outil de construction : SVG vers PNG, jamais livré)",
+      "page": "https://github.com/linebender/resvg",
+      "read": "2026-11-14",
+      "role": "tool",
+      "exe_sha256": "905cbc0b9af8a0275e832c5b7608d05f75b69abc176b232975552004d8c48a1f"
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "wd-belgique",
+      "file": "wd-belgique.json",
+      "query": "queries/belgique.rq",
+      "endpoint": "https://query.wikidata.org/sparql",
+      "date": "2026-11-14",
+      "sha256": "1b5d300aee4294724bcebe29b823f4835b6285912e9a098239fe0d8d514ff043"
+    },
+    {
+      "id": "wd-villes",
+      "file": "wd-villes.json",
+      "query": "queries/villes.rq",
+      "endpoint": "https://query.wikidata.org/sparql",
+      "date": "2026-11-14",
+      "sha256": "58766a0ed03669d074052160968638568144fa00e0cafc68b8bec931842ad35d"
+    },
+    {
+      "id": "wd-france",
+      "file": "wd-france.json",
+      "query": "queries/france.rq",
+      "endpoint": "https://query.wikidata.org/sparql",
+      "date": "2026-11-14",
+      "sha256": "52c0211d45b1378d62c21e61dcca8832ce6bde4516709b3f9b746c1f5f5896e4"
+    },
+    {
+      "id": "wd-historiques",
+      "file": "wd-historiques.json",
+      "query": "queries/historiques.rq",
+      "endpoint": "https://query.wikidata.org/sparql",
+      "date": "2026-11-14",
+      "sha256": "e9ef683b5b0e56d69c490fe0628a42fa05a082b4936a0cb17b19240102f8ccb2"
+    },
+    {
+      "id": "commons-drapeaux",
+      "file": "commons-drapeaux.json",
+      "kind": "commons",
+      "endpoint": "https://commons.wikimedia.org/w/api.php",
+      "date": "2026-11-14",
+      "sha256": "21e7f6b1c889b529935daa831fb5129be83bb4d33e8ec4165720f9aa67953ab6"
+    }
+  ],
+  "wikidata": {
+    "licence": "CC0 1.0",
+    "attribution_fr": "Villes, personnages historiques, régions et départements de France, noms des communes belges en français — Wikidata (https://www.wikidata.org), données CC0 1.0."
+  },
+  "commons_attribution_fr": "Drapeaux des régions et provinces de Belgique — Wikimedia Commons, domaine public ou CC0 (liste des fichiers et auteurs : noms/SOURCES.md).",
+  "commons": [
+    {
+      "file": "Drapeau Province BE Brabant Wallon.svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/4/47/Drapeau_Province_BE_Brabant_Wallon.svg",
+      "licence": "Public domain",
+      "sha256": "e45b30a52d4487953414ff731ce2bd49932a2b1223f4dfe8d933dbb09ad320e7"
+    },
+    {
+      "file": "Flag of Antwerp.svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/1/10/Flag_of_Antwerp.svg",
+      "licence": "Public domain",
+      "sha256": "ff393ef1393aa7ce59e088a1315333fe8a0938f653558eeb2c218f92b7e4e8fb"
+    },
+    {
+      "file": "Flag of Flanders.svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Flag_of_Flanders.svg",
+      "licence": "CC0",
+      "sha256": "4c33ee02b2b6e5387e49f841cfe61b1310bdb2e1a796a21bb98b5c9974d68d03"
+    },
+    {
+      "file": "Flag of Flemish Brabant.svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/bd/Flag_of_Flemish_Brabant.svg",
+      "licence": "Public domain",
+      "sha256": "e3c96905163136ea2f88a86a35a5cfc8bdfd5550232e8e846e31e8ee2d5f6de3"
+    },
+    {
+      "file": "Flag of Limburg (Belgium).svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/7/70/Flag_of_Limburg_%28Belgium%29.svg",
+      "licence": "Public domain",
+      "sha256": "f4dffa38d1b324e3bc032b12de2ead428c621ad50a081a83a7038b377d04ebce"
+    },
+    {
+      "file": "Flag of Namur Province.svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/00/Flag_of_Namur_Province.svg",
+      "licence": "Public domain",
+      "sha256": "b32187d895f261ceb052ed29f5768bd436ff2ee26156af782af2358ed7b4637b"
+    },
+    {
+      "file": "Flag of Wallonia.svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/4/42/Flag_of_Wallonia.svg",
+      "licence": "CC0",
+      "sha256": "0d8dd085216df49082c3bb1d54df043f916ebbe8d155dd1774206d6c73e2c076"
+    },
+    {
+      "file": "Flag of West Flanders.svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c2/Flag_of_West_Flanders.svg",
+      "licence": "Public domain",
+      "sha256": "7210697df0f3e0e46ee880b757069dcc05d5ca379631a9b70d4502ca23b4a33e"
+    },
+    {
+      "file": "Flag of the Brussels-Capital Region.svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/bc/Flag_of_the_Brussels-Capital_Region.svg",
+      "licence": "Public domain",
+      "sha256": "322a536e2918fb0efddecc965a5efcfb4ab9b89a0c74d2441a46efd2b14b04db"
+    },
+    {
+      "file": "Flag of the Province of Luxembourg (Belgium).svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/5/54/Flag_of_the_Province_of_Luxembourg_%28Belgium%29.svg",
+      "licence": "Public domain",
+      "sha256": "16f82d54d594f1244d14761beccf32be74375b2c1505da5b1bc48657f1988fc7"
+    },
+    {
+      "file": "Generieke vlag van Henegouwen.svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Generieke_vlag_van_Henegouwen.svg",
+      "licence": "CC0",
+      "sha256": "80589b2d20bfb83baa668af70d5f5690c00d4874a57452c774a4cdc201ca1e4f"
+    },
+    {
+      "file": "Vlag van Oost-Vlaanderen.svg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Vlag_van_Oost-Vlaanderen.svg",
+      "licence": "Public domain",
+      "sha256": "e68d0fe8a0a6353167f33f0b2889205f942adf97b37f4811db5bc12e76ac4fe1"
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="enfant">
+<title>Mes mots — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html" aria-current="page">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Mes mots</h1>
+<p class="chapeau">Pépite n'apprend jamais tout seul. Il ne garde que les mots qu'on lui donne.</p>
+
+<h2 id="ajouter">Ajouter un mot</h2>
+<ol class="etapes">
+  <li><p>Clique sur le biscuit près de l'horloge, puis sur <b>Ajouter un mot…</b></p></li>
+  <li><p>Écris le mot. Clique sur <b>Écouter</b> pour l'entendre.</p></li>
+  <li><p>Clique sur <b>Ajouter</b>. Pépite le proposera maintenant.</p></li>
+</ol>
+<p>Une majuscule est gardée : « Léa », « Vésuve ». Un trait d'union ou une apostrophe au milieu est accepté : « Jean-Pierre ».</p>
+<p>Le rond rouge <b>?</b> peut aussi ajouter un mot : voir <a href="orthographe.html#inconnu">le rond d'orthographe</a>.</p>
+
+<h2 id="liste">Ma liste de mots</h2>
+<p>Ouvre <b>Réglages…</b>, puis l'onglet <b>Mots</b>. À l'école, Pépite peut demander le code de ton enseignant. Tu y trouves :</p>
+<ul>
+  <li><b>Mes mots</b> : tes mots, avec <b>Chercher :</b>, <b>Ajouter…</b>, <b>Modifier…</b> et <b>Supprimer</b> ;</li>
+  <li><b>Mots de la classe</b> : les mots donnés par ton enseignant. Un mot te gêne ? Choisis-le, puis <b>Ne pas me le proposer</b>.</li>
+</ul>
+<p>Ces changements sont gardés tout de suite, sans <b>Enregistrer</b>.</p>
+
+<h2 id="fautes">Mes fautes</h2>
+<p>Tu écris souvent un mot de travers ? Note-le dans <b>Mes fautes</b>.</p>
+<p>Exemple : <b>J'écris :</b> « fesait », <b>Je veux écrire :</b> « faisait ». Un seul mot de chaque côté.</p>
+<p>Quand tu écris le premier mot, ou ses 3 premières lettres, Pépite propose le bon mot en premier.</p>
+
+<h2 id="lecons">Les leçons de la classe</h2>
+<p>Ton enseignant peut donner les mots d'une leçon. Ils sont proposés tant que la leçon est active.</p>
+<p>Pour les adultes : <a href="enseignants.html#lecons">les listes et les leçons</a>.</p>
+
+<h2 id="effacer">Tout effacer</h2>
+<p><b>Effacer tous mes mots…</b> efface ta liste, tes fautes et les mots cachés. Une sauvegarde est faite avant. Les mots de la classe ne changent pas.</p>
+<p class="suivant"><a href="orthographe.html">← Orthographe</a><a href="lire-un-texte.html">Lire un texte →</a></p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

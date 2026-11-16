@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="adulte">
+<title>Vie privée — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html" aria-current="page">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Vie privée</h1>
+<p class="chapeau">Pépite travaille sur l'ordinateur, sans Internet. Rien n'est envoyé.</p>
+<figure><img src="img/vie-privee.svg" alt="Tout reste dans l'ordinateur : Pépite travaille sans Internet et n'envoie rien." width="700" height="300"></figure>
+
+<h2 id="internet">Aucune connexion</h2>
+<ul>
+  <li>Pépite n'utilise pas le réseau : ni les mots tapés, ni les prénoms, ni des statistiques ne sont envoyés.</li>
+  <li>Pas de mise à jour automatique, pas de publicité, pas de compte à créer.</li>
+  <li>Les liens de la fenêtre <b>À propos</b> s'ouvrent dans votre navigateur seulement si vous cliquez dessus.</li>
+</ul>
+
+<h2 id="frappe">Ce que Pépite voit</h2>
+<p>Pour proposer des mots, Pépite suit la frappe et lit le texte autour du curseur. Il n'enregistre pas ce qui est écrit : il garde seulement les réglages, les profils et les mots ajoutés à la demande.</p>
+<ul>
+  <li><b>Mots de passe</b> : dans un champ de mot de passe, Pépite ne propose rien, ne lit rien et ne dit rien. Un champ qu'il ne peut pas vérifier reste silencieux.</li>
+  <li><b>Consoles et bureaux à distance</b> : Pépite n'y suit rien, n'y lit rien et n'y dit rien.</li>
+  <li><b>Exception</b> : le mode journal (<samp>--log</samp>), réservé aux tests, enregistre les mots tapés. Voir <a href="enseignants.html#journal">le mode journal</a>.</li>
+</ul>
+
+<h2 id="donnees">Ce qui est gardé, et où</h2>
+<ul>
+  <li><samp>%APPDATA%\Pepite-Prediction</samp> : les réglages, les profils (prénom, image, couleur) et les listes de mots, pour chaque compte Windows.</li>
+  <li><samp>%LOCALAPPDATA%\Pepite-Prediction\sauvegardes</samp> : une sauvegarde par jour des profils.</li>
+  <li>Une leçon collée dans Pépite n'est pas gardée : seuls les mots cochés le sont.</li>
+</ul>
+<p>Pour tout effacer : désinstallez Pépite et répondez oui à la question sur les données, ou supprimez ces dossiers.</p>
+
+<h2 id="fichiers-pepite">Fichiers .pepite et images</h2>
+<ul>
+  <li>Un fichier « .pepite » exporté contient les prénoms des élèves : gardez-le sur un support de l'établissement.</li>
+  <li>Pas de photo : un profil a un pictogramme, et une base de noms importée n'accepte que des pictogrammes ou des dessins.</li>
+</ul>
+
+<h2 id="aide">Cette aide</h2>
+<p>Cette aide est faite de fichiers installés avec Pépite. Elle ne charge rien depuis Internet et ne dépose aucun cookie.</p>
+<p>Un petit script, dans le même dossier, retient les deux cases d'affichage (<b>Lettres OpenDyslexic</b>, <b>Texte plus grand</b>) dans votre navigateur, sur cet ordinateur. Les adresses de sites sont écrites en texte : rien ne s'ouvre sans vous.</p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

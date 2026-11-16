@@ -1,0 +1,75 @@
+<Window x:Class="Predict.Keyboard.WelcomeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Predict.Keyboard"
+        ResizeMode="NoResize" SizeToContent="Height" Width="560"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="True" UseLayoutRounding="True"
+        FontFamily="Segoe UI" FontSize="15" AutomationProperties.AutomationId="WelcomeWindow">
+  <!-- welcome (manual start) and « déjà démarré » (second start): one window, two modes (code-behind). The taskbar
+       picture is a simplified vector drawing (no screenshot of Windows): generic grey app tiles, the « ^ » arrow of the
+       hidden icons, our icon circled, the clock. -->
+  <Grid Margin="22,18,22,18">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel Grid.Row="0" Orientation="Horizontal">
+      <Image x:Name="Logo" Width="48" Height="48" Margin="0,0,14,0" VerticalAlignment="Center"/>
+      <TextBlock x:Name="Heading" FontSize="24" FontWeight="SemiBold" VerticalAlignment="Center"
+                 AutomationProperties.AutomationId="WelcomeHeading" AutomationProperties.HeadingLevel="Level1"/>
+    </StackPanel>
+
+    <TextBlock Grid.Row="1" x:Name="Body" TextWrapping="Wrap" Margin="0,14,0,0" Text="{x:Static local:Strings.WelcomeBody}"
+               AutomationProperties.AutomationId="WelcomeBody"/>
+
+    <Border Grid.Row="2" Margin="0,16,0,0" BorderBrush="#FFD0D4DA" BorderThickness="1" CornerRadius="4" Padding="0"
+            HorizontalAlignment="Stretch" x:Name="Picture" Focusable="False"
+            AutomationProperties.AutomationId="TaskbarPicture" AutomationProperties.Name="{x:Static local:Strings.TaskbarPictureName}">
+      <Viewbox Stretch="Uniform" StretchDirection="Both">
+        <Canvas Width="440" Height="56" ClipToBounds="True">
+          <Rectangle Width="440" Height="56" Fill="#FFF3F3F3"/>
+          <Rectangle Width="440" Height="1" Fill="#FFD6D6D6"/>
+          <!-- generic application tiles (no product art) -->
+          <Rectangle Canvas.Left="120" Canvas.Top="14" Width="28" Height="28" RadiusX="6" RadiusY="6" Fill="#FFC5CBD3"/>
+          <Rectangle Canvas.Left="156" Canvas.Top="14" Width="28" Height="28" RadiusX="6" RadiusY="6" Fill="#FFB7C3D0"/>
+          <Rectangle Canvas.Left="192" Canvas.Top="14" Width="28" Height="28" RadiusX="6" RadiusY="6" Fill="#FFC9C3D6"/>
+          <Rectangle Canvas.Left="228" Canvas.Top="14" Width="28" Height="28" RadiusX="6" RadiusY="6" Fill="#FFC3D3C6"/>
+          <!-- the « ^ » arrow of the hidden icons -->
+          <Path Canvas.Left="270" Canvas.Top="24" Data="M 0,7 L 6,1 L 12,7" Stroke="#FF1F1F1F" StrokeThickness="1.8"
+                StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+          <!-- our icon, circled -->
+          <Image x:Name="TrayLogo" Canvas.Left="300" Canvas.Top="16" Width="24" Height="24"/>
+          <Ellipse Canvas.Left="291" Canvas.Top="7" Width="42" Height="42" Stroke="#FFD9480F" StrokeThickness="3"/>
+          <!-- generic system icons (network, sound) -->
+          <Rectangle Canvas.Left="336" Canvas.Top="22" Width="12" Height="12" RadiusX="3" RadiusY="3" Fill="#FF9AA1AA"/>
+          <Rectangle Canvas.Left="354" Canvas.Top="22" Width="12" Height="12" RadiusX="3" RadiusY="3" Fill="#FF9AA1AA"/>
+          <!-- the clock -->
+          <TextBlock Canvas.Left="372" Canvas.Top="19" Width="66" TextAlignment="Center" FontSize="12" Foreground="#FF1F1F1F" Text="10:30"/>
+        </Canvas>
+      </Viewbox>
+    </Border>
+
+    <TextBlock Grid.Row="3" x:Name="IconHint" TextWrapping="Wrap" Margin="0,14,0,0" Text="{x:Static local:Strings.WelcomeIconHint}"
+               AutomationProperties.AutomationId="WelcomeIconHint"/>
+    <TextBlock Grid.Row="4" x:Name="OverflowHint" TextWrapping="Wrap" Margin="0,8,0,0" Opacity="0.8" FontSize="14"
+               Text="{x:Static local:Strings.WelcomeOverflowHint}" AutomationProperties.AutomationId="WelcomeOverflowHint"/>
+
+    <!-- row 5: was « Ne plus afficher ce message »; the welcome is now shown once (owner Q3, embedded-help plan) -->
+
+    <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+      <!-- a disabled button keeps its tooltip -->
+      <Button x:Name="MoreButton" MinWidth="120" Padding="12,4" Margin="0,0,10,0" ToolTipService.ShowOnDisabled="True"
+              AutomationProperties.AutomationId="More" Click="OnHelp"/>
+      <Button x:Name="SettingsButton" MinWidth="120" Padding="12,4" Margin="0,0,10,0" Content="{x:Static local:Strings.AlreadySettings}"
+              AutomationProperties.AutomationId="OpenSettings" Click="OnSettings"/>
+      <Button x:Name="OkButton" MinWidth="96" Padding="12,4" IsDefault="True" IsCancel="True" Content="{x:Static local:Strings.WelcomeOk}"
+              AutomationProperties.AutomationId="Ok" Click="OnOk"/>
+    </StackPanel>
+  </Grid>
+</Window>

@@ -1,0 +1,12 @@
+# Build-time only (plan corpus-light 0.7): reads the pinned Vikidia ZIM in corpus/prepare_corpus.py « extract ».
+# libzim (python-libzim, openZIM) 4.1.0 — GPL-3.0-or-later; never shipped with Pépite. No runtime dependencies.
+# Install into a separate virtual environment in the work folder:
+#   python -m venv <work>/venv-corpus
+#   <work>/venv-corpus/Scripts/python -m pip install --require-hashes --only-binary :all: -r requirements-corpus.txt
+# Hashes: PyPI JSON API, release 4.1.0 (uploaded 2026-11-05), the cp311-abi3 wheels (Python 3.11 and later).
+libzim==4.1.0 \
+    --hash=sha256:dca423764a70bfe9420f0f5f4697ed6d9f2615f63b7bd37a75c0e616522d988e \
+    --hash=sha256:cd26c60e90a2d7f619a6db98e89892d1f429cdbb80d47a4318a659b1d985db1f \
+    --hash=sha256:791fccae1b3364c310320326dfea0277bc4677cb72719472ab9591750dd4a5e8 \
+    --hash=sha256:a381bdd4afd7db7524f631d91485e4687fd1498354e4ecf47f51c12750913bf6 \
+    --hash=sha256:af2be7b69053ba822a1030ad49be50e3ab5d8c266357926475221d717149589c

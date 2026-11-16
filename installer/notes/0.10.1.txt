@@ -1,0 +1,29 @@
+PREMIÈRE VERSION DE TEST PUBLIQUE
+  - Pépite est publié sur GitHub : github.com/pepite-labs/pepite
+    (programme d'installation, code source, données). Version de
+    test non signée : voir INSTALLER plus bas (« Exécuter quand
+    même »).
+  - Aide en ligne : pepite-labs.github.io/pepite (l'aide installée
+    avec Pépite fonctionne sans Internet).
+
+NOUVEAU DANS LA 0.10.1 : UNE AIDE INTÉGRÉE
+  - Aide : menu de l'icône -> « Aide », bouton « ? » de chaque partie
+    des Réglages, ou touche F1 quand la fenêtre Réglages est devant.
+    L'aide s'ouvre dans votre navigateur, sans Internet.
+  - Des pages courtes pour les élèves (« tu ») : la barre de mots,
+    les couleurs, le rond d'orthographe, mes mots, lire un texte,
+    les réglages, un souci ?, pour les curieux.
+  - Des pages pour les adultes (« vous ») : enseignants et parents,
+    installer (avec DEPLOIEMENT.txt, maintenant installé à côté de
+    Pépite), vie privée, à propos.
+  - Deux cases en haut de chaque page : « Lettres OpenDyslexic » et
+    « Texte plus grand ».
+  - La fenêtre « Pépite est prêt ! » ne s'affiche plus qu'au tout
+    premier démarrage (Réglages -> Démarrage pour la revoir une fois).
+
+À TESTER (merci de noter ce qui ne va pas)
+  A1. Menu de l'icône -> « Aide » : la page Sommaire s'ouvre-t-elle ?
+  A2. Dans les Réglages, chaque bouton « ? » et la touche F1 ouvrent-
+      ils la bonne partie de l'aide, sans écrire de mot ?
+  A3. Les cases « Lettres OpenDyslexic » et « Texte plus grand »
+      restent-elles cochées d'une page à l'autre ?

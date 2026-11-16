@@ -1,0 +1,238 @@
+<Window x:Class="Predict.Keyboard.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Predict.Keyboard"
+        Title="{x:Static local:Strings.SettingsTitle}" ResizeMode="NoResize" SizeToContent="WidthAndHeight"
+        WindowStartupLocation="Manual" ShowInTaskbar="True" UseLayoutRounding="True"
+        FontFamily="Segoe UI" FontSize="14" AutomationProperties.AutomationId="SettingsWindow">
+  <Window.Resources>
+    <Style x:Key="Section" TargetType="TextBlock">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="16"/>
+      <Setter Property="Margin" Value="0,10,18,0"/>
+    </Style>
+    <!-- a section title and its « ? » button (plan « aide intégrée »): opens the help of that section, as F1 does -->
+    <Style x:Key="SectionHead" TargetType="StackPanel">
+      <Setter Property="Orientation" Value="Horizontal"/>
+      <Setter Property="VerticalAlignment" Value="Top"/>
+    </Style>
+    <Style x:Key="HelpButton" TargetType="Button">
+      <Setter Property="Width" Value="26"/>
+      <Setter Property="Height" Value="26"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="-12,10,14,0"/>
+      <Setter Property="VerticalAlignment" Value="Top"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Content" Value="{x:Static local:Strings.HelpButton}"/>
+      <Setter Property="ToolTip" Value="{x:Static local:Strings.HelpButtonTip}"/>
+    </Style>
+    <Style x:Key="Locked" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="#FF9A3412"/>
+      <Setter Property="FontStyle" Value="Italic"/>
+      <Setter Property="Margin" Value="10,0,0,0"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Visibility" Value="Collapsed"/>
+      <Setter Property="Text" Value="{x:Static local:Strings.LockedNote}"/>
+    </Style>
+    <Style x:Key="Row" TargetType="StackPanel">
+      <Setter Property="Orientation" Value="Horizontal"/>
+      <Setter Property="Margin" Value="0,6,0,0"/>
+    </Style>
+    <Style TargetType="RadioButton">
+      <Setter Property="Margin" Value="0,0,14,0"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+  </Window.Resources>
+  <DockPanel Margin="20,10,20,16">
+  <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+    <Button x:Name="SaveButton" MinWidth="110" Padding="12,4" IsDefault="True" AutomationProperties.AutomationId="Save" Content="{x:Static local:Strings.Save}"/>
+    <Button x:Name="CancelButton" MinWidth="110" Padding="12,4" Margin="10,0,0,0" IsCancel="True" AutomationProperties.AutomationId="Cancel" Content="{x:Static local:Strings.Cancel}"/>
+  </StackPanel>
+  <TabControl x:Name="Tabs" AutomationProperties.AutomationId="SettingsTabs">
+  <TabItem Header="{x:Static local:Strings.TabSettingsGeneral}" AutomationProperties.AutomationId="TabGeneral">
+  <Grid Margin="0,4,0,0">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="Auto"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Mots -->
+    <StackPanel Grid.Row="0" Style="{StaticResource SectionHead}" Tag="aide:mots">
+      <TextBlock Style="{StaticResource Section}" Text="{x:Static local:Strings.SecWords}"/>
+      <Button Style="{StaticResource HelpButton}" Tag="aide:mots" AutomationProperties.AutomationId="HelpWords"/>
+    </StackPanel>
+    <StackPanel Grid.Row="0" Grid.Column="1" Tag="aide:mots" Margin="0,4,0,0">
+      <StackPanel Style="{StaticResource Row}">
+        <Label Padding="0" VerticalAlignment="Center" Target="{Binding ElementName=WordCount}" Content="{x:Static local:Strings.WordCountLabel}"/>
+        <ComboBox x:Name="WordCount" Width="60" Margin="10,0,6,0" AutomationProperties.AutomationId="WordCount"/>
+        <TextBlock VerticalAlignment="Center" Opacity="0.7" Text="{x:Static local:Strings.WordCountRange}"/>
+        <TextBlock x:Name="LockWordCount" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Text="{x:Static local:Strings.SizeLabel}"/>
+        <RadioButton x:Name="SizeS" GroupName="Size" AutomationProperties.AutomationId="SizeS" Content="{x:Static local:Strings.SizeS}"/>
+        <RadioButton x:Name="SizeM" GroupName="Size" AutomationProperties.AutomationId="SizeM" Content="{x:Static local:Strings.SizeM}"/>
+        <RadioButton x:Name="SizeL" GroupName="Size" AutomationProperties.AutomationId="SizeL" Content="{x:Static local:Strings.SizeL}"/>
+        <RadioButton x:Name="SizeXL" GroupName="Size" AutomationProperties.AutomationId="SizeXL" Content="{x:Static local:Strings.SizeXL}"/>
+        <TextBlock x:Name="LockSize" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <Label Padding="0" VerticalAlignment="Center" Target="{Binding ElementName=FontBox}" Content="{x:Static local:Strings.FontLabel}"/>
+        <ComboBox x:Name="FontBox" Width="230" Margin="10,0,0,0" AutomationProperties.AutomationId="Font"/>
+        <TextBlock x:Name="LockFont" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Text="{x:Static local:Strings.SpacingLabel}"/>
+        <RadioButton x:Name="SpacingNormal" GroupName="Spacing" AutomationProperties.AutomationId="SpacingNormal" Content="{x:Static local:Strings.SpacingNormal}"/>
+        <RadioButton x:Name="SpacingWider" GroupName="Spacing" AutomationProperties.AutomationId="SpacingWider" Content="{x:Static local:Strings.SpacingWider}"/>
+        <RadioButton x:Name="SpacingWidest" GroupName="Spacing" AutomationProperties.AutomationId="SpacingWidest" Content="{x:Static local:Strings.SpacingWidest}"/>
+        <TextBlock x:Name="LockSpacing" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="Pictures" VerticalAlignment="Center" AutomationProperties.AutomationId="Pictures" Content="{x:Static local:Strings.ShowPictures}"/>
+        <TextBlock x:Name="PicturesMissing" Margin="8,0,0,0" Opacity="0.7" VerticalAlignment="Center" Visibility="Collapsed" Text="{x:Static local:Strings.PicturesMissing}"/>
+        <TextBlock x:Name="LockPictures" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="Keys" VerticalAlignment="Center" AutomationProperties.AutomationId="Keys" Content="{x:Static local:Strings.KeysOn}"/>
+        <TextBlock x:Name="LockKeys" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Text="{x:Static local:Strings.PunctLabel}"/>
+        <RadioButton x:Name="PunctFrench" GroupName="Punct" AutomationProperties.AutomationId="PunctFrench" Content="{x:Static local:Strings.PunctFrench}"/>
+        <RadioButton x:Name="PunctNone" GroupName="Punct" AutomationProperties.AutomationId="PunctNone" Content="{x:Static local:Strings.PunctNone}"/>
+        <TextBlock x:Name="LockPunct" Style="{StaticResource Locked}"/>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Position -->
+    <StackPanel Grid.Row="1" Style="{StaticResource SectionHead}" Tag="aide:position">
+      <TextBlock Style="{StaticResource Section}" Text="{x:Static local:Strings.SecPosition}"/>
+      <Button Style="{StaticResource HelpButton}" Tag="aide:position" AutomationProperties.AutomationId="HelpPosition"/>
+    </StackPanel>
+    <StackPanel Grid.Row="1" Grid.Column="1" Tag="aide:position" Margin="0,6,0,0">
+      <StackPanel Style="{StaticResource Row}">
+        <RadioButton x:Name="PosCaret" GroupName="Pos" AutomationProperties.AutomationId="PosCaret" Content="{x:Static local:Strings.PosCaret}"/>
+        <RadioButton x:Name="PosTop" GroupName="Pos" AutomationProperties.AutomationId="PosTop" Content="{x:Static local:Strings.PosTop}"/>
+        <TextBlock x:Name="LockPosition" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <RadioButton x:Name="PosBottom" GroupName="Pos" AutomationProperties.AutomationId="PosBottom" Content="{x:Static local:Strings.PosBottom}"/>
+        <RadioButton x:Name="PosFree" GroupName="Pos" AutomationProperties.AutomationId="PosFree" Content="{x:Static local:Strings.PosFree}"/>
+      </StackPanel>
+      <TextBlock x:Name="FreeHint" Margin="0,4,0,0" Opacity="0.75" Visibility="Collapsed" Text="{x:Static local:Strings.PosFreeHint}"/>
+    </StackPanel>
+
+    <!-- Aperçu: the real bar buttons (BarBuilder), updated live -->
+    <TextBlock Grid.Row="2" Style="{StaticResource Section}" Text="{x:Static local:Strings.SecPreview}"/>
+    <Border Grid.Row="2" Grid.Column="1" Margin="0,10,0,0" HorizontalAlignment="Left" Background="#FF1F2937"
+            BorderBrush="#FF4B5563" BorderThickness="1" Padding="3" AutomationProperties.AutomationId="Preview">
+      <StackPanel x:Name="Preview" Orientation="Horizontal"/>
+    </Border>
+
+    <!-- Voix -->
+    <StackPanel Grid.Row="3" Style="{StaticResource SectionHead}" Tag="aide:voix">
+      <TextBlock Style="{StaticResource Section}" Text="{x:Static local:Strings.SecSpeech}"/>
+      <Button Style="{StaticResource HelpButton}" Tag="aide:voix" AutomationProperties.AutomationId="HelpSpeech"/>
+    </StackPanel>
+    <StackPanel Grid.Row="3" Grid.Column="1" Tag="aide:voix" Margin="0,6,0,0">
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="SpeakInserted" AutomationProperties.AutomationId="SpeakInserted" Content="{x:Static local:Strings.SpeakInserted}"/>
+        <TextBlock x:Name="LockSpeakInserted" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="SpeakWords" AutomationProperties.AutomationId="SpeakWords" Content="{x:Static local:Strings.SpeakWords}"/>
+        <TextBlock x:Name="LockSpeakWords" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="SpeakSentences" AutomationProperties.AutomationId="SpeakSentences" Content="{x:Static local:Strings.SpeakSentences}"/>
+        <TextBlock x:Name="LockSpeakSentences" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="RereadEdits" AutomationProperties.AutomationId="RereadEdits" Content="{x:Static local:Strings.RereadEdits}"/>
+        <TextBlock x:Name="LockRereadEdits" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <Label Padding="0" VerticalAlignment="Center" Target="{Binding ElementName=Voice}" Content="{x:Static local:Strings.VoiceLabel}"/>
+        <ComboBox x:Name="Voice" Width="330" Margin="10,0,0,0" AutomationProperties.AutomationId="Voice"/>
+        <TextBlock x:Name="LockVoice" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <TextBlock x:Name="VoiceStatus" Margin="0,0,0,6" Opacity="0.8" Visibility="Collapsed"
+                 AutomationProperties.AutomationId="VoiceStatus" AutomationProperties.LiveSetting="Polite"/>
+      <StackPanel Style="{StaticResource Row}">
+        <TextBlock VerticalAlignment="Center" Text="{x:Static local:Strings.RateLabel}"/>
+        <TextBlock VerticalAlignment="Center" Margin="10,0,4,0" Opacity="0.7" Text="{x:Static local:Strings.RateSlow}"/>
+        <Slider x:Name="Rate" Width="140" Minimum="-10" Maximum="10" TickFrequency="1" IsSnapToTickEnabled="True"
+                VerticalAlignment="Center" AutomationProperties.AutomationId="Rate" AutomationProperties.Name="{x:Static local:Strings.RateLabel}"/>
+        <TextBlock VerticalAlignment="Center" Margin="4,0,8,0" Opacity="0.7" Text="{x:Static local:Strings.RateFast}"/>
+        <TextBlock x:Name="RateValue" VerticalAlignment="Center" MinWidth="120" Margin="0,0,14,0" AutomationProperties.AutomationId="RateValue"/>
+        <TextBlock VerticalAlignment="Center" Text="{x:Static local:Strings.VolumeLabel}"/>
+        <Slider x:Name="Volume" Width="120" Margin="10,0,0,0" Minimum="0" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True"
+                VerticalAlignment="Center" AutomationProperties.AutomationId="Volume" AutomationProperties.Name="{x:Static local:Strings.VolumeLabel}"/>
+        <TextBlock x:Name="VolumeValue" VerticalAlignment="Center" MinWidth="44" Margin="6,0,0,0" AutomationProperties.AutomationId="VolumeValue"/>
+        <Button x:Name="Listen" Margin="18,0,0,0" Padding="12,2" AutomationProperties.AutomationId="Listen" Content="{x:Static local:Strings.Listen}"/>
+        <TextBlock x:Name="LockSpeechTuning" Style="{StaticResource Locked}"/>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Lecture de la sélection (plan 07, D21) -->
+    <StackPanel Grid.Row="4" Style="{StaticResource SectionHead}" Tag="aide:lecture">
+      <TextBlock Style="{StaticResource Section}" Text="{x:Static local:Strings.SecReading}"/>
+      <Button Style="{StaticResource HelpButton}" Tag="aide:lecture" AutomationProperties.AutomationId="HelpReading"/>
+    </StackPanel>
+    <StackPanel Grid.Row="4" Grid.Column="1" Tag="aide:lecture" Margin="0,6,0,0">
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="ReadingEnabled" AutomationProperties.AutomationId="ReadingEnabled" Content="{x:Static local:Strings.ReadingEnabled}"/>
+        <TextBlock x:Name="LockReadingEnabled" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="ReadingPictures" AutomationProperties.AutomationId="ReadingPictures" Content="{x:Static local:Strings.ReadingPictures}"/>
+        <TextBlock x:Name="LockReadingPictures" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="ReadingClipboard" AutomationProperties.AutomationId="ReadingClipboard" Content="{x:Static local:Strings.ReadingClipboard}"
+                  ToolTip="{x:Static local:Strings.ReadingClipboardHint}" ToolTipService.ShowDuration="20000"/>
+        <TextBlock x:Name="LockReadingClipboard" Style="{StaticResource Locked}"/>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Démarrage: the welcome window at a manual start (TODO « Start-up feedback ») -->
+    <StackPanel Grid.Row="5" Style="{StaticResource SectionHead}" Tag="aide:demarrage">
+      <TextBlock Style="{StaticResource Section}" Text="{x:Static local:Strings.SecStart}"/>
+      <Button Style="{StaticResource HelpButton}" Tag="aide:demarrage" AutomationProperties.AutomationId="HelpStart"/>
+    </StackPanel>
+    <StackPanel Grid.Row="5" Grid.Column="1" Tag="aide:demarrage" Margin="0,6,0,0">
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="ShowWelcome" AutomationProperties.AutomationId="ShowWelcome" Content="{x:Static local:Strings.ShowWelcome}"/>
+        <TextBlock x:Name="LockShowWelcome" Style="{StaticResource Locked}"/>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Plusieurs élèves (plan 09, D29): turn teacher management on, or open the Espace enseignant -->
+    <StackPanel Grid.Row="6" Style="{StaticResource SectionHead}" Tag="aide:eleves">
+      <TextBlock Style="{StaticResource Section}" Text="{x:Static local:Strings.SecPupils}"/>
+      <Button Style="{StaticResource HelpButton}" Tag="aide:eleves" AutomationProperties.AutomationId="HelpPupils"/>
+    </StackPanel>
+    <StackPanel Grid.Row="6" Grid.Column="1" Tag="aide:eleves" Margin="0,6,0,0">
+      <StackPanel Style="{StaticResource Row}">
+        <Button x:Name="PupilsButton" Padding="12,2" AutomationProperties.AutomationId="PupilsButton"/>
+      </StackPanel>
+      <TextBlock x:Name="PupilsHint" Margin="0,4,0,0" Opacity="0.75" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"
+                 AutomationProperties.AutomationId="PupilsHint"/>
+    </StackPanel>
+  </Grid>
+  </TabItem>
+  <!-- plan 10A: the profile's words (WordEditor, code-built; saved at once) -->
+  <TabItem x:Name="WordsTab" Header="{x:Static local:Strings.TabWords}" AutomationProperties.AutomationId="TabWords"/>
+  </TabControl>
+  </DockPanel>
+</Window>

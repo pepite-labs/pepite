@@ -1,0 +1,63 @@
+{
+  "_comment": "Plans 08a/08b (D7, D19, D20, D28): pinned Piper voice files for fetch_voices.py. Nothing downloaded is committed. The patched model adds the /Ceil_output_0 alignment output (onnx 1.23.2); its SHA-256 is enforced. \"public\": false = private test releases only (D28); the public release leaves such packs out. D28 changed 2026-11-16 (owner): pierre is public; its base model (lessac) was trained on research-only data, so \"risk_note\" is written to its SOURCE.txt and the voice may be withdrawn (\"public\": false again + a new release). pierre's \"inference\" = owner blind-sheet winner V4 (2026-11-14, voice-evaluation.md 9c); siwis' \"inference\" = its own scales with length_scale 1.1 (owner 2026-11-14: a little too fast); \"inference_word\" = lower noise for isolated words (noise_scale, noise_w; length_scale stays), owner 2026-11-14; since 0.7.2 only the fallback of pierre's \"word_carrier\" (an isolated word is said inside « Le mot : {0}. » and cut out: owner blind sheet W5, voice-evaluation.md 9d); \"phoneme_fix\" = phoneme post-corrections of the voice (pierre: iʲ -> i, « il y a », 9d); siwis has the same \"word_carrier\" since 2026-11-16 (owner blind sheet, voice-evaluation.md 9e: 4.67 / 4.72 against 3.72 alone), its fallback is the word alone with the voice scales, and \"word_carrier_except\" lists words always said alone (\"eu\", \"les\": better alone on that sheet; compared trimmed, lower case).",
+  "voices": {
+    "siwis": {
+      "name": "Siwis — voix naturelle (femme)",
+      "order": 1,
+      "gender": "female",
+      "culture": "fr-FR",
+      "sampleRate": 22050,
+      "model": "fr_FR-siwis-medium.onnx",
+      "revision": "cf910fb59f1d79ab3b625a63993a108751c6c25d",
+      "patched_sha256": "d1120aceb629668ffc742c69e6e183b45ccb379e8de3dee78a9261451f9ed9ff",
+      "speaker": null,
+      "licence": "CC BY 4.0",
+      "public": true,
+      "inference": {"noise_scale": 0.5, "length_scale": 1.1, "noise_w": 0.333},
+      "word_carrier": "Le mot : {0}.",
+      "word_carrier_except": ["eu", "les"],
+      "files": [
+        {"name": "fr_FR-siwis-medium.onnx", "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx", "sha256": "b1d946fd68d0347155fa59bce0a018924abbef3c1561181db45ca463d83963ef"},
+        {"name": "fr_FR-siwis-medium.onnx.json", "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json", "sha256": "df814aa3dfedd00510a07144442cc0a220ff21e43d03c3b078444fc0be68fc37"},
+        {"name": "MODEL_CARD", "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/siwis/medium/MODEL_CARD", "sha256": "f75d76ec577b5e7a49a7462883d31ef65383022387818a9a0b75bdaf90b9010c"},
+        {"name": "LICENSE.txt", "url": "https://creativecommons.org/licenses/by/4.0/legalcode.txt", "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411"}
+      ],
+      "attribution": [
+        "Voix Piper « fr_FR-siwis-medium » (piper-voices, révision cf910fb5), licence CC BY 4.0, modifiée : sortie /Ceil_output_0 ajoutée (onnx 1.23.2).",
+        "Données : The SIWIS French Speech Synthesis Database — Yamagishi, Junichi; Honnet, Pierre-Edouard; Garner, Philip; Lazaridis, Alexandros. (2017). The SIWIS French Speech Synthesis Database, 2016 [dataset]. University of Edinburgh. School of Informatics. The Centre for Speech Technology Research. https://doi.org/10.7488/ds/1705. Licence CC BY 4.0.",
+        "Modèle de base : hifi_tts_92, entraîné sur Hi-Fi TTS (OpenSLR 109), licence CC BY 4.0."
+      ]
+    },
+    "pierre": {
+      "name": "Pierre — voix naturelle (homme)",
+      "order": 2,
+      "gender": "male",
+      "culture": "fr-FR",
+      "sampleRate": 22050,
+      "model": "fr_FR-upmc-medium.onnx",
+      "revision": "cf910fb59f1d79ab3b625a63993a108751c6c25d",
+      "patched_sha256": "7f763f70ddf9148ecb878346e03133fc9779e45b69c5a0ddad8768cf203b496a",
+      "speaker": "pierre",
+      "licence": "CC BY-SA 4.0",
+      "public": true,
+      "risk_note": "Base model: fine-tuned from the Piper voice lessac, whose training data is licensed for research only. The owner accepts the risk (D28, 2026-11-16): if that licence is challenged, this voice is withdrawn from the public release.",
+      "inference": {"noise_scale": 0.5, "length_scale": 1.1, "noise_w": 0.333},
+      "inference_word": {"noise_scale": 0.333, "noise_w": 0.2},
+      "word_carrier": "Le mot : {0}.",
+      "phoneme_fix": [["iʲ", "i"]],
+      "files": [
+        {"name": "fr_FR-upmc-medium.onnx", "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/upmc/medium/fr_FR-upmc-medium.onnx", "sha256": "9abb3800c199148897a9ed64e100d224f3de83579f100044174ad19418f1786f"},
+        {"name": "fr_FR-upmc-medium.onnx.json", "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/upmc/medium/fr_FR-upmc-medium.onnx.json", "sha256": "e8636ec15dfd5d72db37a02cb5320a20f2b8d339f2a0e4337da64c58a33a5868"},
+        {"name": "MODEL_CARD", "url": "https://huggingface.co/rhasspy/piper-voices/resolve/cf910fb59f1d79ab3b625a63993a108751c6c25d/fr/fr_FR/upmc/medium/MODEL_CARD", "sha256": "cf1ac7309e0e04bb159b7e6ae80bc8f66bfce9bdfb3e62ae93a6f57e210ab98a"},
+        {"name": "LICENSE.txt", "url": "https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt", "sha256": "28a9529c7d0bb4dc51f4bf5c116a3d16ef247a052f7591466768ddf563fd1cf5"},
+        {"name": "DATASET-LICENSE.md", "url": "https://raw.githubusercontent.com/marytts/upmc-pierre-data/93d6429be8001839f4a1ca22afab009f79891afb/LICENSE.md", "sha256": "ce77948a7320aa2779db549f5e3efc209da87c76f55c17d1b4773808e27dec56"},
+        {"name": "DATASET-README.md", "url": "https://raw.githubusercontent.com/marytts/upmc-pierre-data/93d6429be8001839f4a1ca22afab009f79891afb/README.md", "sha256": "eeac4783f84f941c995a593c52750b586184ba022e90e1f7758ffee306861e8f"}
+      ],
+      "attribution": [
+        "Voix Piper « fr_FR-upmc-medium », locuteur pierre (piper-voices, révision cf910fb5), licence CC BY-SA 4.0, modifiée : sortie /Ceil_output_0 ajoutée (onnx 1.23.2) ; le modèle modifié est diffusé sous la même licence.",
+        "Données : UPMC Pierre Voice Data — « A French speech corpus designed for synthesis, recorded in 2013 at the Institut des Systèmes Intelligents et de Robotique (ISIR), Université Pierre et Marie Curie (UPMC) by Pierre Chauvin, a male native speaker of French. » (github.com/marytts/upmc-pierre-data, révision 93d6429b), licence CC BY-SA 4.0.",
+        "Affiné à partir de la voix anglaise lessac (corpus Blizzard 2013, usage de recherche) ; cette voix pourra être retirée si la licence de ce modèle de base est contestée."
+      ]
+    }
+  }
+}

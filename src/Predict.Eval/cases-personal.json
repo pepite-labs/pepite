@@ -1,0 +1,1094 @@
+[
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "L",
+  "intended": "Léa"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Lé",
+  "intended": "Léa"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "T",
+  "intended": "Tom"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "To",
+  "intended": "Tom"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "I",
+  "intended": "Inès"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "In",
+  "intended": "Inès"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "N",
+  "intended": "Noah"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "No",
+  "intended": "Noah"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "C",
+  "intended": "Chloé"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Ch",
+  "intended": "Chloé"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "M",
+  "intended": "Maël"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Ma",
+  "intended": "Maël"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "Y",
+  "intended": "Yasmine"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Ya",
+  "intended": "Yasmine"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "L",
+  "intended": "Lucas"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Lu",
+  "intended": "Lucas"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "Z",
+  "intended": "Zoé"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Zo",
+  "intended": "Zoé"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "I",
+  "intended": "Ilyes"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Il",
+  "intended": "Ilyes"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "R",
+  "intended": "Romane"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Ro",
+  "intended": "Romane"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "N",
+  "intended": "Nathan"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Na",
+  "intended": "Nathan"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "J",
+  "intended": "Jade"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Ja",
+  "intended": "Jade"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "A",
+  "intended": "Adam"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Ad",
+  "intended": "Adam"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "K",
+  "intended": "Kenza"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Ke",
+  "intended": "Kenza"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "G",
+  "intended": "Gabriel"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Ga",
+  "intended": "Gabriel"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "E",
+  "intended": "Emma"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Em",
+  "intended": "Emma"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "R",
+  "intended": "Rayan"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Ra",
+  "intended": "Rayan"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "L",
+  "intended": "Louise"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Lo",
+  "intended": "Louise"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "S",
+  "intended": "Sacha"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Sa",
+  "intended": "Sacha"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "A",
+  "intended": "Anaïs"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "An",
+  "intended": "Anaïs"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "B",
+  "intended": "Bilal"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Bi",
+  "intended": "Bilal"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "C",
+  "intended": "Clémence"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Cl",
+  "intended": "Clémence"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "É",
+  "intended": "Éloïse"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Él",
+  "intended": "Éloïse"
+ },
+ {
+  "category": "name-1",
+  "context": "je joue avec",
+  "typed": "J",
+  "intended": "Jean-Baptiste"
+ },
+ {
+  "category": "name-2",
+  "context": "je joue avec",
+  "typed": "Je",
+  "intended": "Jean-Baptiste"
+ },
+ {
+  "category": "name-1",
+  "context": "l'école",
+  "typed": "C",
+  "intended": "Clairefontaine"
+ },
+ {
+  "category": "name-2",
+  "context": "l'école",
+  "typed": "Cl",
+  "intended": "Clairefontaine"
+ },
+ {
+  "category": "name-1",
+  "context": "nous habitons à",
+  "typed": "V",
+  "intended": "Valbrune-les-Pins"
+ },
+ {
+  "category": "name-2",
+  "context": "nous habitons à",
+  "typed": "Va",
+  "intended": "Valbrune-les-Pins"
+ },
+ {
+  "category": "name-1",
+  "context": "le volcan",
+  "typed": "V",
+  "intended": "Vésuve"
+ },
+ {
+  "category": "name-2",
+  "context": "le volcan",
+  "typed": "Vé",
+  "intended": "Vésuve"
+ },
+ {
+  "category": "name-1",
+  "context": "le volcan",
+  "typed": "E",
+  "intended": "Etna"
+ },
+ {
+  "category": "name-2",
+  "context": "le volcan",
+  "typed": "Et",
+  "intended": "Etna"
+ },
+ {
+  "category": "name-1",
+  "context": "le volcan",
+  "typed": "P",
+  "intended": "Pompéi"
+ },
+ {
+  "category": "name-2",
+  "context": "le volcan",
+  "typed": "Po",
+  "intended": "Pompéi"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "m",
+  "intended": "magma"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "ma",
+  "intended": "magma"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "l",
+  "intended": "lave"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "la",
+  "intended": "lave"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "c",
+  "intended": "cratère"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "cr",
+  "intended": "cratère"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "é",
+  "intended": "éruption"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "ér",
+  "intended": "éruption"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "v",
+  "intended": "volcanologue"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "vo",
+  "intended": "volcanologue"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "s",
+  "intended": "stratovolcan"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "st",
+  "intended": "stratovolcan"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "l",
+  "intended": "lapilli"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "la",
+  "intended": "lapilli"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "f",
+  "intended": "fumerolle"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "fu",
+  "intended": "fumerolle"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "c",
+  "intended": "cheminée"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "ch",
+  "intended": "cheminée"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "m",
+  "intended": "magmatique"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "ma",
+  "intended": "magmatique"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "p",
+  "intended": "pyroclastique"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "py",
+  "intended": "pyroclastique"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "b",
+  "intended": "basalte"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "ba",
+  "intended": "basalte"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "œ",
+  "intended": "œsophage"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "œs",
+  "intended": "œsophage"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "e",
+  "intended": "estomac"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "es",
+  "intended": "estomac"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "i",
+  "intended": "intestin"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "in",
+  "intended": "intestin"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "s",
+  "intended": "salive"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "sa",
+  "intended": "salive"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "d",
+  "intended": "digestion"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "di",
+  "intended": "digestion"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "p",
+  "intended": "pancréas"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "pa",
+  "intended": "pancréas"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "f",
+  "intended": "foie"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "fo",
+  "intended": "foie"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "n",
+  "intended": "nutriments"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "nu",
+  "intended": "nutriments"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "m",
+  "intended": "molaire"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "mo",
+  "intended": "molaire"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "i",
+  "intended": "incisive"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "in",
+  "intended": "incisive"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "c",
+  "intended": "canine"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "ca",
+  "intended": "canine"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "e",
+  "intended": "enzyme"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "en",
+  "intended": "enzyme"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "d",
+  "intended": "duodénum"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "du",
+  "intended": "duodénum"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "c",
+  "intended": "chyme"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "ch",
+  "intended": "chyme"
+ },
+ {
+  "category": "lesson-1",
+  "context": "on parle du",
+  "typed": "v",
+  "intended": "villosités"
+ },
+ {
+  "category": "lesson-2",
+  "context": "on parle du",
+  "typed": "vi",
+  "intended": "villosités"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "pace",
+  "intended": "parce"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "pac",
+  "intended": "parce"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "kan",
+  "intended": "quand"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "ojourdui",
+  "intended": "aujourd'hui"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "ojo",
+  "intended": "aujourd'hui"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "bocou",
+  "intended": "beaucoup"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "boc",
+  "intended": "beaucoup"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "sest",
+  "intended": "c'est"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "ses",
+  "intended": "c'est"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "malgrer",
+  "intended": "malgré"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "mal",
+  "intended": "malgré"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "toujour",
+  "intended": "toujours"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "tou",
+  "intended": "toujours"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "otre",
+  "intended": "autre"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "otr",
+  "intended": "autre"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "dabor",
+  "intended": "d'abord"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "dab",
+  "intended": "d'abord"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "kelke",
+  "intended": "quelque"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "kel",
+  "intended": "quelque"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "comencer",
+  "intended": "commencer"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "com",
+  "intended": "commencer"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "maintenan",
+  "intended": "maintenant"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "mai",
+  "intended": "maintenant"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "ecol",
+  "intended": "école"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "eco",
+  "intended": "école"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "apré",
+  "intended": "après"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "apr",
+  "intended": "après"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "enfain",
+  "intended": "enfin"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "enf",
+  "intended": "enfin"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "peutetre",
+  "intended": "peut-être"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "peu",
+  "intended": "peut-être"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "kom",
+  "intended": "comme"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "ossi",
+  "intended": "aussi"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "oss",
+  "intended": "aussi"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "pourkoi",
+  "intended": "pourquoi"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "pou",
+  "intended": "pourquoi"
+ },
+ {
+  "category": "fautes-exact",
+  "context": null,
+  "typed": "jamai",
+  "intended": "jamais"
+ },
+ {
+  "category": "fautes-prefix3",
+  "context": null,
+  "typed": "jam",
+  "intended": "jamais"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "L",
+  "intended": "le"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "L",
+  "intended": "la"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "L",
+  "intended": "les"
+ },
+ {
+  "category": "start-2",
+  "context": null,
+  "typed": "Le",
+  "intended": "les"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "I",
+  "intended": "il"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "E",
+  "intended": "elle"
+ },
+ {
+  "category": "start-2",
+  "context": null,
+  "typed": "El",
+  "intended": "elle"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "N",
+  "intended": "nous"
+ },
+ {
+  "category": "start-2",
+  "context": null,
+  "typed": "No",
+  "intended": "nous"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "J",
+  "intended": "je"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "M",
+  "intended": "mais"
+ },
+ {
+  "category": "start-2",
+  "context": null,
+  "typed": "Ma",
+  "intended": "mais"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "T",
+  "intended": "tu"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "O",
+  "intended": "on"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "C",
+  "intended": "ce"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "U",
+  "intended": "un"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "U",
+  "intended": "une"
+ },
+ {
+  "category": "start-2",
+  "context": null,
+  "typed": "Un",
+  "intended": "une"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "Q",
+  "intended": "quand"
+ },
+ {
+  "category": "start-2",
+  "context": null,
+  "typed": "Qu",
+  "intended": "quand"
+ },
+ {
+  "category": "start-1",
+  "context": null,
+  "typed": "P",
+  "intended": "pourquoi"
+ },
+ {
+  "category": "start-2",
+  "context": null,
+  "typed": "Po",
+  "intended": "pourquoi"
+ },
+ {
+  "category": "start-ctx",
+  "context": "Il pleut.",
+  "typed": "C",
+  "intended": "comme"
+ },
+ {
+  "category": "start-ctx",
+  "context": "Il pleut.",
+  "typed": "Ch",
+  "intended": "c'est"
+ },
+ {
+  "category": "start-ctx",
+  "context": "On joue.",
+  "typed": "Ma",
+  "intended": "mais"
+ },
+ {
+  "category": "start-ctx",
+  "context": "On joue.",
+  "typed": "Le",
+  "intended": "le"
+ },
+ {
+  "category": "start-ctx",
+  "context": "Bonjour !",
+  "typed": "No",
+  "intended": "nous"
+ },
+ {
+  "category": "start-ctx",
+  "context": "Bonjour !",
+  "typed": "To",
+  "intended": "tout"
+ },
+ {
+  "category": "start-ctx",
+  "context": "C'est fini.",
+  "typed": "Ra",
+  "intended": "rien"
+ },
+ {
+  "category": "start-ctx",
+  "context": "Tu viens ?",
+  "typed": "Je",
+  "intended": "je"
+ }
+]

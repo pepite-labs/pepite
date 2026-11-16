@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="pepite-public" content="enfant">
+<title>Un souci ? — Aide de Pépite</title>
+<link rel="stylesheet" href="style.css">
+<script src="prefs.js" defer></script>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>l'aide</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Pages de l'aide">
+  <ul class="enfant">
+      <li><a href="index.html">Sommaire</a></li>
+      <li><a href="bienvenue.html">Bienvenue</a></li>
+      <li><a href="comment-ca-marche.html">Comment ça marche</a></li>
+      <li><a href="orthographe.html">Orthographe</a></li>
+      <li><a href="mes-mots.html">Mes mots</a></li>
+      <li><a href="lire-un-texte.html">Lire un texte</a></li>
+      <li><a href="reglages.html">Les réglages</a></li>
+      <li><a href="questions.html" aria-current="page">Un souci ?</a></li>
+      <li><a href="pour-les-curieux.html">Pour les curieux</a></li>
+  </ul>
+  <div class="adultes"><span class="adultes-titre" id="nav-adultes">Pour les adultes :</span>
+  <ul aria-labelledby="nav-adultes">
+      <li><a href="enseignants.html">Enseignants et parents</a></li>
+      <li><a href="installation.html">Installer</a></li>
+      <li><a href="vie-privee.html">Vie privée</a></li>
+      <li><a href="a-propos.html">À propos</a></li>
+  </ul></div>
+</nav>
+<main id="contenu">
+<h1>Un souci ?</h1>
+<p class="chapeau">Les petits problèmes les plus courants, et quoi faire.</p>
+
+<h2 id="pas-de-barre">La barre n'apparaît pas</h2>
+<ul>
+  <li>Le biscuit près de l'horloge est <b>gris</b> ? Pépite est en pause : clique dessus, puis sur <b>Reprendre</b>.</li>
+  <li>Tu écris un <b>mot de passe</b> ? C'est normal : Pépite se tait.</li>
+  <li>Pas de biscuit du tout ? Pépite n'est pas démarré. Ouvre <b>Pépite</b> depuis le menu Démarrer.</li>
+  <li>Dans une console ou une fenêtre de bureau à distance, Pépite ne fait rien. C'est voulu.</li>
+  <li>Un programme lancé « en tant qu'administrateur » ne laisse pas Pépite écrire dedans.</li>
+</ul>
+
+<h2 id="icone">Je ne trouve pas le biscuit</h2>
+<p>Windows cache parfois les petites icônes. Clique sur la flèche <b>^</b> à côté de l'horloge : le biscuit est là.</p>
+<p>Pour le garder toujours visible, un adulte peut ouvrir <b>Paramètres &gt; Personnalisation &gt; Barre des tâches &gt; Autres icônes de barre d’état système</b>.</p>
+
+<h2 id="f1">La touche F1 fait autre chose</h2>
+<p>Les touches <kbd>F1</kbd> à <kbd>F8</kbd> choisissent un mot <b>seulement quand la barre est là</b>. Sinon, elles font leur travail habituel.</p>
+<p>Dans la fenêtre Réglages, <kbd>F1</kbd> ouvre cette aide.</p>
+<p>Sur certains portables, il faut appuyer en même temps sur la touche <kbd>Fn</kbd>.</p>
+<p>Tu as besoin des touches F pour un jeu ou un programme ? Décoche <b>Touches F1 à F8 pour insérer</b> dans les <a href="reglages.html#mots">réglages</a>. Le clic marche toujours.</p>
+
+<h2 id="silence">Je n'entends rien</h2>
+<ul>
+  <li>Vérifie le son de l'ordinateur et le casque.</li>
+  <li>Dans les <a href="reglages.html#voix">réglages</a>, clique sur <b>Écouter</b>.</li>
+  <li>Juste après le démarrage, la voix met quelques secondes à se préparer. Le biscuit dit alors « chargement de la voix » quand la souris passe dessus.</li>
+  <li>Dans un champ de mot de passe, ou quand Pépite ne sait pas si le champ est sûr, il se tait.</li>
+</ul>
+
+<h2 id="mauvais-mots">Les mots proposés ne me conviennent pas</h2>
+<ul>
+  <li>Continue à taper : la barre change à chaque lettre.</li>
+  <li><kbd>Échap</kbd> cache la barre.</li>
+  <li>Il manque un mot ? <a href="mes-mots.html#ajouter">Ajoute-le</a>.</li>
+  <li>Tu fais toujours la même faute ? Utilise <a href="mes-mots.html#fautes">Mes fautes</a>.</li>
+</ul>
+
+<h2 id="code">On me demande un code</h2>
+<p>À l'école, certains choix sont protégés par le <b>code enseignant</b>. Demande à ton enseignant.</p>
+<p>Pour les adultes : <a href="enseignants.html#code">le code enseignant et le code de secours</a>.</p>
+
+<h2 id="deja-demarre"><q>Pépite est déjà démarré</q></h2>
+<p>Pépite marchait déjà. Rien de grave : il n'en démarre pas un deuxième. La fenêtre te propose <b>Ouvrir les Réglages</b> ou <b>Aide</b>.</p>
+
+<h2 id="windows-protege"><q>Windows a protégé votre ordinateur</q></h2>
+<p>Ce message vient pendant l'installation. C'est l'affaire d'un adulte : voir <a href="installation.html#windows-protege">Installer Pépite</a>.</p>
+
+<h2 id="accessibilite">Sans souris, avec un lecteur d'écran</h2>
+<ul>
+  <li><b>Sans souris</b> : <kbd>Windows</kbd>+<kbd>B</kbd>, puis les flèches jusqu'au biscuit, puis <kbd>Entrée</kbd> ouvre le menu de Pépite.</li>
+  <li><b>Lecteur d'écran</b> : les réglages ont tous un nom lisible (Narrateur, NVDA).</li>
+  <li><b>Cette aide</b> s'agrandit avec <kbd>Ctrl</kbd>+<kbd>+</kbd>. La touche <kbd>Tab</kbd> passe d'un lien à l'autre. Les cases en haut de page changent les lettres et la taille.</li>
+</ul>
+
+<h2 id="signaler">Signaler un problème</h2>
+<p>Parle-en à un adulte. Il peut écrire aux auteurs de Pépite sur <b>github.com/pepite-labs/pepite</b>, rubrique « Issues ».</p>
+<div class="attention"><p>On n'y met jamais de prénom, de texte d'élève ni de copie d'écran avec des noms.</p></div>
+<p class="suivant"><a href="reglages.html">← Les réglages</a><a href="pour-les-curieux.html">Pour les curieux →</a></p>
+</main>
+<footer class="bas">
+  <p><a href="a-propos.html">À propos</a> · Pépite — logiciel libre, sans Internet. Cette aide : licence CC BY-SA 4.0.</p>
+</footer>
+</body>
+</html>

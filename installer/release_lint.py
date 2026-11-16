@@ -26,7 +26,10 @@ extension) and the extra
   files and fonts must resolve); with ``--public``, ``aide\\index.html`` is required;
 - **notice versions** (publication cleanup, S6): every runtime pack and package of ``Pepite.deps.json`` that ships files
   (runtime or native assets) must appear in ``THIRD-PARTY-NOTICES.txt`` with its version, in one paragraph that names
-  the package (or its family: ``SQLitePCLRaw`` for ``SQLitePCLRaw.core``).
+  the package (or its family: ``SQLitePCLRaw`` for ``SQLitePCLRaw.core``);
+- **licence files** (plan 13, first CI installer run): a publish (``Pepite.deps.json`` present) must ship the non-empty
+  licence texts of ``REQUIRED_LICENSES`` (.NET and Windows Desktop runtimes, System.Speech, the Apache-2.0 text): the
+  build used to skip a missing one silently.
 
 Exit code 0 = clean, 1 = problems (listed), 2 = bad arguments.
 """
@@ -53,6 +56,15 @@ ALLOWED_PATHS = (
 # build paths inside third-party binaries we ship unchanged (the .NET apphost is built by Microsoft's CI)
 ALLOWED_BINARY_PATHS = ("d:\\a\\_work\\",)
 OWN_TEXTS = ("LISEZ-MOI.txt", "THIRD-PARTY-NOTICES.txt")
+# the licence texts a publish must carry (Predict.Keyboard.csproj copies them; THIRD-PARTY-NOTICES.txt points to them)
+REQUIRED_LICENSES = (
+    r"licenses\dotnet\LICENSE.TXT",
+    r"licenses\dotnet\THIRD-PARTY-NOTICES.TXT",
+    r"licenses\windowsdesktop\LICENSE",
+    r"licenses\system-speech\LICENSE.TXT",
+    r"licenses\system-speech\THIRD-PARTY-NOTICES.TXT",
+    r"licenses\apache-2.0\LICENSE.txt",
+)
 DRIVE_PATH = re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:\\[^\s\"'<>|*?]*")
 HTTP = re.compile(r"http://[^\s\"'<>)]+")
 # XML namespace names (the help's SVG drawings: xmlns="http://www.w3.org/2000/svg") are identifiers, never fetched
@@ -185,8 +197,22 @@ def check_versions(stage):
     return problems
 
 
+def check_licenses(stage):
+    """The required licence files of a publish (a stage with ``Pepite.deps.json``): present and not empty."""
+    if not os.path.isfile(os.path.join(stage, "Pepite.deps.json")):
+        return []
+    problems = []
+    for rel in REQUIRED_LICENSES:
+        path = os.path.join(stage, *rel.split("\\"))
+        if not os.path.isfile(path):
+            problems.append(f"{rel} missing: a publish ships this licence text")
+        elif os.path.getsize(path) == 0:
+            problems.append(f"{rel} is empty")
+    return problems
+
+
 def lint(stage, forbidden, public=False, texts=()):
-    problems = check_versions(stage)
+    problems = check_versions(stage) + check_licenses(stage)
     for root, _, files in os.walk(stage):
         for fn in files:
             path = os.path.join(root, fn)

@@ -2,7 +2,9 @@
 
 ## Prerequisites
 
-- **.NET SDK** — the version pinned in [`global.json`](../global.json) (6.0.424, `rollForward: latestFeature`).
+- **.NET SDK** — exactly the version pinned in [`global.json`](../global.json) (6.0.424, `rollForward: disable`: the
+  SDK patch fixes the bundled runtime packs of a self-contained publish, 6.0.32 here, which THIRD-PARTY-NOTICES.txt
+  names; the CI installs the same SDK and checks `dotnet --version`, so a local rebuild matches the CI one).
   The projects target `net6.0` / `net6.0-windows`. On a PC that has only a newer .NET *runtime* (e.g. 8.0), set
   `DOTNET_ROLL_FORWARD=Major` so the 6.0-built tools and tests run on it.
 - **Python 3.12** (standard library only for the build and test scripts — uses `sqlite3`); run scripts with `python -I`.
@@ -384,6 +386,11 @@ powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 
   the same tag passes the full lint (plan 13, A8). The embedded
   help (`aide\`, fonts excepted) counts as our own texts; `installer\help_lint.py` runs on it, and a public build
   requires `aide\index.html`.
+  It also checks that every runtime pack and package of `Pepite.deps.json` that ships files has its version in
+  `THIRD-PARTY-NOTICES.txt`, and that the publish carries the licence texts `licenses\dotnet\`, `licenses\windowsdesktop\`,
+  `licenses\system-speech\` and `licenses\apache-2.0\` (non-empty). The csproj takes the two runtime-pack licences from
+  the packs the SDK resolved (target `PepiteRuntimePackLicenses`) and fails a self-contained build or publish when one
+  is missing; a framework-dependent dev build does not copy them.
 - **Embedded help** (`freeware/aide/`, plan « aide intégrée »): copied by the csproj to `aide\` with the fonts of
   `src/Data.Build/out/fonts` in `aide\fonts\`. Check the pages with `python -I installer\help_lint.py aide` (tests:
   `python -I -m unittest discover -s installer\tests -p test_help_lint.py`). The bar pictures `aide\img\barre-*.png`

@@ -22,10 +22,12 @@
     <Copyright>© 2026 Les auteurs de Pépite</Copyright>
     <!-- plan 12: French only (D14) — no satellite resource folders (de, es, ja, …) in the publish / the installer -->
     <SatelliteResourceLanguages>fr</SatelliteResourceLanguages>
+    <!-- one place for the System.Speech version: the PackageReference and the path of its licence files -->
+    <PepiteSystemSpeechVersion>6.0.0</PepiteSystemSpeechVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Predict.Core\Predict.Core.csproj" />
-    <PackageReference Include="System.Speech" Version="6.0.0" />
+    <PackageReference Include="System.Speech" Version="$(PepiteSystemSpeechVersion)" />
     <!-- plan 08a (D19: MIT, GPL-3-compatible): Piper voices on ONNX Runtime, played through WASAPI -->
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
     <PackageReference Include="NAudio.Core" Version="2.2.1" />
@@ -91,15 +93,40 @@
   </ItemGroup>
   <!-- publication cleanup (S6): the licences of what a self-contained publish ships — the .NET and Windows Desktop runtime
        packs (MIT + their third-party notices), System.Speech (MIT) and the Apache-2.0 text for SQLitePCLRaw; the versions
-       follow THIRD-PARTY-NOTICES.txt (release_lint.py checks them against Pepite.deps.json) -->
+       follow THIRD-PARTY-NOTICES.txt (release_lint.py checks them against Pepite.deps.json). System.Speech and Apache-2.0
+       ship with every build; the runtime-pack licences are added by PepiteRuntimePackLicenses below -->
   <ItemGroup>
-    <None Include="$(NuGetPackageRoot)microsoft.netcore.app.runtime.win-x64\6.0.32\LICENSE.TXT" Link="licenses\dotnet\LICENSE.TXT" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(NuGetPackageRoot)microsoft.netcore.app.runtime.win-x64\6.0.32\LICENSE.TXT')" />
-    <None Include="$(NuGetPackageRoot)microsoft.netcore.app.runtime.win-x64\6.0.32\THIRD-PARTY-NOTICES.TXT" Link="licenses\dotnet\THIRD-PARTY-NOTICES.TXT" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(NuGetPackageRoot)microsoft.netcore.app.runtime.win-x64\6.0.32\THIRD-PARTY-NOTICES.TXT')" />
-    <None Include="$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\6.0.32\LICENSE" Link="licenses\windowsdesktop\LICENSE" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(NuGetPackageRoot)microsoft.windowsdesktop.app.runtime.win-x64\6.0.32\LICENSE')" />
-    <None Include="$(NuGetPackageRoot)system.speech\6.0.0\LICENSE.TXT" Link="licenses\system-speech\LICENSE.TXT" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(NuGetPackageRoot)system.speech\6.0.0\LICENSE.TXT')" />
-    <None Include="$(NuGetPackageRoot)system.speech\6.0.0\THIRD-PARTY-NOTICES.TXT" Link="licenses\system-speech\THIRD-PARTY-NOTICES.TXT" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(NuGetPackageRoot)system.speech\6.0.0\THIRD-PARTY-NOTICES.TXT')" />
+    <None Include="$(NuGetPackageRoot)system.speech\$(PepiteSystemSpeechVersion)\LICENSE.TXT" Link="licenses\system-speech\LICENSE.TXT" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(NuGetPackageRoot)system.speech\$(PepiteSystemSpeechVersion)\THIRD-PARTY-NOTICES.TXT" Link="licenses\system-speech\THIRD-PARTY-NOTICES.TXT" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\licenses\apache-2.0\LICENSE.txt" Link="licenses\apache-2.0\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- plan 13 (first CI installer run): the runtime-pack licences come from the packs the SDK actually resolved
+       (ResolvedRuntimePack.PackageDirectory), not from a hard-coded version folder: a different SDK patch resolves other
+       packs, and an Exists() condition on a fixed path then left the .NET licences out of the installer silently.
+       Self-contained RID builds only (a framework-dependent dev build ships no runtime); a missing file is an error. -->
+  <Target Name="PepiteRuntimePackLicenses" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveFrameworkReferences"
+          Condition="'$(RuntimeIdentifier)' != '' and '$(SelfContained)' == 'true'">
+    <ItemGroup>
+      <_PepiteNetCorePack Include="@(ResolvedRuntimePack)" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.NETCore.App'" />
+      <_PepiteDesktopPack Include="@(ResolvedRuntimePack)" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.WindowsDesktop.App'" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_PepiteNetCorePackDir>@(_PepiteNetCorePack->'%(PackageDirectory)'->Distinct())</_PepiteNetCorePackDir>
+      <_PepiteDesktopPackDir>@(_PepiteDesktopPack->'%(PackageDirectory)'->Distinct())</_PepiteDesktopPackDir>
+    </PropertyGroup>
+    <Error Condition="'$(_PepiteNetCorePackDir)' == '' or '$(_PepiteDesktopPackDir)' == '' or $(_PepiteNetCorePackDir.Contains(';')) or $(_PepiteDesktopPackDir.Contains(';'))"
+           Text="Pépite: cannot locate the resolved .NET / Windows Desktop runtime packs (got '$(_PepiteNetCorePackDir)' and '$(_PepiteDesktopPackDir)'); their licences must ship with a self-contained publish." />
+    <ItemGroup>
+      <_PepiteRuntimeLicense Include="$(_PepiteNetCorePackDir)\LICENSE.TXT" Link="licenses\dotnet\LICENSE.TXT" />
+      <_PepiteRuntimeLicense Include="$(_PepiteNetCorePackDir)\THIRD-PARTY-NOTICES.TXT" Link="licenses\dotnet\THIRD-PARTY-NOTICES.TXT" />
+      <_PepiteRuntimeLicense Include="$(_PepiteDesktopPackDir)\LICENSE" Link="licenses\windowsdesktop\LICENSE" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(_PepiteRuntimeLicense.Identity)')"
+           Text="Pépite: licence file missing from the resolved runtime pack: %(_PepiteRuntimeLicense.Identity) (needed as %(_PepiteRuntimeLicense.Link) in a self-contained publish)." />
+    <ItemGroup>
+      <None Include="@(_PepiteRuntimeLicense)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
   <!-- plan « aide intégrée »: the embedded help (static French pages, CC BY-SA 4.0; prefs.js GPL) in aide\, its
        contributor notes excepted; the bundled fonts copied again into aide\fonts\ (Firefox refuses a font from a parent
        folder of a local page), each with its OFL.txt; the school deployment guide next to the exe (owner Q6), linked

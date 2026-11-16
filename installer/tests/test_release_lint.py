@@ -62,7 +62,33 @@ class ReleaseLintTest(unittest.TestCase):
                           "SQLitePCLRaw.core/2.1.2": {"type": "package"},
                           "System.Memory/4.5.5": {"type": "package"}}}
 
+    def write_licenses(self):
+        for rel in rl.REQUIRED_LICENSES:
+            self.write(rel.replace("\\", "/"), "MIT License\n")
+
+    def test_publish_requires_the_licence_files(self):
+        self.write("Pepite.deps.json", json.dumps(self.DEPS))
+        self.write("THIRD-PARTY-NOTICES.txt", ".NET runtime 6.0.32\n  package Microsoft.NETCore.App.Runtime.win-x64 6.0.32\n\n"
+                                              "SQLitePCLRaw 2.1.2 — Apache-2.0\n")
+        probs = rl.lint(self.stage, WORDS)
+        self.assertEqual(len(probs), len(rl.REQUIRED_LICENSES), probs)
+        for sub in ("dotnet", "windowsdesktop", "system-speech", "apache-2.0"):
+            self.assertTrue(any(f"licenses\\{sub}\\" in p and "missing" in p for p in probs), (sub, probs))
+        self.write_licenses()
+        self.assertEqual(rl.lint(self.stage, WORDS), [])
+        os.remove(os.path.join(self.stage, "licenses", "windowsdesktop", "LICENSE"))     # one missing file is enough
+        probs = rl.lint(self.stage, WORDS)
+        self.assertEqual(len(probs), 1, probs)
+        self.assertIn("licenses\\windowsdesktop\\LICENSE missing", probs[0])
+        self.write("licenses/windowsdesktop/LICENSE", b"")                                  # an empty one too
+        self.assertEqual(rl.lint(self.stage, WORDS), ["licenses\\windowsdesktop\\LICENSE is empty"])
+
+    def test_no_licence_check_without_a_publish(self):
+        self.write("licenses/x/LICENSE", "MIT")                       # no Pepite.deps.json: not a publish stage
+        self.assertEqual(rl.check_licenses(self.stage), [])
+
     def test_notice_versions_follow_the_deps_json(self):
+        self.write_licenses()
         self.write("Pepite.deps.json", json.dumps(self.DEPS))
         self.write("THIRD-PARTY-NOTICES.txt", ".NET runtime 6.0.32\n  package Microsoft.NETCore.App.Runtime.win-x64 6.0.32\n\n"
                                               "SQLitePCLRaw 2.1.2 — Apache-2.0\n")

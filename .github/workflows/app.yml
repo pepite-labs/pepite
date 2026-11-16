@@ -9,6 +9,8 @@
 #   release    tags only, environment "release" (owner approval): SHA256SUMS check, build-provenance attestation,
 #              French release notes, a DRAFT pre-release with every asset uploaded (immutable releases: published by
 #              the owner after his checks)
+# The .NET SDK is exactly the one global.json pins (rollForward: disable; checked after setup-dotnet): its patch fixes
+# the runtime packs of the self-contained publish, which THIRD-PARTY-NOTICES.txt and the owner's local rebuild match.
 # The online help (GitHub Pages) has its own workflow, pages.yml.
 name: app
 
@@ -47,6 +49,13 @@ jobs:
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
+      - name: SDK is exactly the global.json one
+        shell: pwsh
+        run: |
+          $want = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+          $got = (dotnet --version | Out-String).Trim()
+          if ($got -ne $want) { throw "dotnet --version is '$got', global.json pins '$want'" }
+          "SDK $got"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -90,6 +99,13 @@ jobs:
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
+      - name: SDK is exactly the global.json one
+        shell: pwsh
+        run: |
+          $want = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+          $got = (dotnet --version | Out-String).Trim()
+          if ($got -ne $want) { throw "dotnet --version is '$got', global.json pins '$want'" }
+          "SDK $got"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}

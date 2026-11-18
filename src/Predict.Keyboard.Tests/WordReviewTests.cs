@@ -110,32 +110,35 @@ public class WordReviewTests : IDisposable
         var queue = new List<Action>();
         var pc = Pc(a => { lock (queue) queue.Add(a); });
         pc.Words.AddWord(pc.Lea, "Vésuve");
-        void Drain()
+        // the « dispatcher »: runs what the worker posted, until the condition holds (a generous bound: the snapshot is
+        // built on the thread pool, which a full parallel test run can keep busy for seconds)
+        bool DrainUntil(Func<bool> done, int ms = 30000)
         {
-            for (int i = 0; i < 100; i++)
+            var sw = Stopwatch.StartNew();
+            while (true)
             {
                 Action[] q;
                 lock (queue) { q = queue.ToArray(); queue.Clear(); }
                 foreach (var a in q) a();
-                if (q.Length == 0) System.Threading.Thread.Sleep(20); else return;
+                if (done()) return true;
+                if (sw.ElapsedMilliseconds > ms) return false;
+                System.Threading.Thread.Sleep(10);
             }
         }
         // the edit of the loaded active profile rebuilt on the worker; nothing applied before the dispatcher runs
         int before = pc.Applied.Count;
-        Drain();
-        Assert.True(pc.Applied.Count > before);
+        Assert.True(DrainUntil(() => pc.Applied.Count > before));
         Assert.True(pc.Applied.Last().Contains("vésuve"));
         // a switch to Tom: none of Léa's words meanwhile (empty), then Tom's
-        pc.Words.AddWord(pc.Tom, "Zorglub");
-        Drain();
+        pc.Words.AddWord(pc.Tom, "Zorglub");   // Tom is not active: no rebuild
         pc.Svc.Switch(pc.Tom, "test");
         Assert.False(pc.Applied.Last().Contains("vésuve"));
-        Drain();
-        Assert.True(pc.Applied.Last().Contains("zorglub"));
-        // two rebuilds in a row: only the newer one is applied
+        Assert.True(DrainUntil(() => pc.Applied.Last().Contains("zorglub")));
+        // two rebuilds in a row: only the newer one ends applied (an older result that arrives later is dropped)
         pc.Svc.Switch(pc.Lea, "test");
         pc.Svc.Switch(pc.Tom, "test");
-        Drain(); Drain();
+        Assert.True(DrainUntil(() => pc.Applied.Last().Contains("zorglub")));
+        DrainUntil(() => false, 500);          // let a late result of the first switch arrive: it must not be applied
         Assert.True(pc.Applied.Last().Contains("zorglub"));
     }
 

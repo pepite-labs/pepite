@@ -272,19 +272,42 @@ public class SpeechTests
         var hang = new ManualResetEventSlim();
         var log = new ConcurrentQueue<string>();
         int calls = 0;
-        using var g = new EchoGuard(_ => { Interlocked.Increment(ref calls); hang.Wait(20000); return ProbeStatus.NotPassword; },
+        long lastStart = 0;
+        using var g = new EchoGuard(_ =>
+                                    {
+                                        Interlocked.Exchange(ref lastStart, Environment.TickCount64);
+                                        Interlocked.Increment(ref calls);
+                                        hang.Wait(60000);
+                                        return ProbeStatus.NotPassword;
+                                    },
                                     () => fg, _ => { }, log.Enqueue);
-        for (int round = 0; round <= ProbeWorker<object>.MaxAbandoned + 1; round++)
+        try
         {
-            g.Submit(new SpeechItem("m" + round, SpeechKind.Word), fg);
-            int expected = Math.Min(round + 1, ProbeWorker<object>.MaxAbandoned + 1);
-            WaitFor(() => calls >= expected, 2000);
-            Thread.Sleep(EchoGuard.StuckMs + 150);
+            // each worker generation takes its item and hangs; the next Submit sees it stuck and starts a new one
+            for (int round = 0; round <= ProbeWorker<object>.MaxAbandoned; round++)
+            {
+                g.Submit(new SpeechItem("m" + round, SpeechKind.Word), fg);
+                int expected = round + 1;
+                Assert.True(WaitFor(() => Volatile.Read(ref calls) == expected, 30000), $"round {round}: {calls} calls");
+                WaitUntilStuck(ref lastStart);
+            }
+            // every replacement used up: the next item is refused at once (on the caller's thread)
+            g.Submit(new SpeechItem("m" + (ProbeWorker<object>.MaxAbandoned + 1), SpeechKind.Word), fg);
+            Assert.Equal(ProbeWorker<object>.MaxAbandoned, log.Count(l => l.Contains("new thread")));
+            Assert.Contains(log, l => l == "echo dropped (guard stuck)");
+            Assert.Equal(ProbeWorker<object>.MaxAbandoned + 1, Volatile.Read(ref calls));
         }
-        Assert.Equal(ProbeWorker<object>.MaxAbandoned, log.Count(l => l.Contains("new thread")));
-        Assert.Contains(log, l => l == "echo dropped (guard stuck)");
-        Assert.Equal(ProbeWorker<object>.MaxAbandoned + 1, calls);
-        hang.Set();
+        finally { hang.Set(); }
+    }
+
+    /// <summary>Waits until the probe that started last has been busy for longer than <see cref="EchoGuard.StuckMs"/>:
+    /// the worker marks itself busy before it calls the probe, so the guard then sees it as stuck. Measured from the
+    /// probe's own start, not from the test's Submit, so a slow thread start on a busy runner cannot shorten it.</summary>
+    private static void WaitUntilStuck(ref long lastStart)
+    {
+        long start = Interlocked.Read(ref lastStart);
+        Assert.True(start != 0, "the probe never started");
+        while (Environment.TickCount64 - start <= EchoGuard.StuckMs + 100) Thread.Sleep(20);
     }
 
     [Fact]
@@ -397,16 +420,28 @@ public class SpeechTests
         var forwarded = new ConcurrentQueue<string>();
         var log = new ConcurrentQueue<string>();
         int calls = 0;
-        using var g = new EchoGuard(_ => { if (Interlocked.Increment(ref calls) == 1) hang.Wait(10000); return ProbeStatus.NotPassword; },
+        long lastStart = 0;
+        var blockedDone = new ManualResetEventSlim();
+        using var g = new EchoGuard(_ =>
+                                    {
+                                        Interlocked.Exchange(ref lastStart, Environment.TickCount64);
+                                        if (Interlocked.Increment(ref calls) == 1) hang.Wait(60000);
+                                        return ProbeStatus.NotPassword;
+                                    },
                                     () => fg, i => forwarded.Enqueue(i.Text), log.Enqueue);
-        g.Submit(new SpeechItem("bloque", SpeechKind.Word), fg);
-        Assert.True(WaitFor(() => calls == 1));
-        Thread.Sleep(EchoGuard.StuckMs + 200);
-        g.Submit(new SpeechItem("suivant", SpeechKind.Word), fg);
-        Assert.True(WaitFor(() => forwarded.Contains("suivant")));
-        hang.Set();
-        Thread.Sleep(200);
-        Assert.DoesNotContain("bloque", forwarded);   // the abandoned guard never delivers
-        Assert.Contains(log, l => l.Contains("new thread"));
+        try
+        {
+            g.Submit(new SpeechItem("bloque", SpeechKind.Word, Done: _ => blockedDone.Set()), fg);
+            Assert.True(WaitFor(() => Volatile.Read(ref calls) == 1, 30000));
+            WaitUntilStuck(ref lastStart);
+            g.Submit(new SpeechItem("suivant", SpeechKind.Word), fg);
+            Assert.True(WaitFor(() => forwarded.Contains("suivant"), 30000));
+            hang.Set();
+            // the abandoned guard comes back, sees it no longer owns the queue and drops its item (Done = Cancelled)
+            Assert.True(blockedDone.Wait(30000), "the abandoned item was never settled");
+            Assert.DoesNotContain("bloque", forwarded);   // the abandoned guard never delivers
+            Assert.Contains(log, l => l.Contains("new thread"));
+        }
+        finally { hang.Set(); }
     }
 }

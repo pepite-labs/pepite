@@ -97,6 +97,51 @@ class BuildHelpSiteTest(unittest.TestCase):
         self.assertIn(".en-ligne", self.read(out, self.minor, "aide", "style.css"))
         self.assertNotIn("en-ligne", self.read(out, self.minor, "aide", "aller", "reglages-voix.html"))   # stubs as they are
 
+    def test_pages_beta_copied_rendered_and_checked(self):
+        out = os.path.join(self.tmp, "site")
+        rc, text = self.run_main("--out", out, "--fonts", self.fonts, "--latest", self.minor,
+                                 "--version", "%s=%s" % (self.minor, REPO), "--pages", os.path.join(REPO, "site"))
+        self.assertEqual(rc, 0, text)
+        page = self.read(out, "beta", "index.html")
+        self.assertNotIn("{LATEST}", page)
+        self.assertIn('href="../%s/aide/style.css"' % self.minor, page)       # the help's look, fonts and logo
+        self.assertIn('href="../%s/DEPLOIEMENT.txt"' % self.minor, page)
+        self.assertIn("url=%s/aide/index.html" % self.minor, self.read(out, "index.html"))   # the root is unchanged
+        self.assertIsNone(help_lint.EMAIL.search(page))                     # the address is never written out
+        for f in os.listdir(os.path.join(REPO, "site", "beta", "img")):
+            self.assertTrue(os.path.isfile(os.path.join(out, "beta", "img", f)), f)
+        self.assertEqual(bs.check_page(out, "beta/index.html"), [])
+
+    def test_pages_problems(self):
+        pages = os.path.join(self.tmp, "pages")
+        os.makedirs(os.path.join(pages, "p"))
+        with open(os.path.join(REPO, "site", "beta", "index.html"), encoding="utf-8") as h:
+            good = h.read()
+        bad = (good.replace('href="#contact"', 'href="#nulle-part"', 1)
+               .replace("img/affiche-maizon.png", "img/absente.png")
+               .replace("https://github.com/pepite-labs/pepite/issues", "https://github.com/pepite-labs/pepite-x/issues")
+               .replace("</main>", "<p>a" + "@" + "b.example.org</p></main>"))
+        with open(os.path.join(pages, "p", "index.html"), "w", encoding="utf-8") as h:
+            h.write(bad)
+        for f in ("beta.css", "contact.js"):
+            shutil.copyfile(os.path.join(REPO, "site", "beta", f), os.path.join(pages, "p", f))
+        shutil.copytree(os.path.join(REPO, "site", "beta", "img"), os.path.join(pages, "p", "img"))
+        out = os.path.join(self.tmp, "site")
+        rc, text = self.run_main("--out", out, "--fonts", self.fonts, "--latest", self.minor,
+                                 "--version", "%s=%s" % (self.minor, REPO), "--pages", pages)
+        self.assertEqual(rc, 1)
+        self.assertIn("anchor #nulle-part not found", text)
+        self.assertIn("img/absente.png not found in the site", text)
+        self.assertIn("neither relative nor to the project on GitHub", text)
+        self.assertIn("e-mail address written out", text)
+        os.makedirs(os.path.join(pages, self.minor))                       # never over a version folder
+        with open(os.path.join(pages, self.minor, "x.html"), "w", encoding="utf-8") as h:
+            h.write(good)
+        rc, text = self.run_main("--out", out, "--fonts", self.fonts, "--latest", self.minor,
+                                 "--version", "%s=%s" % (self.minor, REPO), "--pages", pages, "--replace")
+        self.assertEqual(rc, 1)
+        self.assertIn("would replace a file of the help site", text)
+
     def test_refusals(self):
         out = os.path.join(self.tmp, "site")
         self.assertEqual(self.run_main("--out", out, "--fonts", self.fonts, "--latest", "0.10", "--version", "0.10")[0], 2)

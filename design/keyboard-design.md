@@ -1466,6 +1466,12 @@ real screenshots `aide\img\capture-*.png`, each with pictograms captioned « Pic
 Gouvernement d'Aragon, CC BY-NC-SA 4.0 ». The same pages are also published as an online copy on GitHub Pages (plan 13, A10; `pepite-labs.github.io/pepite`,
 one folder per minor version, a banner saying the installed help works offline, and a privacy line for the web host;
 `installer/build_help_site.py`, `development/BUILD.md` § 2c); the « À propos » page names that address as plain text.
+The site also carries its own pages from `site/` (`--pages`, not part of the installed help): `/beta/` is the testers
+page of a test release (download link, how to keep and run a not-yet-known file in Edge and SmartScreen, requirements,
+contact, posters, SHA-256 / attestation / silent install for IT staff). It reuses the help's style sheet, fonts, logo
+and display check boxes through `{LATEST}`, is checked by `build_help_site.check_page`, and is edited by hand for
+each test release (version, link, SHA-256, date). Owner exception to D18 (2026-11-18): this page names the author and
+gives his e-mail, written « nom @ domaine » and turned into a link by `contact.js`.
 
 ```
  tray « Aide » ─────────────┐                      HelpLinks.Candidates(topic): stub? → page → aide\index.html → LISEZ-MOI.txt

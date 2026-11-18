@@ -2,7 +2,7 @@
 """Build the online copy of the embedded help for GitHub Pages (plan 13, A10). Stdlib only; run with ``python -I``.
 
     python -I installer/build_help_site.py --out <site> --fonts <fonts dir> --latest 0.10 \\
-        --version 0.10=<source dir> [--version 0.11=<source dir> ...] [--replace]
+        --version 0.10=<source dir> [--version 0.11=<source dir> ...] [--pages <dir>] [--replace]
 
 Each ``<source dir>`` is a source tree of the repository (the checkout, or ``git archive`` of a release tag): its
 ``aide/`` (the help pages) and the files the help links as ``../<file>`` — ``THIRD-PARTY-NOTICES.txt``, ``COPYING``,
@@ -19,6 +19,16 @@ folder), so the help files stay the same and ``help_lint --stage`` checks them a
     <site>/<minor>/index.html         redirect to aide/index.html
     <site>/<minor>/aide/...           the help, its fonts in aide/fonts/ (as the csproj copies them)
     <site>/<minor>/THIRD-PARTY-NOTICES.txt, COPYING, DEPLOIEMENT.txt, LISEZ-MOI.txt
+    <site>/beta/...                   with --pages <dir>: the site's own pages (the repository's site/), copied
+
+``--pages`` adds pages that are not part of the help, such as the testers page ``site/beta/index.html``: every file of
+``<dir>`` is copied to the same place under ``<site>`` (never over the root redirect or a minor folder), and
+``{LATEST}`` in a page becomes the relative path from that page to the ``<latest>`` folder, so a page reuses the help's
+style sheet, fonts, logo and display check boxes. :func:`check_page` checks them: the help's document shell and CSP,
+its forbidden markup and banned wording, no e-mail address or drive path written out, relative links that resolve in
+the site, absolute links only to the project on GitHub (:data:`SITE_LINKS`), files of at most ``help_lint.MAX_IMAGE``
+bytes. Unlike the help they may link the project on GitHub, and the « tu / vous » rule is not applied (a poster's alt
+text quotes its « tu »).
 
 The only transform of the pages: a banner on every page (« Aide en ligne de Pépite <minor> — l'aide installée avec
 Pépite fonctionne sans Internet. »), a paragraph on the privacy page (GitHub Pages logs the visits; no audience
@@ -29,6 +39,7 @@ every version folder. Exit code 0 = built and clean, 1 = a problem (listed), 2 =
 import argparse
 import json
 import os
+import posixpath
 import re
 import shutil
 import sys
@@ -64,6 +75,10 @@ REDIRECT = """<!doctype html>
 </body>
 </html>
 """
+
+
+PAGES_TEXT = (".html", ".css", ".js")
+SITE_LINKS = "https://github.com/pepite-labs/pepite"   # the project page and what is under it (not « pepite-x »)
 
 
 class SiteError(Exception):
@@ -165,7 +180,75 @@ def build_version(src, fonts, dest, minor):
     return ["%s/aide: %s" % (minor, p) for p in help_lint.check(aide, stage=True)]
 
 
-def build(out, fonts, versions, latest):
+def check_page(out, rel):
+    """The problems of one extra page ``rel`` (POSIX, relative to the built site ``out``)."""
+    page = help_lint.parse(os.path.join(out, *rel.split("/")))
+    problems = []
+    help_lint.check_shell(rel, page, problems)
+    whole = " ".join(t for t, _ in page.text) + " " + page.title
+    for rx, label in help_lint.BANNED:
+        if rx.search(whole):
+            problems.append("%s: banned wording %s" % (rel, label))
+    if help_lint.EMAIL.search(page.raw):
+        problems.append("%s: an e-mail address written out (write « nom @ domaine », see contact.js)" % rel)
+    if help_lint.DRIVE.search(page.raw):
+        problems.append("%s: a drive path" % rel)
+    if "{LATEST}" in page.raw:
+        problems.append("%s: {LATEST} left" % rel)
+    base = posixpath.dirname(rel)
+    for value, tag in page.links:
+        if tag == "a" and (value == SITE_LINKS or value.startswith(SITE_LINKS + "/")):
+            continue
+        if help_lint.SCHEME.match(value) or value.startswith(("/", "\\")):
+            problems.append("%s: link « %s » is neither relative nor to the project on GitHub" % (rel, value[:60]))
+            continue
+        path, frag = help_lint.split_link(value)
+        if not path:
+            if frag and frag not in page.ids:
+                problems.append("%s: anchor #%s not found" % (rel, frag))
+            continue
+        target = posixpath.normpath(posixpath.join(base, path))
+        if target.startswith("../") or not os.path.isfile(os.path.join(out, *target.split("/"))):
+            problems.append("%s: link « %s »: %s not found in the site" % (rel, value[:60], target))
+    return problems
+
+
+def copy_pages(pages, out, latest, reserved):
+    """Copy the extra pages of the folder ``pages`` into the site ``out``; returns their problems."""
+    problems, html = [], []
+    for d, dirs, fs in os.walk(pages):
+        dirs[:] = sorted(x for x in dirs if x != "__pycache__")
+        for f in sorted(fs):
+            rel = os.path.relpath(os.path.join(d, f), pages).replace(os.sep, "/")
+            if rel.split("/")[0] in reserved:
+                raise SiteError("--pages: %s would replace a file of the help site" % rel)
+            target = os.path.join(out, *rel.split("/"))
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            if not f.endswith(PAGES_TEXT):
+                shutil.copyfile(os.path.join(d, f), target)
+                if os.path.getsize(target) > help_lint.MAX_IMAGE:
+                    problems.append("%s: %d bytes (at most %d)" % (rel, os.path.getsize(target), help_lint.MAX_IMAGE))
+                continue
+            with open(os.path.join(d, f), encoding="utf-8") as h:
+                text = h.read()
+            if f.endswith(".html"):
+                text = text.replace("{LATEST}", posixpath.relpath(latest, posixpath.dirname(rel) or "."))
+                html.append(rel)
+            elif f.endswith(".css"):
+                for m in help_lint.CSS_FONT_SIZE.finditer(text):
+                    v, unit = float(m.group(1)), m.group(2).lower()
+                    if (v if unit in ("rem", "em") else v / 16 if unit == "px" else v / 100) < help_lint.MIN_FONT_REM:
+                        problems.append("%s: font-size %s%s below %s rem" % (rel, m.group(1), unit, help_lint.MIN_FONT_REM))
+            with open(target, "w", encoding="utf-8", newline="\n") as h:
+                h.write(text)
+    if not html:
+        raise SiteError("--pages %s: no .html page" % pages)
+    for rel in html:
+        problems += check_page(out, rel)
+    return problems
+
+
+def build(out, fonts, versions, latest, pages=None):
     if latest not in versions:
         raise SiteError("--latest %s is not one of the --version minors" % latest)
     os.makedirs(out)
@@ -177,6 +260,8 @@ def build(out, fonts, versions, latest):
     with open(os.path.join(out, "index.html"), "w", encoding="utf-8", newline="\n") as h:
         h.write(REDIRECT.format(csp=help_lint.CSP, target="%s/aide/index.html" % latest, minor=latest))
     open(os.path.join(out, ".nojekyll"), "w").close()   # serve the files as they are
+    if pages:
+        problems += ["pages: %s" % p for p in copy_pages(pages, out, latest, set(versions) | {"index.html", ".nojekyll"})]
     return problems
 
 
@@ -186,6 +271,7 @@ def main(argv=None):
     ap.add_argument("--fonts", required=True)
     ap.add_argument("--latest", required=True, help="the minor version / redirects to (x.y)")
     ap.add_argument("--version", action="append", default=[], help="<x.y>=<source dir> (repeatable)")
+    ap.add_argument("--pages", help="a folder of extra site pages (the repository's site/), copied to the site root")
     ap.add_argument("--replace", action="store_true")
     a = ap.parse_args(argv)
     versions = {}
@@ -195,8 +281,8 @@ def main(argv=None):
             print("bad --version %r (expected x.y=<dir>, once per minor)" % v, file=sys.stderr)
             return 2
         versions[minor] = src
-    if not versions or not os.path.isdir(a.fonts):
-        print("give at least one --version and an existing --fonts folder", file=sys.stderr)
+    if not versions or not os.path.isdir(a.fonts) or (a.pages is not None and not os.path.isdir(a.pages)):
+        print("give at least one --version and an existing --fonts folder (and --pages folder)", file=sys.stderr)
         return 2
     if os.path.exists(a.out):
         if not a.replace:
@@ -204,13 +290,14 @@ def main(argv=None):
             return 2
         shutil.rmtree(a.out)
     try:
-        problems = build(a.out, a.fonts, versions, a.latest)
-    except (SiteError, OSError, ET.ParseError) as e:
+        problems = build(a.out, a.fonts, versions, a.latest, a.pages)
+    except (SiteError, OSError, ET.ParseError, UnicodeDecodeError) as e:
         print("PROBLEM  %s" % e, file=sys.stderr)
         return 1
     for p in problems:
         print("HELP LINT: %s" % p)
-    print("help site %s: %s, latest %s, %d problem(s)" % (a.out, ", ".join(sorted(versions)), a.latest, len(problems)))
+    print("help site %s: %s, latest %s%s, %d problem(s)" % (a.out, ", ".join(sorted(versions)), a.latest,
+                                                            ", pages %s" % a.pages if a.pages else "", len(problems)))
     return 1 if problems else 0
 
 

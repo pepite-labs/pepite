@@ -1,0 +1,19 @@
+/* Page des testeurs de Pépite — complète la feuille de style de l'aide (chargée avant celle-ci) ; aucune ressource
+   distante. Licence : CC BY-SA 4.0 (comme l'aide). */
+.telecharger { border: 0.2rem solid var(--biscuit-clair); }
+.telecharger h2 { margin-top: 0.2em; }
+.bouton {
+  display: inline-block; padding: 0.75rem 1.6rem; border-radius: 2rem; background: var(--pepite); color: #fff;
+  font-family: var(--texte-titre); font-weight: 600; font-size: 1.2em; text-decoration: none;
+}
+.bouton:hover { background: #6B3F27; color: #fff; }
+.petit { font-size: 0.9em; color: var(--encre-douce); }
+.adresse { font-family: var(--texte-titre); font-weight: 600; font-size: 1.2em; }
+.affiches { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr)); gap: 1rem; align-items: start; }
+.affiches figure { margin: 0; }
+.affiches img { display: block; width: 100%; height: auto; border-radius: 0.8rem; box-shadow: 0 0.15rem 0 rgba(74, 44, 29, 0.12); }
+pre.commande {
+  margin: 0 0 0.9em; padding: 0.6rem 0.9rem; background: var(--creme); border: 1px solid #EAD9C2; border-radius: 0.6rem;
+  white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.9em;
+}
+pre.commande samp { font-size: 1em; }

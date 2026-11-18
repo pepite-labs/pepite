@@ -1,7 +1,7 @@
 # The online help of Pépite on GitHub Pages (plan 13, A10): https://pepite-labs.github.io/pepite/
 # One folder per minor version (<x.y>/aide/...), "/" redirects to the latest one. The help pages are those of aide/,
 # with a banner « Aide en ligne de Pépite <x.y> » and a privacy line (installer/build_help_site.py); help_lint runs on
-# the built site. Independent of the installer build, so it can go live right after the first public push.
+# the built site. site/ adds the site's own pages (/beta/: the testers page), checked too. Independent of the installer build, so it can go live right after the first public push.
 #   workflow_dispatch (branch main): builds the "minor" folder from main (it must be the csproj's minor version);
 #   a v<x.y.z> tag: builds that tag's minor folder.
 # Every other minor folder is rebuilt from the latest published release tag of that minor (Pages deployments replace
@@ -77,6 +77,7 @@ jobs:
             minors+=("$minor")
           done
           latest=$(printf '%s\n' "${minors[@]}" | sort -V | tail -n 1)
+          if [ -d site ]; then args+=(--pages "$GITHUB_WORKSPACE/site"); fi   # the site's own pages (beta/: testers)
           python -I installer/build_help_site.py --out "$RUNNER_TEMP/site" --fonts "$RUNNER_TEMP/data-out/fonts" \
             --latest "$latest" "${args[@]}"
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0

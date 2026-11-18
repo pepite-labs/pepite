@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Pépite 0.10.2, la première version de test de Pépite : téléchargement, avertissements de Windows, contact.">
+<title>Pépite — version de test</title>
+<link rel="stylesheet" href="{LATEST}/aide/style.css">
+<link rel="stylesheet" href="beta.css">
+<script src="{LATEST}/aide/prefs.js" defer></script>
+<script src="contact.js" defer></script>
+</head>
+<body>
+<!-- Page des testeurs du site GitHub Pages (installer/build_help_site.py --pages). LATEST entre accolades = le dossier
+     de la dernière version de l'aide : la page reprend sa feuille de style, ses polices, son logo et ses cases d'affichage.
+     À mettre à jour à chaque version de test (numéro, lien, empreinte SHA-256, date). Licence : CC BY-SA 4.0. -->
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="index.html"><img src="{LATEST}/aide/img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>prédiction de mots</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Parties de la page">
+  <ul>
+      <li><a href="#telecharger">Télécharger</a></li>
+      <li><a href="#avertissement">L'avertissement de Windows</a></li>
+      <li><a href="#tester">Être testeur</a></li>
+      <li><a href="#contact">Contact</a></li>
+      <li><a href="{LATEST}/aide/index.html">L'aide</a></li>
+  </ul>
+</nav>
+<main id="contenu">
+<h1>Pépite : la première version de test est là</h1>
+<p class="chapeau">Pépite propose des mots pendant que l'on écrit, avec une image, et peut les lire à voix haute. C'est un logiciel libre et gratuit pour Windows, qui fonctionne sans Internet. Voici sa toute première version publique&#8239;: une version de test (bêta), pour les enseignants et les parents qui veulent bien l'essayer avec nous. Merci&#8239;!</p>
+
+<section class="carte telecharger" aria-labelledby="telecharger">
+<h2 id="telecharger">Pépite 0.10.2, version de test</h2>
+<p>Préversion du 18 novembre 2026, pour Windows 11 (64 bits). Un seul fichier d'installation, d'environ 250 Mo.</p>
+<p><a class="bouton" href="https://github.com/pepite-labs/pepite/releases/download/v0.10.2/Pepite-0.10.2-installation.exe">Télécharger Pépite 0.10.2</a></p>
+<p class="petit">Le fichier s'appelle <samp>Pepite-0.10.2-installation.exe</samp>. Tous les détails de cette version&#8239;: <a href="https://github.com/pepite-labs/pepite/releases/tag/v0.10.2">la page de la version 0.10.2 sur GitHub</a>.</p>
+<p class="petit">Le mode d'emploi&#8239;: <a href="{LATEST}/aide/index.html">l'aide de Pépite</a>, en particulier <a href="{LATEST}/aide/installation.html">Installer</a> et <a href="{LATEST}/aide/enseignants.html">Enseignants et parents</a>. La même aide est installée avec Pépite et s'ouvre sans Internet.</p>
+</section>
+
+<h2 id="avertissement">Windows va vous avertir&#8239;: c'est normal</h2>
+<div class="attention"><p><b>Pourquoi un avertissement&#8239;?</b> Pépite est un logiciel libre tout récent, encore peu téléchargé&#8239;: Microsoft ne le «&#8239;connaît&#8239;» pas encore, et cette version de test n'est pas encore signée. Le navigateur, puis Windows, affichent donc un avertissement. Cela ne veut pas dire que le fichier est dangereux, ni qu'un virus a été trouvé.</p></div>
+<p>Pour être tranquille, téléchargez Pépite uniquement depuis cette page ou depuis <b>github.com/pepite-labs/pepite</b>.</p>
+
+<h3 id="edge">1. Pendant le téléchargement (Microsoft Edge)</h3>
+<p>Edge peut afficher&#8239;: <q>Pepite-0.10.2-installation.exe n'est pas fréquemment téléchargé</q>. Pour garder le fichier&#8239;:</p>
+<ol class="etapes">
+  <li><p>Appuyez sur <kbd>Ctrl</kbd> + <kbd>J</kbd>&#8239;: la liste des téléchargements s'ouvre.</p></li>
+  <li><p>À côté du fichier, cliquez sur <b>«&#8239;…&#8239;»</b> (plus d'actions).</p></li>
+  <li><p>Cliquez sur <b>«&#8239;Conserver&#8239;»</b>.</p></li>
+  <li><p>Cliquez sur <b>«&#8239;Afficher plus&#8239;»</b>, puis sur <b>«&#8239;Conserver quand même&#8239;»</b>.</p></li>
+</ol>
+<p>Avec un autre navigateur, le principe est le même&#8239;: choisissez de conserver le fichier.</p>
+
+<h3 id="lancement">2. Au lancement de l'installation</h3>
+<p>Double-cliquez sur le fichier téléchargé. Une fenêtre bleue peut s'afficher&#8239;: <q>Windows a protégé votre ordinateur</q>.</p>
+<ol class="etapes">
+  <li><p>Cliquez sur <b>«&#8239;Informations complémentaires&#8239;»</b>.</p></li>
+  <li><p>Vérifiez le nom de l'application&#8239;: <samp>Pepite-0.10.2-installation.exe</samp>. «&#8239;Éditeur inconnu&#8239;» est normal pour cette version de test.</p></li>
+  <li><p>Cliquez sur <b>«&#8239;Exécuter quand même&#8239;»</b>. L'installation de Pépite commence.</p></li>
+</ol>
+<div class="astuce"><p><b>Ne désactivez pas SmartScreen.</b> Il protège votre ordinateur. Il suffit d'accepter une fois, pour ce fichier-là.</p></div>
+<p>Si Windows bloque le fichier sans proposer «&#8239;Exécuter quand même&#8239;» (c'est le «&#8239;Smart App Control&#8239;» de certains ordinateurs), cette version ne peut pas être installée sur cet ordinateur&#8239;: il faudra attendre une version signée.</p>
+
+<h2 id="config">Ce qu'il faut</h2>
+<ul>
+  <li>Windows 11, 64 bits, avec un processeur Intel ou AMD (pas les ordinateurs à processeur ARM). Windows 10 n'est pas pris en charge&#8239;: l'installation s'arrête avec un message.</li>
+  <li>8 Go de mémoire conseillés. Avec moins de 4 Go, l'installation affiche un avertissement, mais reste possible.</li>
+  <li>Environ 460 Mo de place sur le disque, avec les images et la voix naturelle. Un disque SSD est conseillé.</li>
+  <li>Rien d'autre à installer. Après le téléchargement, Internet n'est plus nécessaire.</li>
+</ul>
+
+<h2 id="tester">Être testeur, concrètement</h2>
+<p>C'est une version de test (préversion)&#8239;: elle peut encore avoir des défauts. Elle est faite pour être essayée, pas encore pour un usage de tous les jours en classe. Essayez-la d'abord vous-même.</p>
+<ul>
+  <li>Notez ce qui ne marche pas, ce qui surprend, ce qui plaît&#8239;: chaque avis compte, même court.</li>
+  <li>Pour un problème, dites ce que vous faisiez, dans quelle application vous écriviez, et ce qui s'est passé. Une capture d'écran aide beaucoup.</li>
+  <li>Envoyez-le par e-mail (voir <a href="#contact">Contact</a>) ou, si vous avez un compte GitHub, ouvrez un ticket&#8239;: <a href="https://github.com/pepite-labs/pepite/issues/new/choose">signaler un problème ou proposer une idée</a>.</li>
+  <li>Pépite n'envoie rien tout seul&#8239;: rien ne quitte l'ordinateur. C'est vous qui choisissez ce que vous nous écrivez.</li>
+  <li>Pas de mise à jour automatique&#8239;: les nouvelles versions de test seront annoncées ici. Pour mettre à jour, il suffit d'installer la nouvelle version&#8239;; les réglages et les profils sont gardés.</li>
+</ul>
+
+<h2 id="images">Pépite en images</h2>
+<div class="affiches">
+  <figure><img src="img/affiche-maizon.png" width="540" height="540" alt="Affiche : « Tu écris maizon ? Pépite te souffle maison. » La barre de mots propose maison, mais et maïs."></figure>
+  <figure><img src="img/affiche-lecture.png" width="540" height="675" alt="Affiche : « Sélectionne. Écoute. Comprends. » Pépite lit le texte sélectionné à voix haute et surligne le mot lu."></figure>
+  <figure><img src="img/affiche-promesses.png" width="540" height="540" alt="Affiche : « Tes mots restent chez toi. » Gratuit et libre, sans Internet, privé : rien ne sort de l'ordinateur."></figure>
+  <figure><img src="img/affiche-confiance.png" width="540" height="675" alt="Affiche : « Écrire. S'écouter. Prendre confiance. » Pour les enfants dys, leurs parents et leurs enseignants."></figure>
+</div>
+
+<h2 id="contact">Contact</h2>
+<p>Pépite est développé par Rodolphe Cardon. Pour un avis, une question ou un problème, écrivez-lui&#8239;:</p>
+<p class="adresse"><span id="adresse">cardon.rodolphe @ gmail.com</span></p>
+<p class="petit" id="adresse-aide">Recopiez l'adresse sans les espaces autour du «&#8239;@&#8239;».</p>
+<p class="petit">Une faille de sécurité se signale en privé&#8239;: <a href="https://github.com/pepite-labs/pepite/security/advisories/new">signalement privé sur GitHub</a>.</p>
+
+<h2 id="informaticiens">Pour les informaticiens</h2>
+<div class="carte technique">
+<p>Empreinte SHA-256 de <samp>Pepite-0.10.2-installation.exe</samp>&#8239;:</p>
+<pre class="commande"><samp>9078543ffa103ab06c39597a62b8656e0d298a219e6efd8b55ecebc5bca250f4</samp></pre>
+<p>Vérification dans PowerShell, dans le dossier du fichier&#8239;:</p>
+<pre class="commande"><samp>Get-FileHash .\Pepite-0.10.2-installation.exe</samp></pre>
+<p>Provenance&#8239;: le fichier a été construit par GitHub Actions à partir de l'étiquette v0.10.2 du dépôt. Avec l'outil <samp>gh</samp>, après <samp>gh auth login</samp>&#8239;:</p>
+<pre class="commande"><samp>gh attestation verify Pepite-0.10.2-installation.exe --repo pepite-labs/pepite --signer-workflow pepite-labs/pepite/.github/workflows/app.yml --source-ref refs/tags/v0.10.2</samp></pre>
+<p>Installation silencieuse pour tous les utilisateurs (compte administrateur ou SYSTEM)&#8239;:</p>
+<pre class="commande"><samp>Pepite-0.10.2-installation.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /ALLUSERS</samp></pre>
+<p>Les autres paramètres (<samp>/CURRENTUSER</samp>, <samp>/COMPONENTS</samp>, <samp>/TASKS</samp>, <samp>/CONFIG</samp>, <samp>/LOG</samp>), les codes de retour, la configuration d'établissement et la désinstallation silencieuse&#8239;: <a href="{LATEST}/DEPLOIEMENT.txt">DEPLOIEMENT.txt</a>. Voir aussi le <a href="{LATEST}/LISEZ-MOI.txt">LISEZ-MOI</a>.</p>
+</div>
+</main>
+<footer class="bas">
+  <p>© 2026 Les auteurs de Pépite · logiciel libre, licence GPL-3.0-or-later · <a href="https://github.com/pepite-labs/pepite">github.com/pepite-labs/pepite</a> · Développé avec l'aide de Claude (Anthropic). Cette page est hébergée par GitHub Pages, qui enregistre les visites dans ses journaux&#8239;; nous n'y ajoutons ni mesure d'audience ni cookie.</p>
+</footer>
+</body>
+</html>

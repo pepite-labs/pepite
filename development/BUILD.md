@@ -519,7 +519,7 @@ push) and every `v<x.y.z>` tag; environment `github-pages` (owner approval). The
 latest published release tag of each minor (a Pages deployment replaces the whole site).
 
 ```
-python -I installer\build_help_site.py --out <site> --fonts <out>\fonts --latest 0.10 --version 0.10=<source tree>
+python -I installer\build_help_site.py --out <site> --fonts <out>\fonts --latest 0.10 --version 0.10=<source tree> --pages site
 python -I -m unittest discover -s installer\tests -p test_build_help_site.py
 ```
 
@@ -529,6 +529,13 @@ public build does). The transform only adds a banner « Aide en ligne de Pépite
 fonctionne sans Internet. » on every page (style rule appended to `style.css`), and a paragraph on the privacy page
 (GitHub Pages logs the visits; no audience measurement, no cookie). The CSP and the no-external-link rule stay;
 `help_lint --stage` runs on every version folder and fails the build.
+
+`--pages site` (the workflow passes it when `site\` exists) adds the site's own pages: `site\beta\` becomes
+`/beta/`, the testers page of the current test release. `{LATEST}` in a page is replaced by the relative path to the
+latest minor folder, so the page reuses the help's `style.css`, fonts, logo and `prefs.js`. `check_page` keeps the
+help's shell and CSP and also requires links that resolve in the site (absolute links only to
+`github.com/pepite-labs/pepite`) and no e-mail address written out. Update the page by hand for each test release
+(version, download link, SHA-256, date, mail subject in `contact.js`).
 
 ## 2b. Try the predictor
 

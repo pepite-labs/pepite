@@ -658,13 +658,14 @@ public class ReadingTests
         public void Dispose() { }
     }
 
-    private static bool WaitFor(Func<bool> cond, int ms = 4000)
+    private static bool WaitFor(Func<bool> cond, int ms = 30000)
     {
         var sw = Stopwatch.StartNew();
         while (sw.ElapsedMilliseconds < ms) { if (cond()) return true; Thread.Sleep(5); }
         return cond();
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Reading_Item_Gets_Progress_And_Done()
     {
@@ -678,6 +679,7 @@ public class ReadingTests
         Assert.Equal(new[] { 0, 3, 8 }, events.Select(e => e.CharPos));
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Reading_Mutes_The_Echo_And_Is_Dropped_While_Paused()
     {
@@ -698,10 +700,11 @@ public class ReadingTests
         Assert.DoesNotContain("en pause", synth.Spoken);
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void A_Reading_Item_Interrupts_And_The_Replaced_One_Hears_Cancelled()
     {
-        var synth = new ProgressSynth { SpeakMs = 1500 };
+        var synth = new ProgressSynth { SpeakMs = 60000 };   // an utterance ends only when cancelled (no race with its end)
         using var w = new SpeechWorker(() => synth, new SpeechSettings(), null);
         SpeechOutcome? first = null, second = null;
         w.Say(new SpeechItem("phrase un", SpeechKind.Reading, null, null, o => first = o));

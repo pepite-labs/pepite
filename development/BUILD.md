@@ -490,7 +490,7 @@ the workflow token is read-only except in the `release` job, `pull_request_targe
 
 | Job | When | What |
 |---|---|---|
-| `test` (windows-2025) | every pull request, push to `main` | the word base of the data release (`--only pepite-data-…zip`), `dotnet build` / `dotnet test` of `Pepite.sln`, the Python suites, `help_lint` — the required check |
+| `test` (windows-2025) | every pull request, push to `main`, `v<x.y.z>` tag | the word base of the data release (`--only pepite-data-…zip`), `dotnet build` / `dotnet test --filter "Category!=Timing"` of `Pepite.sln`, the Python suites, `help_lint` — the required check |
 | `installer` | a `v<x.y.z>` tag, or « Run workflow » with `installer` ticked | tag = csproj `Version` (else the job fails); `fetch_data_release.py`, `stage_vcruntime.ps1` (the runner's VC++ runtime), `fetch_innosetup.ps1`, `build_installer.ps1 -NoForbiddenList -OldRelease '' -EspeakSourceArchive …`; artifact kept 14 days (approve the `release` environment within 14 days, else re-run the workflow) |
 | `smoke` | after `installer` | `installer\tests\Smoke-PepiteInstall.ps1` on the disposable runner (refuses to run elsewhere): silent per-user install, installed files = `files.sha256`, `--check-config` example → 0 and broken JSON → 2, HKCU uninstall key, silent uninstall removes the folder and the key; `--speech-bench --audio null` reported, never fatal |
 | `release` (ubuntu) | tags only, environment `release` (owner approval) | `sha256sum -c SHA256SUMS.txt` and the asset list, `actions/attest` on the installer and the symbols, `installer\release_notes.py`, `gh release create --draft --prerelease --verify-tag` with every asset (immutable releases: assets are uploaded while it is a draft; the owner publishes after the checks of plan 13 A8) |
@@ -499,6 +499,16 @@ The forbidden-term list never goes to GitHub: a CI build records « SKIPPED » i
 local rebuild from the same tag runs the full lint before the draft is published. `actionlint` (a downloaded, hash-checked
 binary; third-party actions are not allowed in the workflow) is run locally on the workflow files. The online help has
 its own workflow, `pages.yml` (§ 2c).
+
+**« Timing » tests: local only (owner decision, 2026-11-18).** The tests marked `[Trait("Category", "Timing")]` use
+background threads, timeouts or wall-clock bounds (the echo guard, the caret-read queue, the speech thread, the picture
+loader, the background file writes, the performance bounds). They are written to be deterministic (events, the worker's
+own start, 30–60 s bounds), but a shared 2-core runner can still starve a thread for seconds, so the `test` job skips
+them (`--filter "Category!=Timing"`). They are not skipped anywhere else: the export gate run locally before every
+push (`export.py --build`) and a plain `dotnet test Pepite.sln` run all of them, and the export
+baseline counts them. A new test that waits on a thread or a clock gets the trait. In the test assembly, `TestSetup`
+raises `JsonFileStore.DefaultFlushTimeoutMs` (3 s in the app) to 60 s, so that a test reopening a file after `Flush()`
+always finds it written.
 
 ## 2c. Online help on GitHub Pages (plan 13, A10)
 

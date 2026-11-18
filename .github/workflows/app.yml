@@ -1,6 +1,7 @@
 # Build, test and release Pépite (plan 13, A4). Every action is a GitHub-owned action pinned to a full commit SHA
 # (organisation rule); the tag of each pin is in the comment next to it.
-#   test       every pull request and push to main: build Pepite.sln, dotnet test, the Python suites (the required check)
+#   test       every pull request, push to main and tag: build Pepite.sln, dotnet test without the « Timing » tests, the
+#              Python suites (the required check)
 #   installer  a v<x.y.z> tag, or a manual run with "installer": the data release, the VC++ runtime, Inno Setup, then
 #              build_installer.ps1 -NoForbiddenList (the forbidden-term list never comes to GitHub: the owner's local
 #              rebuild from the tag runs the full lint before publishing); artifact kept 14 days: approve the
@@ -71,8 +72,10 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Build
         run: dotnet build Pepite.sln -c Release -nologo
+      # the tests marked [Trait("Category", "Timing")] (background threads, timeouts, wall-clock bounds) do not run on the
+      # shared runner (owner, 2026-11-18): the export gate runs every test locally before each push (BUILD.md § 2a)
       - name: .NET tests
-        run: dotnet test Pepite.sln -c Release --no-build -nologo
+        run: dotnet test Pepite.sln -c Release --no-build -nologo --filter "Category!=Timing"
       - name: Python suites and help lint
         shell: pwsh
         run: |

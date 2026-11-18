@@ -197,7 +197,7 @@ public class StartupTests
         using var ev = SingleInstance.CreateEvent(name);
         Assert.False(ev.WaitOne(0));
         Assert.True(SingleInstance.Signal(name));
-        Assert.True(ev.WaitOne(1000));
+        Assert.True(ev.WaitOne(30000));
         Assert.False(ev.WaitOne(0));                           // auto-reset: one wake-up per second start
     }
 }

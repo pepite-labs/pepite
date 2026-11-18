@@ -91,7 +91,7 @@ public sealed class PiperSynthCarrierTests : IDisposable
         using var done = new ManualResetEventSlim();
         _synth.Rendered = (a, _) => audio = a;
         Assert.True(_synth.Speak(voice, text, (_, _) => done.Set(), null, word));
-        Assert.True(done.Wait(15000), "utterance did not end");
+        Assert.True(done.Wait(60000), "utterance did not end");
         _synth.Rendered = null;
         return (audio!, _model.Count - before);
     }
@@ -189,7 +189,7 @@ public sealed class PiperSynthCarrierTests : IDisposable
         int before = _model.Count;
         using var done = new ManualResetEventSlim();
         Assert.True(_synth.Speak("piper:pierre", "très", (_, _) => done.Set(), _ => { }, word: true));
-        Assert.True(done.Wait(15000));
+        Assert.True(done.Wait(60000));
         Assert.Equal(1, _model.Count - before);
         Assert.True(_model.Last.Ids.Length < 15);
     }

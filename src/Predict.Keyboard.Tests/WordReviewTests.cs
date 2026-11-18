@@ -79,6 +79,7 @@ public class WordReviewTests : IDisposable
         Assert.Contains("suve", r.ReadToEnd());
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Delete_Right_After_An_Edit_Leaves_No_Folder()
     {
@@ -89,6 +90,7 @@ public class WordReviewTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(pc.Store.ProfilesDir, pc.Tom)));
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Rebase_Of_5000_Words_For_40_Pupils_Is_Fast()
     {
@@ -104,6 +106,7 @@ public class WordReviewTests : IDisposable
         Assert.True(sw.ElapsedMilliseconds < 5000, $"{sw.ElapsedMilliseconds} ms");
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Snapshot_Is_Built_On_A_Worker_And_Swapped_In_Order()
     {
@@ -200,6 +203,7 @@ public class WordReviewTests : IDisposable
         Assert.True(mb < 200, $"{mb:0.0} MB");
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void A_Slow_File_Read_Does_Not_Block_The_Ui_Thread()
     {
@@ -210,13 +214,13 @@ public class WordReviewTests : IDisposable
         store.Get(pc.Lea);
         using var reading = new System.Threading.ManualResetEventSlim();
         using var release = new System.Threading.ManualResetEventSlim();
-        store.BeforeRead = id => { if (id == pc.Tom) { reading.Set(); release.Wait(5000); } };
+        store.BeforeRead = id => { if (id == pc.Tom) { reading.Set(); release.Wait(60000); } };
         var worker = System.Threading.Tasks.Task.Run(() => store.Get(pc.Tom));   // a slow disk: held inside the read
-        Assert.True(reading.Wait(5000));
+        Assert.True(reading.Wait(30000));
         var sw = Stopwatch.StartNew();
         Assert.True(store.TryGetLoaded(pc.Lea, out _));      // the UI thread's check does not wait for the read
         Assert.False(store.TryGetLoaded(pc.Tom, out _));
-        Assert.True(sw.ElapsedMilliseconds < 500, $"{sw.ElapsedMilliseconds} ms");
+        Assert.True(sw.ElapsedMilliseconds < 10000, $"{sw.ElapsedMilliseconds} ms");   // well under the 60 s held read: no wait for it
         release.Set();
         Assert.Equal("Zorglub", worker.Result.Default!.Words.Single().W);
         Assert.True(store.TryGetLoaded(pc.Tom, out var b) && b.WordCount == 1);

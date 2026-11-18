@@ -78,6 +78,7 @@ public class ProfileMigrationTests : IDisposable
         Assert.Single(Load().Profiles);
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void A_Crash_Before_The_Index_Migrates_Again_From_The_Kept_Or_Original_File()
     {
@@ -238,6 +239,7 @@ public class TeacherModeTests : IDisposable
         return (app, p, lk, new TeacherMode(app, p, lk, null));
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Off_By_Default_Then_Activate_Creates_Pin_And_Classe()
     {

@@ -69,6 +69,7 @@ public class TeacherLockTests : IDisposable
         Assert.Equal(600_000, TeacherLock.DefaultIterations);
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Five_Wrong_Then_Wait_Kept_After_Restart()
     {

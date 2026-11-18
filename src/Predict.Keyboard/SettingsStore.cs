@@ -147,7 +147,7 @@ internal sealed class SettingsStore
     }
 
     /// <summary>Wait for the pending writes (exit, tests).</summary>
-    public void Flush(int timeoutMs = 3000) => _file.Flush(timeoutMs);
+    public void Flush(int? timeoutMs = null) => _file.Flush(timeoutMs);
 }
 
 /// <summary><see cref="IPromotionState"/> on <c>state.trayPromoted</c> of settings.json (replaces state.json).</summary>

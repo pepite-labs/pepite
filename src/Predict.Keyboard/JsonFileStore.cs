@@ -136,12 +136,17 @@ internal sealed class JsonFileStore
         WriteNow(text);
     }
 
+    /// <summary>How long <see cref="Flush"/> waits when no timeout is given: 3 s, so that the exit never hangs on a stuck
+    /// disk. The tests raise it (a test hook): on a busy CI runner a queued write can take longer, and a test that reopens
+    /// the file right after <see cref="Flush"/> must find it written.</summary>
+    internal static volatile int DefaultFlushTimeoutMs = 3000;
+
     /// <summary>Wait for the pending writes (exit, tests).</summary>
-    public void Flush(int timeoutMs = 3000)
+    public void Flush(int? timeoutMs = null)
     {
         Task t;
         lock (_lock) t = _writes;
-        try { t.Wait(timeoutMs); } catch (AggregateException) { }
+        try { t.Wait(timeoutMs ?? DefaultFlushTimeoutMs); } catch (AggregateException) { }
     }
 
     private string Snapshot()   // under _lock

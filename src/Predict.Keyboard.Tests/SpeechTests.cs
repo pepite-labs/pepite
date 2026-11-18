@@ -175,14 +175,16 @@ public class SpeechTests
 
     private sealed class FakeSynth : ISynth
     {
-        public int CreateDelayMs, SpeakMs = 50;
+        public int SpeakMs = 50;
+        /// <summary>When set, creation (voice enumeration) hangs until the test opens it: no race with a fixed delay.</summary>
+        public ManualResetEventSlim? CreateGate;
         public readonly ConcurrentQueue<string> Spoken = new();
         public readonly ManualResetEventSlim Started = new();
         private Action<SpeechOutcome, string?>? _done;
         private CancellationTokenSource? _cts;
         public int Cancels;
         public Action<SpeechProgress>? LastProgress;
-        public IReadOnlyList<VoiceEntry> Voices() { Thread.Sleep(CreateDelayMs); return new[] { new VoiceEntry("sapi:Fake", "Fake", "fr-FR", "Female", VoiceId.Sapi) }; }
+        public IReadOnlyList<VoiceEntry> Voices() { CreateGate?.Wait(60000); return new[] { new VoiceEntry("sapi:Fake", "Fake", "fr-FR", "Female", VoiceId.Sapi) }; }
         public readonly ConcurrentQueue<string?> Configured = new();
         public string Configure(SpeechSettings s) { Configured.Enqueue(s.Voice); return "Fake"; }
         public void SpeakAsync(string text, Action<SpeechOutcome, string?> done, Action<SpeechProgress>? progress = null)
@@ -202,7 +204,7 @@ public class SpeechTests
         public void Dispose() { }
     }
 
-    private static bool WaitFor(Func<bool> cond, int ms = 4000)
+    private static bool WaitFor(Func<bool> cond, int ms = 30000)
     {
         var sw = Stopwatch.StartNew();
         while (sw.ElapsedMilliseconds < ms) { if (cond()) return true; Thread.Sleep(5); }
@@ -224,23 +226,27 @@ public class SpeechTests
         return batches[4];
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Hook_Side_Calls_Never_Wait_For_A_Blocked_Synthesizer_Or_Probe()
     {
-        var fake = new FakeSynth { CreateDelayMs = 2000 };
+        var fake = new FakeSynth { CreateGate = new ManualResetEventSlim() };   // the synthesizer hangs until the end
         using var w = new SpeechWorker(() => fake, new SpeechSettings(), null);
         var block = new ManualResetEventSlim();
-        using var g = new EchoGuard(_ => { block.Wait(5000); return ProbeStatus.NotPassword; }, () => (IntPtr)1, i => w.Say(i), null);
+        using var g = new EchoGuard(_ => { block.Wait(60000); return ProbeStatus.NotPassword; }, () => (IntPtr)1, i => w.Say(i), null);
         var item = new SpeechItem("mot", SpeechKind.Word);
         double say = MedianPerCallMs(() => w.Say("mot", SpeechKind.Word));
         double cancel = MedianPerCallMs(w.CancelAll);
         double submit = MedianPerCallMs(() => g.Submit(item, (IntPtr)1));
         double clear = MedianPerCallMs(g.Clear);
         block.Set();
-        Assert.True(say < 0.1 && cancel < 0.1 && submit < 0.1 && clear < 0.1,
+        fake.CreateGate.Set();
+        // a call that waited would take the whole hang (up to 60 s); 1 ms per call leaves room for a busy 2-core runner
+        Assert.True(say < 1 && cancel < 1 && submit < 1 && clear < 1,
                     $"per call: Say {say:0.0000} CancelAll {cancel:0.0000} Submit {submit:0.0000} Clear {clear:0.0000} ms");
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Guard_Never_Forwards_An_Item_Cleared_While_Probing_And_Reports_Passwords()
     {
@@ -251,20 +257,37 @@ public class SpeechTests
         var forwarded = new ConcurrentQueue<string>();
         var passwords = new ConcurrentQueue<IntPtr>();
         var log = new ConcurrentQueue<string>();
-        using var g = new EchoGuard(_ => { inProbe.Set(); release.Wait(5000); return status; }, () => fg,
+        using var g = new EchoGuard(_ => { inProbe.Set(); release.Wait(60000); return status; }, () => fg,
                                     i => forwarded.Enqueue(i.Text), log.Enqueue, passwords.Enqueue);
-        g.Submit(new SpeechItem("avant", SpeechKind.Word), fg);
-        Assert.True(inProbe.Wait(4000));
-        g.Clear();                       // pause while the item is being probed
-        release.Set();
-        Assert.True(WaitFor(() => log.Any(l => l.StartsWith("echo dropped (cancelled)"))));
-        Assert.Empty(forwarded);
-        status = ProbeStatus.Password;
-        g.Submit(new SpeechItem("secret", SpeechKind.Word), fg);
-        Assert.True(WaitFor(() => passwords.Contains(fg)));
-        Assert.Empty(forwarded);
+        try
+        {
+            // the guard drops a probe slower than BudgetMs before it looks at the pause: when the runner descheduled this
+            // thread between the probe's start and release.Set, the item is dropped as slow (never forwarded either) and
+            // the attempt is repeated, so that the pause path itself is checked
+            bool cancelled = false;
+            for (int attempt = 0; attempt < 5 && !cancelled; attempt++)
+            {
+                inProbe.Reset();
+                release.Reset();
+                int drops = log.Count(l => l.StartsWith("echo dropped"));
+                g.Submit(new SpeechItem("avant", SpeechKind.Word), fg);
+                Assert.True(inProbe.Wait(30000));
+                g.Clear();                       // pause while the item is being probed
+                release.Set();
+                Assert.True(WaitFor(() => log.Count(l => l.StartsWith("echo dropped")) > drops));
+                cancelled = log.Any(l => l.StartsWith("echo dropped (cancelled)"));
+                Assert.Empty(forwarded);
+            }
+            Assert.True(cancelled, string.Join(" | ", log));
+            status = ProbeStatus.Password;
+            g.Submit(new SpeechItem("secret", SpeechKind.Word), fg);
+            Assert.True(WaitFor(() => passwords.Contains(fg)));
+            Assert.Empty(forwarded);
+        }
+        finally { release.Set(); }
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Abandoned_Guard_Threads_Are_Capped()
     {
@@ -310,6 +333,7 @@ public class SpeechTests
         while (Environment.TickCount64 - start <= EchoGuard.StuckMs + 100) Thread.Sleep(20);
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Field_Probe_Latest_Request_Wins()
     {
@@ -325,17 +349,23 @@ public class SpeechTests
         Assert.Equal(ProbeStatus.NotPassword, results.Single(r => r.Item1 == b).Item2);
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Say_Returns_At_Once_Even_With_A_Blocking_Synthesizer()
     {
-        var fake = new FakeSynth { CreateDelayMs = 2000 };   // creation + voice enumeration hang 2 s
+        var fake = new FakeSynth { CreateGate = new ManualResetEventSlim() };   // creation + voice enumeration hang until opened
         using var w = new SpeechWorker(() => fake, new SpeechSettings(), null);
-        double perCall = MedianPerCallMs(() => w.Say("mot", SpeechKind.Word));
-        Assert.True(perCall < 0.1, $"Say took {perCall:0.0000} ms per call");
-        Assert.False(w.Voices.IsCompleted);
+        try
+        {
+            double perCall = MedianPerCallMs(() => w.Say("mot", SpeechKind.Word));
+            Assert.True(perCall < 1, $"Say took {perCall:0.0000} ms per call");
+            Assert.False(w.Voices.IsCompleted);
+        }
+        finally { fake.CreateGate.Set(); }
         Assert.True(WaitFor(() => w.Voices.IsCompleted));
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void After_A_Preview_The_Configured_Settings_Are_Applied_Again_When_Idle()
     {
@@ -348,30 +378,33 @@ public class SpeechTests
         // a Configure that arrives while an item speaks is applied once it ends
         fake.SpeakMs = 500;
         w.Say("une phrase", SpeechKind.Sentence);
-        Assert.True(fake.Started.Wait(4000));
+        Assert.True(fake.Started.Wait(30000));
         w.Configure(new SpeechSettings(Voice: "piper:pierre"));
         Assert.True(WaitFor(() => fake.Configured.Count >= 4));
         Assert.Equal("piper:pierre", fake.Configured.Last());
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Inserted_Interrupts_And_CancelAll_Is_Honoured()
     {
-        var fake = new FakeSynth { SpeakMs = 3000 };
+        var fake = new FakeSynth { SpeakMs = 60000 };   // an utterance ends only when cancelled (no race with its end)
         var log = new ConcurrentQueue<string>();
         using var w = new SpeechWorker(() => fake, new SpeechSettings(), log.Enqueue);
         w.Say("une longue phrase", SpeechKind.Sentence);
-        Assert.True(fake.Started.Wait(4000));
+        Assert.True(fake.Started.Wait(30000));
         w.Say("maison", SpeechKind.Inserted);
         Assert.True(WaitFor(() => fake.Spoken.Contains("maison")));
         Assert.Contains(log, l => l.StartsWith("speech cancelled"));
         w.CancelAll();
-        Assert.True(WaitFor(() => log.Count(l => l.StartsWith("speech cancelled")) == 2, 1000));   // well under the 3 s utterance
+        Assert.True(WaitFor(() => log.Count(l => l.StartsWith("speech cancelled")) == 2));   // the 60 s utterance was cancelled
+        fake.SpeakMs = 50;
         w.Say("a", SpeechKind.Word);
         Assert.True(WaitFor(() => fake.Spoken.Contains("a")));
         Assert.Contains(log, l => l == "speak Inserted 'maison'");
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Speech_Unavailable_Is_Logged_And_Harmless()
     {
@@ -385,6 +418,7 @@ public class SpeechTests
 
     // ------------------------------------------------------------------ echo guard
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Guard_Drops_Password_And_Slow_Probes_Without_Logging_The_Text()
     {
@@ -399,12 +433,18 @@ public class SpeechTests
         status = ProbeStatus.Unavailable;   // 0.8.3 (owner): a field that cannot be classified stays silent
         g.Submit(new SpeechItem("inconnu", SpeechKind.Word), fg);
         Assert.True(WaitFor(() => log.Any(l => l.StartsWith("echo dropped (field not proven)"))));
-        status = ProbeStatus.NotPassword;   // a plain field: spoken
-        g.Submit(new SpeechItem("bonjour", SpeechKind.Word), fg);
-        Assert.True(WaitFor(() => forwarded.Contains("bonjour")));
+        status = ProbeStatus.NotPassword;   // a plain field: spoken (repeated if a descheduled probe went over the budget)
+        for (int attempt = 0; attempt < 5 && !forwarded.Contains("bonjour"); attempt++)
+        {
+            int drops = log.Count(l => l.StartsWith("echo dropped"));
+            g.Submit(new SpeechItem("bonjour", SpeechKind.Word), fg);
+            Assert.True(WaitFor(() => forwarded.Contains("bonjour") || log.Count(l => l.StartsWith("echo dropped")) > drops));
+        }
+        Assert.True(forwarded.Contains("bonjour"), string.Join(" | ", log));
         status = ProbeStatus.NotPassword; delay = 400;
+        int slow = log.Count(l => l.Contains("> 300"));
         g.Submit(new SpeechItem("lent", SpeechKind.Word), fg);
-        Assert.True(WaitFor(() => log.Any(l => l.Contains("> 300"))));
+        Assert.True(WaitFor(() => log.Count(l => l.Contains("> 300")) > slow));
         delay = 0;
         g.Submit(new SpeechItem("ailleurs", SpeechKind.Word), (IntPtr)7);   // foreground changed since the key
         Assert.True(WaitFor(() => log.Any(l => l.Contains("foreground changed"))));
@@ -412,6 +452,7 @@ public class SpeechTests
         Assert.Equal(new[] { "bonjour" }, forwarded.ToArray());
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Stuck_Guard_Is_Replaced()
     {

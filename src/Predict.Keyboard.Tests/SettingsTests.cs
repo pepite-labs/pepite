@@ -200,6 +200,7 @@ public class SettingsTests
         finally { Cleanup(dir); }
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void SettingsPromotionState_Satisfies_TrayPromotion()
     {
@@ -213,6 +214,7 @@ public class SettingsTests
             Assert.False(state.IsPromoted(exe));
             state.MarkPromoted(exe);
             Assert.True(state.IsPromoted(exe.ToUpperInvariant()));
+            store.Flush();                                                    // the mark is written in the background
             var reloaded = new SettingsStore(dir, null);
             reloaded.Load();
             Assert.True(new SettingsPromotionState(reloaded).IsPromoted(exe));

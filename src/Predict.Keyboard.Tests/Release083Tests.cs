@@ -427,6 +427,7 @@ public class Release083Tests : IDisposable
     public void Terminals_And_Remote_Windows_Are_Private(string process, string top, string? focus, bool expected) =>
         Assert.Equal(expected, PrivateHosts.Is(process, top, focus));
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Typed_Text_Is_Spoken_Only_In_A_Proven_Field_Outside_Terminals()
     {
@@ -448,7 +449,7 @@ public class Release083Tests : IDisposable
         Assert.DoesNotContain(log, l => l.Contains("non1") || l.Contains("non2"));
     }
 
-    private static bool Wait(Func<bool> cond, int ms = 4000)
+    private static bool Wait(Func<bool> cond, int ms = 30000)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         while (sw.ElapsedMilliseconds < ms) { if (cond()) return true; System.Threading.Thread.Sleep(5); }

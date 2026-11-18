@@ -227,6 +227,7 @@ public class WordListServiceTests : IDisposable
         return (store, svc, words, applied, lea, tom);
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void No_File_Until_A_Change_Then_Written_And_Read_Back()
     {
@@ -320,6 +321,7 @@ public class WordListServiceTests : IDisposable
         Assert.Single(Directory.GetFiles(Path.GetDirectoryName(pc.Words.Store.PathOf(pc.Tom))!, "mots.json.bad-*"));
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Snapshot_Of_15000_Words_Builds_Within_The_Gate()
     {

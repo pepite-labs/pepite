@@ -53,7 +53,7 @@ public sealed class PictureStoreTests : IDisposable
         var s = PictureStore.Open(path, decode ?? (b => "img" + b[0]), m => { lock (log ?? new List<string>()) log?.Add(m); }, cap)!;
         Assert.NotNull(s);
         _open.Add(s);
-        Assert.True(s.Loaded.Wait(5000));
+        Assert.True(s.Loaded.Wait(30000));
         return s;
     }
 
@@ -95,6 +95,7 @@ public sealed class PictureStoreTests : IDisposable
         Assert.Contains(log, l => l.StartsWith("pictures: off (pack schema '2'"));
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Request_Delivers_Pictures_And_Fills_The_Cache()
     {
@@ -103,7 +104,7 @@ public sealed class PictureStoreTests : IDisposable
         var done = new CountdownEvent(2);
         Assert.False(s.TryGetCached("maison", out _));
         s.Request(1, new[] { "maison", "inconnu", "chat" }, (g, w, img) => { got.Enqueue((g, w, img)); done.Signal(); });
-        Assert.True(done.Wait(5000));
+        Assert.True(done.Wait(30000));
         Assert.Equal(new[] { (1, "maison", (object)"img1"), (1, "chat", (object)"img2") }, got.ToArray());
         Assert.True(s.TryGetCached("MAISON", out var m));
         Assert.Equal("img1", m);
@@ -112,6 +113,7 @@ public sealed class PictureStoreTests : IDisposable
         Assert.False(s.TryGetCached("inconnu", out _));
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Latest_Generation_Wins()
     {
@@ -120,16 +122,16 @@ public sealed class PictureStoreTests : IDisposable
         int decodes = 0;
         var s = Open(MakePack(), b =>
         {
-            if (Interlocked.Increment(ref decodes) == 1) { entered.Set(); gate.Wait(5000); }
+            if (Interlocked.Increment(ref decodes) == 1) { entered.Set(); gate.Wait(60000); }
             return "img" + b[0];
         });
         var got = new ConcurrentQueue<(int G, string W)>();
         var gen2 = new ManualResetEventSlim(false);
         s.Request(1, new[] { "maison", "chat", "voiture", "lune" }, (g, w, _) => got.Enqueue((g, w)));
-        Assert.True(entered.Wait(5000));                      // decoding « maison » (gen 1)
+        Assert.True(entered.Wait(30000));                      // decoding « maison » (gen 1)
         s.Request(2, new[] { "mer" }, (g, w, _) => { got.Enqueue((g, w)); gen2.Set(); });
         gate.Set();
-        Assert.True(gen2.Wait(5000));
+        Assert.True(gen2.Wait(30000));
         var all = got.ToArray();
         Assert.Equal((2, "mer"), all.Last());
         Assert.DoesNotContain(all, x => x.G == 1 && x.W != "maison");   // chat, voiture, lune skipped
@@ -151,6 +153,7 @@ public sealed class PictureStoreTests : IDisposable
         Assert.Null(s.GetNow("bleu"));
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void One_Bad_Picture_Does_Not_Cost_The_Rest_And_Is_Not_Retried()
     {
@@ -163,14 +166,15 @@ public sealed class PictureStoreTests : IDisposable
         var got = new ConcurrentQueue<string>();
         var done = new CountdownEvent(2);
         s.Request(1, new[] { "maison", "chat", "voiture" }, (_, w, _) => { got.Enqueue(w); done.Signal(); });
-        Assert.True(done.Wait(5000));
+        Assert.True(done.Wait(30000));
         Assert.Equal(new[] { "maison", "voiture" }, got.ToArray());
         var again = new ManualResetEventSlim(false);
         s.Request(2, new[] { "chats", "lune" }, (_, w, _) => { if (w == "lune") again.Set(); });   // chats = same id as chat
-        Assert.True(again.Wait(5000));
+        Assert.True(again.Wait(30000));
         Assert.Equal(1, chatDecodes);
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Dispose_During_Prefetch_Returns_At_Once_And_Delivers_Nothing_More()
     {
@@ -179,12 +183,12 @@ public sealed class PictureStoreTests : IDisposable
         int decodes = 0;
         var store = PictureStore.Open(MakePack(), b =>
         {
-            if (Interlocked.Increment(ref decodes) == 1) { entered.Set(); gate.Wait(5000); }
+            if (Interlocked.Increment(ref decodes) == 1) { entered.Set(); gate.Wait(60000); }
             return "img" + b[0];
         }, null)!;
-        Assert.True(store.Loaded.Wait(5000));
+        Assert.True(store.Loaded.Wait(30000));
         store.Prefetch(new[] { "maison", "chat", "voiture", "lune", "mer", "été" });
-        Assert.True(entered.Wait(5000));                          // loader busy decoding « maison »
+        Assert.True(entered.Wait(30000));                          // loader busy decoding « maison »
         int delivered = 0;
         store.Request(1, new[] { "chat" }, (_, _, _) => Interlocked.Increment(ref delivered));
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -193,11 +197,11 @@ public sealed class PictureStoreTests : IDisposable
         var disposeStarted = new ManualResetEventSlim(false);
         var disposing = new Thread(() => { disposeStarted.Set(); store.Dispose(); }) { IsBackground = true };
         disposing.Start();
-        Assert.True(disposeStarted.Wait(5000));
+        Assert.True(disposeStarted.Wait(30000));
         Thread.Sleep(50);
         gate.Set();                                               // the decode in progress finishes
-        Assert.True(disposing.Join(3000));
-        Assert.True(sw.ElapsedMilliseconds < 2000);
+        Assert.True(disposing.Join(30000));
+        Assert.True(sw.ElapsedMilliseconds < 10000, $"{sw.ElapsedMilliseconds} ms");   // well under the 60 s gate: Dispose did not wait for the prefetch
         Thread.Sleep(200);
         Assert.Equal(0, delivered);                               // queued request abandoned
         Assert.Equal(1, decodes);                                 // rest of the prefetch abandoned
@@ -207,6 +211,7 @@ public sealed class PictureStoreTests : IDisposable
         Assert.Equal(0, delivered);
     }
 
+    [Trait("Category", "Timing")]
     [Fact]
     public void Prefetch_Warms_The_Cache_And_Yields_To_Requests()
     {
@@ -214,8 +219,8 @@ public sealed class PictureStoreTests : IDisposable
         s.Prefetch(new[] { "lune", "mer", "été" });
         var done = new ManualResetEventSlim(false);
         s.Request(1, new[] { "maison" }, (_, _, _) => done.Set());
-        Assert.True(done.Wait(5000));
-        var deadline = DateTime.UtcNow.AddSeconds(5);
+        Assert.True(done.Wait(30000));
+        var deadline = DateTime.UtcNow.AddSeconds(30);
         while (!(s.TryGetCached("lune", out _) && s.TryGetCached("mer", out _) && s.TryGetCached("été", out _)) && DateTime.UtcNow < deadline)
             Thread.Sleep(10);
         Assert.True(s.TryGetCached("été", out _));

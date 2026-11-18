@@ -175,3 +175,67 @@ public class InserterTests
         Assert.Equal(Native.KEYEVENTF_UNICODE | Native.KEYEVENTF_KEYUP, ev[9].u.ki.dwFlags);
     }
 }
+
+/// <summary>0.10.2 (plan glued-words.md step 6): a joined tile (« t'aime ») goes through the bar's display steps, its picture,
+/// the insertion and the tracker as any word.</summary>
+public class GluedTileTests
+{
+    [Fact]
+    public void A_Joined_Tile_Shows_The_Picture_Of_Its_Main_Word()
+    {
+        Assert.Equal("école", PictureStore.KeyFor(new Predict.Core.Suggestion("l'école", 0, Predict.Core.MatchKind.Phonetic)));
+        Assert.Equal("école", PictureStore.KeyFor(new Predict.Core.Suggestion("L’école", 0, Predict.Core.MatchKind.Phonetic)));
+        Assert.Equal("aujourd'hui", PictureStore.KeyFor(new Predict.Core.Suggestion("aujourd'hui", 0, Predict.Core.MatchKind.Prefix)));   // not joined
+        Assert.Null(PictureStore.KeyFor(new Predict.Core.Suggestion("l'école", 0, Predict.Core.MatchKind.Phonetic, Name: true)));
+    }
+
+    /// <summary>Review 3: a name with an apostrophe (« N'Diaye », « M'Bappé », « D'Artagnan ») is looked up by its full form (the
+    /// teacher's or the pack's picture), never by its second part.</summary>
+    [Fact]
+    public void An_Elided_Name_Keeps_Its_Full_Form_For_The_Picture()
+    {
+        foreach (var n in new[] { "N'Diaye", "M'Bappé", "D'Artagnan" })
+            Assert.Equal(n, PictureStore.PictureForm(new Predict.Core.Suggestion(n, 0, Predict.Core.MatchKind.Prefix, Name: true)));
+        Assert.Equal("école", PictureStore.PictureForm(new Predict.Core.Suggestion("l'école", 0, Predict.Core.MatchKind.Phonetic)));
+        Assert.Equal("maison", PictureStore.PictureForm(new Predict.Core.Suggestion("maison", 0, Predict.Core.MatchKind.Prefix)));
+    }
+
+    [Fact]
+    public void The_Bar_Writes_The_Documents_Apostrophe_And_The_Case()
+    {
+        var s = new[] { new Predict.Core.Suggestion("t'aime", 0, Predict.Core.MatchKind.Phonetic), new Predict.Core.Suggestion("thème", -1, Predict.Core.MatchKind.Phonetic) };
+        Assert.Equal(new[] { "t’aime", "thème" }, KeyboardPolicy.Shown(s, false, '’', "tème", false, 8).Select(x => x.Word).ToArray());
+        Assert.Equal(new[] { "t'aime", "thème" }, KeyboardPolicy.Shown(s, false, '\'', "tème", false, 8).Select(x => x.Word).ToArray());
+        var j = new[] { new Predict.Core.Suggestion("j'ai", 0, Predict.Core.MatchKind.Phonetic) };
+        Assert.Equal("J'ai", KeyboardPolicy.Shown(j, false, '\'', "Jai", true, 8)[0].Word);   // « Jai » at a start → « J'ai »
+        Assert.Equal("J’ai", KeyboardPolicy.Shown(j, false, '’', "jai", true, 8)[0].Word);
+        Assert.Equal(Predict.Core.MatchKind.Phonetic, KeyboardPolicy.Shown(j, false, '\'', "jai", false, 8)[0].Kind);   // green « même son »
+        // « a-til »: never « t'il »
+        var t = new[] { new Predict.Core.Suggestion("t'il", 0, Predict.Core.MatchKind.Phonetic), new Predict.Core.Suggestion("til", -1, Predict.Core.MatchKind.Prefix) };
+        Assert.Equal(new[] { "til" }, KeyboardPolicy.Shown(t, true, '\'', "til", false, 8).Select(x => x.Word).ToArray());
+    }
+
+    [Fact]
+    public void A_Joined_Word_Is_Inserted_With_A_Space_And_Tracked_As_One_Word()
+    {
+        Assert.True(KeyboardPolicy.NeedsSpace(false, '\0', "t'aime"));
+        Assert.True(KeyboardPolicy.NeedsSpace(true, '\0', "t’aime"));
+        var tr = new WordTracker();
+        foreach (var c in "je tèm") tr.Type(c);
+        tr.Accept("t'aime", true);
+        Assert.Equal("t'aime", tr.Finished!.Value.Word);
+        Assert.Equal(' ', tr.Finished!.Value.After);
+        Assert.Equal("t'aime", tr.Context[^1]);
+        Assert.True(tr.AfterSeparator);
+        Assert.Equal("", tr.Current);
+    }
+
+    [Fact]
+    public void The_Insertion_Keys_Carry_The_Apostrophe()
+    {
+        var ev = Inserter.Build(3, 0, "t’aime ", UIntPtr.Zero);
+        var typed = new string(ev.Where(e => (e.u.ki.dwFlags & Native.KEYEVENTF_KEYUP) == 0 && (e.u.ki.dwFlags & Native.KEYEVENTF_UNICODE) != 0)
+                                 .Select(e => (char)e.u.ki.wScan).ToArray());
+        Assert.Equal("t’aime ", typed);
+    }
+}

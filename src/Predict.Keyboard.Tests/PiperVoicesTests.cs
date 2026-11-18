@@ -142,7 +142,7 @@ public class PiperVoicesTests
         r.OnLoaded("piper:pierre", 1_000_000);      // pierre Ready
         Assert.True(r.AnyCandidate);
         Assert.Equal(new[] { ("piper:siwis", "replaced by piper:pierre") }, r.Due(1_000_001));
-        Assert.Empty(r.Due(1_000_001).Where(d => d.Id == "piper:pierre"));
+        Assert.DoesNotContain(r.Due(1_000_001), d => d.Id == "piper:pierre");
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public class PiperVoicesTests
         Assert.Equal(new[] { "piper:pierre" }, r.NeedsArena());
         r.OnArena("piper:pierre");
         Assert.Empty(r.NeedsArena());
-        Assert.Empty(r.Due(1_000_000).Where(d => d.Id == "piper:pierre"));   // configured: never unloaded
+        Assert.DoesNotContain(r.Due(1_000_000), d => d.Id == "piper:pierre");   // configured: never unloaded
     }
 
     // ---------------------------------------------------------------- one sink for every voice

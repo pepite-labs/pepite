@@ -93,7 +93,18 @@ internal static class SpeechBench
         }
         var proc = Process.GetCurrentProcess();
         if (profile == "2core") proc.ProcessorAffinity = (IntPtr)0x5;   // logical CPUs 0 and 2 (two physical cores), as plan 05
-        var items = LoadItems(option(args, "--sentences"));
+        // the sentence file only for the modes that read it, and a missing one said in bench.md (0.10.1 VM: exit 2, no reason)
+        var items = new List<Item>();
+        if (SpeechBenchSentences.Needed(args, option))
+        {
+            var given = option(args, "--sentences");
+            if (SpeechBenchSentences.Find(given, AppContext.BaseDirectory) is not { } sentences)
+            {
+                File.WriteAllText(Path.Combine(outDir, "bench.md"), SpeechBenchSentences.MissingMessage(given) + "\n");
+                return 2;
+            }
+            items = LoadItems(sentences);
+        }
         var voicesDir = option(args, "--voices") ?? Path.Combine(AppContext.BaseDirectory, "voices");
         var packs = PiperVoicePack.Scan(voicesDir, Log);
         if (packs.Count == 0) { File.WriteAllText(Path.Combine(outDir, "bench.md"), $"no voice pack in {voicesDir}\n"); return 2; }
@@ -662,15 +673,9 @@ internal static class SpeechBench
         return l[lo] + (l[hi] - l[lo]) * (rank - lo);
     }
 
-    private static List<Item> LoadItems(string? path)
+    private static List<Item> LoadItems(string path)
     {
-        if (path is null)
-            foreach (var d in DataSearch.DevParents(AppContext.BaseDirectory))
-            {
-                var p = Path.Combine(d.FullName, "development", "voice-test", "sentences.txt");
-                if (File.Exists(p)) { path = p; break; }
-            }
-        if (path is null || !File.Exists(path)) throw new FileNotFoundException("sentences.txt not found: pass --sentences <file>");
+        if (!File.Exists(path)) throw new FileNotFoundException($"{path} not found");
         return File.ReadAllLines(path, Encoding.UTF8).Where(l => l.Length > 0 && !l.StartsWith("#"))
                    .Select(l => l.Split('\t')).Where(f => f.Length == 3).Select(f => new Item(f[0], f[1], f[2])).ToList();
     }

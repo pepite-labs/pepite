@@ -3,9 +3,9 @@
 | Project | Lang | Role |
 |---|---|---|
 | **Data.Build/** | Python | `build_db.py`: Lexique 3.83 → `prediction.sqlite` (lexicon). `build_ngrams.py`: open corpora → bigram + trigram tables in the same DB. `build_pictos.py`: ARASAAC → `pictos.sqlite` (word → pictogram, 128 px PNGs; Pillow at build time) + `ARASAAC-LICENCE.txt`; `picto_overrides.tsv` = reviewed curation; `make_icon.py`: the app icon (own drawing). `fetch_fonts.py`: pinned, hash-checked download of the bundled OFL fonts (OpenDyslexic, Lexend, Andika) → `out/fonts/`, files unmodified. Tests: `test_build_pictos.py`. |
-| **Predict.Core/** | C# (net6.0) | The **first library**. `PhoneticKey.Fold` (French phonetic hash) + `PredictionEngine` (prefix + phonetic candidate generation, frequency ranking). Reusable, no UI. |
+| **Predict.Core/** | C# (net10.0) | The **first library**. `PhoneticKey.Fold` (French phonetic hash) + `PredictionEngine` (prefix + phonetic candidate generation, frequency ranking). Reusable, no UI. |
 | **Predict.Cli/** | C# | Minimal console to try the engine on words. |
-| **Predict.Keyboard/** | C# (WPF, net6.0-windows) | The **on-screen predictor**: system-wide keyboard hook, suggestion bar at the caret with an ARASAAC picture above each word, F1–F8 / click to insert into any app, right-click to hear; speech echo; settings window (words, sizes, positions incl. docked/free, fonts + letter spacing, speech) with a read-only machine layer; tray icon (Pause/Reprendre · Réglages · À propos · Quitter). See [../development/keyboard.md](../development/keyboard.md). |
+| **Predict.Keyboard/** | C# (WPF, net10.0-windows) | The **on-screen predictor**: system-wide keyboard hook, suggestion bar at the caret with an ARASAAC picture above each word, F1–F8 / click to insert into any app, right-click to hear; speech echo; settings window (words, sizes, positions incl. docked/free, fonts + letter spacing, speech) with a read-only machine layer; tray icon (Pause/Reprendre · Réglages · À propos · Quitter). See [../development/keyboard.md](../development/keyboard.md). |
 | **Predict.Eval/** | C# | Quality benchmark: scores the engine on curated cases (`cases.json`) and on held-out text (keystroke savings). |
 
 Build/run: see [../development/BUILD.md](../development/BUILD.md). Design: see

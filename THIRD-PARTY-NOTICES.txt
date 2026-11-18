@@ -85,10 +85,10 @@ CC BY-SA 4.0 and the GPL: Creative Commons lists GPLv3 as a compatible licence f
 (« ShareAlike compatibility: GPLv3 », creativecommons.org/share-your-work/licensing-considerations/compatible-licenses,
 2015). The voice models are separate data files, not linked code; each keeps its own licence.
 
-« Noms propres » open-data pack, edition 2026.1 — CC BY 4.0 (a separate data component in noms\)
+« Noms propres » open-data pack, edition 2026.2 — CC BY 4.0 (a separate data component in noms\)
   Built by src/Data.Build/pepite-noms/build_names.py from the pinned inputs of names.lock.json (versions, URLs and SHA-256
   in noms\SOURCES.md); licence text and the notices below in noms\LICENCE.txt; the attribution shown in « À propos »:
-    Noms propres — paquet de données ouvertes « Noms propres (données ouvertes) », édition 2026.1, licence CC BY 4.0
+    Noms propres — paquet de données ouvertes « Noms propres (données ouvertes) », édition 2026.2, licence CC BY 4.0
     (https://creativecommons.org/licenses/by/4.0/deed.fr). Données modifiées : sélection, mise en forme et classement par Pépite.
     • Prénoms (France) — Source : Insee, Fichier des prénoms, édition juillet 2026 (naissances 1900-2025), mise à jour du
       16/07/2026. Licence Ouverte / Open Licence 2.0 (Etalab).
@@ -264,7 +264,13 @@ ARASAAC pictograms — CC BY-NC-SA 4.0 (pictos.sqlite, a separate non-commercial
   into pictos.sqlite by src/Data.Build/build_pictos.py; pictograms flagged « sex » or « violence » are left out.
   pictos.sqlite is a separate component under CC BY-NC-SA 4.0, shipped with ARASAAC-LICENCE.txt; it is not covered by
   the GPL and the GPL does not apply to it. NON-COMMERCIAL USE ONLY: anyone reusing Pépite's code in a commercial product
-  must leave the pictograms out (the app runs without pictos.sqlite) or obtain ARASAAC's permission.
+  must leave the pictograms out (the app runs without pictos.sqlite) — and the four help screenshots that show them
+  (aide\img\capture-qui-es-tu.png, capture-espace-enseignant.png, capture-barre-images.png,
+  capture-barre-lecture.png) — or obtain ARASAAC's permission.
+  The help (aide\, CC BY-SA 4.0) shows ARASAAC pictograms inside four real screenshots (aide\img\capture-qui-es-tu.png,
+  capture-espace-enseignant.png, capture-barre-images.png, capture-barre-lecture.png; 0.10.2), each captioned « Pictogrammes : Sergio Palao,
+  ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0 »: those pictograms stay under CC BY-NC-SA 4.0, outside the help's
+  CC BY-SA 4.0 licence.
 
 Fonts — SIL Open Font License 1.1, shipped unmodified in fonts\<family>\ with their OFL.txt
   - OpenDyslexic v0.91.12 (Abbie Gonzalez, Reserved Font Name OpenDyslexic), https://github.com/antijingoist/opendyslexic
@@ -276,25 +282,31 @@ Fonts — SIL Open Font License 1.1, shipped unmodified in fonts\<family>\ with 
   Fetched with pinned URLs and SHA-256 by src/Data.Build/fetch_fonts.py (each folder's SOURCE.txt). The OFL covers the
   font files only, not the program; the fonts are loaded privately by the app and credited in « À propos ».
 
-.NET runtime 6.0.32 and Windows Desktop runtime 6.0.32 (self-contained publish) — MIT
+.NET runtime 10.0.15 and Windows Desktop runtime 10.0.15 (self-contained publish) — MIT
   Copyright (c) .NET Foundation and Contributors. https://github.com/dotnet/runtime , https://github.com/dotnet/wpf ,
-  https://github.com/dotnet/winforms . Packages Microsoft.NETCore.App.Runtime.win-x64 6.0.32 and
-  Microsoft.WindowsDesktop.App.Runtime.win-x64 6.0.32. Licences and the runtime's own third-party notices:
+  https://github.com/dotnet/winforms . Packages Microsoft.NETCore.App.Runtime.win-x64 10.0.15 and
+  Microsoft.WindowsDesktop.App.Runtime.win-x64 10.0.15. Licences and the runtime's own third-party notices:
   licenses\dotnet\LICENSE.TXT, licenses\dotnet\THIRD-PARTY-NOTICES.TXT, licenses\windowsdesktop\LICENSE.
 
-System.Speech 6.0.0 (NuGet) — MIT
+System.Speech 10.0.15 (NuGet) — MIT
   Copyright (c) .NET Foundation and Contributors. https://github.com/dotnet/runtime
-  Licence and notices: licenses\system-speech\LICENSE.TXT, licenses\system-speech\THIRD-PARTY-NOTICES.TXT.
+  Licence and notices: licenses\system-speech\LICENSE.TXT (the dotnet/runtime MIT licence, taken from the runtime pack:
+  the 10.0 package no longer carries it), licenses\system-speech\THIRD-PARTY-NOTICES.TXT.
 
-Microsoft.Data.Sqlite 6.0.25 (NuGet Microsoft.Data.Sqlite, Microsoft.Data.Sqlite.Core) — MIT
+System.Numerics.Tensors 9.0.0 (NuGet, needed by Microsoft.ML.OnnxRuntime.Managed) — MIT
+  Copyright (c) .NET Foundation and Contributors. https://github.com/dotnet/runtime
+  Same MIT licence text as licenses\dotnet\LICENSE.TXT; every component its third-party notices name is also in
+  licenses\dotnet\THIRD-PARTY-NOTICES.TXT.
+
+Microsoft.Data.Sqlite 10.0.15 (NuGet Microsoft.Data.Sqlite, Microsoft.Data.Sqlite.Core) — MIT
   Copyright (c) .NET Foundation and Contributors. https://github.com/dotnet/efcore
   Same MIT licence text as licenses\dotnet\LICENSE.TXT.
 
-SQLitePCLRaw 2.1.2 (NuGet SQLitePCLRaw.bundle_e_sqlite3, .core, .provider.e_sqlite3, .lib.e_sqlite3) — Apache-2.0
-  Copyright 2014-2022 SourceGear, LLC. https://github.com/ericsink/SQLitePCL.raw
+SQLitePCLRaw 2.1.13 (NuGet SQLitePCLRaw.bundle_e_sqlite3, .core, .provider.e_sqlite3, .lib.e_sqlite3) — Apache-2.0
+  Copyright 2014-2024 SourceGear, LLC. https://github.com/ericsink/SQLitePCL.raw
   Licence text: licenses\apache-2.0\LICENSE.txt. No NOTICE file is distributed with these packages.
 
-SQLite 3.39.2 (e_sqlite3.dll, from SQLitePCLRaw.lib.e_sqlite3 2.1.2; source id 2022-07-21 15:24:47 698edb77) — public domain
+SQLite 3.53.3 (e_sqlite3.dll, from SQLitePCLRaw.lib.e_sqlite3 2.1.13; source id 2026-06-26 20:14:12 d4c0e51e) — public domain
   https://www.sqlite.org/copyright.html : « All of the code and documentation in SQLite has been dedicated to the public
   domain by the authors. »
 

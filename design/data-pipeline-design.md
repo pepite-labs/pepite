@@ -101,7 +101,10 @@ extracts, splits, draws the held-out sets and samples the training text; `corpus
 - No sentence-start token: the first word of a sentence gets no context, only unigram.
 - Apostrophe splitting means `l'` is stored as `l`: since plan 04 (D22) the keyboard shows and inserts it as `l'`
   (display mapping `Elision.Apply` after ranking, no DB rebuild), and after an elision the engine favours
-  vowel / mute-h words (`ElisionBoost`). Elision-aware tokens in the corpus build remain possible.
+  vowel / mute-h words (`ElisionBoost`). Elision-aware tokens in the corpus build remain possible. Since 0.10.2 the
+  context-free frequency of `j' m' c' qu' jusqu' lorsqu' puisqu'` (no Lexique apostrophe row) is estimated by the
+  engine at load from the `words` and `bigrams` tables already shipped (predict-core-design §4): still no rebuild and no
+  new data release.
 
 ## 7. Picture pack (`build_pictos.py` → `pictos.sqlite`, plan 02)
 

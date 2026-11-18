@@ -40,6 +40,91 @@ public class ElisionTests
     [InlineData("huit", "8it", false)] [InlineData("hauteur", "ot9R", false)] [InlineData("honte", "§t", false)]
     [InlineData("maison", "mEz§", false)] [InlineData("yaourt", "jauRt", false)] [InlineData("x", "", false)]
     public void TakesElision(string word, string phon, bool expected) => Assert.Equal(expected, Elision.TakesElision(word, phon));
+
+    /// <summary>0.10.2: every bare form has its full form (the unigram calibration reads it), and only those.</summary>
+    [Theory]
+    [InlineData("j", "je")] [InlineData("m", "me")] [InlineData("t", "te")] [InlineData("s", "se")] [InlineData("n", "ne")]
+    [InlineData("d", "de")] [InlineData("c", "ce")] [InlineData("qu", "que")] [InlineData("l", "le")]
+    [InlineData("jusqu", "jusque")] [InlineData("lorsqu", "lorsque")] [InlineData("puisqu", "puisque")] [InlineData("Qu", "que")]
+    public void FullForm(string bare, string full) => Assert.Equal(full, Elision.FullForm[bare]);
+
+    [Fact]
+    public void FullForm_Covers_Exactly_The_Bare_Forms()
+    {
+        Assert.Equal(Elision.Bare.Count, Elision.FullForm.Count);
+        foreach (var b in Elision.Bare) Assert.True(Elision.FullForm.ContainsKey(b), b);
+    }
+
+    /// <summary>0.10.2 (owner Q2): the elided word follows the document's apostrophe; other words never change.</summary>
+    [Theory]
+    [InlineData("j'", '’', "j’")] [InlineData("J'", '’', "J’")] [InlineData("qu'", '’', "qu’")] [InlineData("jusqu'", '’', "jusqu’")]
+    [InlineData("j’", '\'', "j'")] [InlineData("j'", '\'', "j'")] [InlineData("l’", '’', "l’")]
+    [InlineData("je", '’', "je")] [InlineData("j", '’', "j")] [InlineData("j'", 'x', "j'")]
+    [InlineData("", '’', "")]
+    // glued words (owner Q5): every apostrophe word follows the document
+    [InlineData("aujourd'", '’', "aujourd’")] [InlineData("aujourd'hui", '’', "aujourd’hui")] [InlineData("quelqu’un", '\'', "quelqu'un")]
+    [InlineData("t'aime", '’', "t’aime")] [InlineData("J’ai", '\'', "J'ai")] [InlineData("t'aime", '\'', "t'aime")] [InlineData("t'aime", 'x', "t'aime")]
+    public void Styled(string word, char apostrophe, string expected) => Assert.Equal(expected, Elision.Styled(word, apostrophe));
+
+    /// <summary>0.10.2 (glued words): each bare form's sound is the start of the fold of that form glued to a vowel word, and
+    /// what follows it there is a vowel key.</summary>
+    [Fact]
+    public void Sound_Is_The_Fold_Of_The_Glued_Form()
+    {
+        Assert.Equal(Elision.Bare.Count, Elision.Sound.Count);
+        foreach (var b in Elision.Bare)
+            foreach (var w in new[] { "est", "il", "aime", "école", "avait", "un", "oiseau", "en", "on" })
+            {
+                // c' only before e / i (« c'est », « c'était »): before a / o / u the letter c is /k/
+                if (b == "c" && w[0] is not ('e' or 'é' or 'i')) continue;
+                var k = PhoneticKey.Fold(b + w);
+                var s = Elision.Sound[b];
+                Assert.True(k.StartsWith(s, StringComparison.Ordinal), $"{b}+{w}: {k} / {s}");
+                Assert.True(Elision.IsVowelKey(k[s.Length]), $"{b}+{w}: {k}");
+                Assert.Equal(PhoneticKey.Fold(w), k[s.Length..]);
+            }
+    }
+
+    [Theory]
+    [InlineData("tem", "t:1")] [InlineData("je", "j:1")] [InlineData("setet", "s:1 c:1")] [InlineData("kil", "qu:1")]
+    [InlineData("juska", "j:1 jusqu:4")] [InlineData("lekol", "l:1")] [InlineData("dakor", "d:1")] [InlineData("lwazo", "l:1")]
+    [InlineData("t", "")] [InlineData("tr", "")] [InlineData("", "")] [InlineData("ma", "m:1")] [InlineData("ekol", "")]
+    public void SplitsOf(string key, string expected)
+    {
+        Span<int> into = stackalloc int[Elision.MaxSplits];
+        int n = Elision.SplitsOf(key, into);
+        var got = new string[n];
+        for (int i = 0; i < n; i++) got[i] = Elision.SplitForms[into[i]] + ":" + Elision.SoundLength(into[i]);
+        Assert.Equal(expected, string.Join(" ", got));
+    }
+
+    [Fact]
+    public void SplitForms_Are_The_Bare_Forms_With_Their_Sound()
+    {
+        Assert.Equal(Elision.Bare.Count, Elision.SplitForms.Count);
+        Span<int> one = stackalloc int[Elision.MaxSplits];
+        for (int i = 0; i < Elision.SplitForms.Count; i++)
+        {
+            Assert.True(Elision.IsBare(Elision.SplitForms[i]));
+            Assert.Equal(Elision.Sound[Elision.SplitForms[i]].Length, Elision.SoundLength(i));
+            Assert.Contains(i, one[..Elision.SplitsOf(Elision.Sound[Elision.SplitForms[i]] + "a", one)].ToArray());
+        }
+    }
+
+    [Theory]
+    [InlineData("t'aime", true, "t", "aime")] [InlineData("J’ai", true, "J", "ai")] [InlineData("qu'il", true, "qu", "il")]
+    [InlineData("jusqu'à", true, "jusqu", "à")] [InlineData("l'", false, "", "")] [InlineData("aujourd'hui", false, "", "")]
+    [InlineData("quelqu'un", false, "", "")] [InlineData("'aime", false, "", "")] [InlineData("aime", false, "", "")]
+    [InlineData("", false, "", "")] [InlineData(null, false, "", "")]
+    public void IsJoined(string? w, bool expected, string bare, string main)
+    {
+        Assert.Equal(expected, Elision.IsJoined(w, out var b, out var m));
+        Assert.Equal(bare, b);
+        Assert.Equal(main, m);
+    }
+
+    [Fact]
+    public void Join_Writes_A_Straight_Apostrophe() => Assert.Equal("t'aime", Elision.Join("t", "aime"));
 }
 
 public class TokenizerTests
@@ -259,6 +344,55 @@ public class ElisionTrackingTests
         Assert.Equal("l", a.Current); Assert.Equal("l", b.Current);
     }
 
+    /// <summary>0.10.2 (owner Q2): after « C’est vrai. », « j » shows « J’ » and inserts it; the next word follows at once.</summary>
+    [Fact]
+    public void Elision_Follows_The_Documents_Apostrophe()
+    {
+        const string text = "C’est vrai. j";
+        var c = ContextExtractor.Extract(text, text.Length, false, false);
+        var t = new WordTracker();
+        t.Seed(c.Prefix, c.Context, c.Separators, c.Suffix, c.NextChar, "win32", c.AtSentenceStart, c.Apostrophe);
+        Assert.Equal('’', t.ApostropheStyle);
+        Assert.True(t.AtSentenceStart);
+        var ranked = new[] { new Suggestion("je", 0, MatchKind.Prefix), new Suggestion("j", -1, MatchKind.Prefix), new Suggestion("jour", -2, MatchKind.Prefix) };
+        var shown = KeyboardPolicy.Shown(ranked, false, t.ApostropheStyle, t.Current, t.AtSentenceStart, 8);
+        Assert.Equal(new[] { "Je", "J’", "Jour" }, shown.Select(s => s.Word).ToArray());
+        Assert.False(KeyboardPolicy.NeedsSpace(false, '\0', "J’"));   // no space after it
+        t.Accept("J’", spaced: false);
+        Assert.Equal(new[] { "J" }, t.Context.ToArray());
+        Assert.True(t.AfterSeparator);
+    }
+
+    [Fact]
+    public void A_Plain_Document_Keeps_The_Straight_Apostrophe()
+    {
+        var c = ContextExtractor.Extract("il fait beau. ", 14, false, false);
+        var t = new WordTracker();
+        t.Seed(c.Prefix, c.Context, c.Separators, c.Suffix, c.NextChar, "win32", c.AtSentenceStart, c.Apostrophe);
+        Assert.Equal('\'', t.ApostropheStyle);
+        var shown = KeyboardPolicy.Shown(new[] { new Suggestion("j", 0, MatchKind.Prefix) }, false, t.ApostropheStyle, "j", true, 8);
+        Assert.Equal("J'", shown[0].Word);
+    }
+
+    [Fact]
+    public void Apostrophe_Style_Typed_Kept_And_Reset()
+    {
+        var t = new WordTracker();
+        Assert.Equal('\'', t.ApostropheStyle);
+        foreach (var ch in "l’arbre ") t.Type(ch);
+        Assert.Equal('’', t.ApostropheStyle);                 // a typed ’
+        foreach (var ch in "en 2000 ") t.Type(ch);
+        Assert.Equal('’', t.ApostropheStyle);                 // a digit is no jump
+        t.Backspace(); t.Backspace();
+        Assert.Equal('’', t.ApostropheStyle);
+        t.Seed("", new[] { "il" }, 1, "", '\0', "uia");       // a read without an apostrophe: the style stays
+        Assert.Equal('’', t.ApostropheStyle);
+        t.Reset();                                            // a jump: back to the default until a read says otherwise
+        Assert.Equal('\'', t.ApostropheStyle);
+        foreach (var ch in "l'eau") t.Type(ch);
+        Assert.Equal('\'', t.ApostropheStyle);
+    }
+
     [Fact]
     public void Curly_And_Capital_Elision()
     {
@@ -443,6 +577,13 @@ public class PunctuationReviewTests
         Assert.Equal("l'", Elision.Display("l", afterHyphen: true));   // only t is the inversion t
         var s = new[] { new Suggestion("t", 0, MatchKind.Prefix), new Suggestion("te", -1, MatchKind.Prefix) };
         Assert.Equal(new[] { "t", "te" }, Elision.Apply(s, afterHyphen: true).Select(x => x.Word).ToArray());
+        // 0.10.2 (glued words): « a-til » never offers « t'il »; another joined word stays, and without the hyphen t'il stays
+        var j = new[] { new Suggestion("t'il", 0, MatchKind.Phonetic), new Suggestion("til", -1, MatchKind.Prefix), new Suggestion("l'il", -2, MatchKind.Phonetic) };
+        Assert.Equal(new[] { "til", "l'il" }, Elision.Apply(j, afterHyphen: true).Select(x => x.Word).ToArray());
+        Assert.Equal(new[] { "t'il", "til", "l'il" }, Elision.Apply(j).Select(x => x.Word).ToArray());
+        // review 8: only the inversion pronouns; « va-t'en » keeps its joined form
+        var p = new[] { "t'ils", "t'elle", "t'elles", "t'on", "T'il", "t'en", "t'y" }.Select(w => new Suggestion(w, 0, MatchKind.Phonetic)).ToArray();
+        Assert.Equal(new[] { "t'en", "t'y" }, Elision.Apply(p, afterHyphen: true).Select(x => x.Word).ToArray());
     }
 
     [Fact]

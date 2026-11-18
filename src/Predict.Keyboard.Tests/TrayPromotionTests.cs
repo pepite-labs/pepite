@@ -131,7 +131,7 @@ public class TrayPromotionTests
     [InlineData("app-paused.ico")]
     public void Icon_Loads_At_Every_Size(string name)
     {
-        if (!OperatingSystem.IsWindows()) return;   // System.Drawing icons: Windows only
+        if (!OperatingSystem.IsWindowsVersionAtLeast(6, 1)) return;   // System.Drawing icons: Windows 7+ only (CA1416)
         var path = Path.Combine(AppContext.BaseDirectory, "Assets", name);
         // 256 px is a PNG entry (Explorer/WPF read it; System.Drawing.Icon skips PNG entries): check its header
         var bytes = File.ReadAllBytes(path);

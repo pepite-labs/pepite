@@ -5,6 +5,11 @@ using Predict.Core;
 //        plan 11 (10D-1): --probe [--grammar <grammar.sqlite>] [--grammar-off] "context|typed[|start]" ("context|" = next word);
 //        --bench-grammar [<grammar.sqlite>]  speed with the agreement term on / off;
 //        --mem-grammar [<grammar.sqlite>]    memory of the grammar lexicon load in this fresh process (run it 3 times)
+//        0.10.2 (plan exact-typed-word): --exact off|present|first [--exact-margin F] for --probe and --bench;
+//        --bench-exact [--grammar <g>] [--names <folder>]  speed of the rule (2 000 grammar-context queries typed as words)
+//        0.10.2 (glued words): --splits / --no-splits [--w-split F] [--split-known 0|1] for --probe and --bench;
+//        --bench-split [--grammar <g>] [--names <folder>]  speed of the split pass (off / on) and of RankCorrections
+Console.OutputEncoding = System.Text.Encoding.UTF8;
 var db = args.Length > 0 ? args[0] : "Data.Build/out/prediction.sqlite";
 var sw = Stopwatch.StartNew();
 using var engine = PredictionEngine.Load(db);
@@ -12,6 +17,125 @@ sw.Stop();
 Console.WriteLine($"loaded {engine.Count} words in {sw.ElapsedMilliseconds} ms; context={engine.HasContext}\n");
 string OptAfter(string name, string def) { int i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal) ? args[i + 1] : def; }
 const string DefaultGrammar = "Data.Build/out/grammar.sqlite";
+static ExactTypedMode ParseExact(string s) => s switch
+{
+    "off" => ExactTypedMode.Off, "present" => ExactTypedMode.Present, "first" => ExactTypedMode.First,
+    _ => throw new ArgumentException("--exact off|present|first: " + s),
+};
+// 0.10.2: the exact typed word rule for --probe and --bench (default: the engine's)
+engine.ExactTyped = ParseExact(OptAfter("--exact", engine.ExactTyped.ToString().ToLowerInvariant()));
+engine.ExactMargin = double.Parse(OptAfter("--exact-margin", engine.ExactMargin.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                                  System.Globalization.CultureInfo.InvariantCulture);
+if (args.Contains("--exact") || args.Contains("--exact-margin"))
+    Console.WriteLine(FormattableString.Invariant($"exact typed word: {engine.ExactTyped}, margin {engine.ExactMargin}, bar {engine.ExactBar}\n"));
+// 0.10.2 (glued words): --splits / --no-splits, --w-split F, --split-known 0|1 for --probe and --bench
+if (args.Contains("--splits")) engine.Splits = true;
+if (args.Contains("--no-splits")) engine.Splits = false;
+engine.WSplit = double.Parse(OptAfter("--w-split", engine.WSplit.ToString(System.Globalization.CultureInfo.InvariantCulture)), System.Globalization.CultureInfo.InvariantCulture);
+if (OptAfter("--split-known", "") is { Length: > 0 } sk) engine.SplitKnown = sk != "0";
+engine.SplitMinCount = int.Parse(OptAfter("--split-min", engine.SplitMinCount.ToString()));
+if (args.Contains("--splits") || args.Contains("--no-splits") || args.Contains("--w-split") || args.Contains("--split-known"))
+    Console.WriteLine(FormattableString.Invariant($"glued words: splits {(engine.Splits ? "on" : "off")}, WSplit {engine.WSplit}, SplitMax {engine.SplitMax}, from {engine.SplitFrom}, known {engine.SplitKnown}\n"));
+
+if (args.Contains("--bench-exact"))
+{
+    // 0.10.2: the speed of the exact typed word rule. 2 000 queries in grammar contexts whose typed letters are words (the
+    // rule applies: « mai » < maison, « par » < partir, homophones et / est, mange / mangent; one in ten at a sentence start
+    // with a capital), 200 warm-up queries, 3 rounds of off / present / first at k = 11 (the keyboard's 8 + 3 spares), with
+    // the grammar (and the names pack with --names)
+    engine.Grammar = LoadGrammar(OptAfter("--grammar", DefaultGrammar), engine);
+    if (OptAfter("--names", "") is { Length: > 0 } np) engine.Names = LoadNames(np, engine);
+    string[][] ctxs = { new[] { "les" }, new[] { "ils" }, new[] { "elle", "est" }, new[] { "il", "a" }, new[] { "pour" }, new[] { "je", "vais" },
+                        new[] { "le", "chat" }, new[] { "la" }, new[] { "il" }, new[] { "je" }, new[] { "c'est" } };
+    var words = new[] { "mai", "par", "bon", "ver", "pas", "et", "est", "son", "sont", "mange", "mangent", "la", "le", "ma", "mais", "en",
+                        "faim", "fin", "ba", "pi", "port", "maison", "chat", "petit", "petite", "tout", "tous", "mer", "mère", "sa", "ça",
+                        "ou", "où", "on", "ont", "ce", "se", "ces", "ses", "porte", "joue", "jouer", "fait", "fais", "va", "vas", "di", "dit" };
+    foreach (var w in words) if (!engine.KnowsForMark(w, false)) Console.WriteLine($"note: « {w} » is not ✓: the rule does not apply to it");
+    var rnd = new Random(1);
+    var qs = new List<(string Q, string[] C, bool Start)>();
+    for (int i = 0; i < 2000; i++)
+    {
+        var w = words[rnd.Next(words.Length)];
+        bool start = rnd.Next(10) == 0;
+        qs.Add((start ? char.ToUpperInvariant(w[0]) + w[1..] : w, start ? Array.Empty<string>() : ctxs[rnd.Next(ctxs.Length)], start));
+    }
+    for (int round = 1; round <= 3; round++)
+        foreach (var m in new[] { ExactTypedMode.Off, ExactTypedMode.Present, ExactTypedMode.First })
+        {
+            engine.ExactTyped = m;
+            for (int i = 0; i < 200; i++) engine.Predict(qs[i].Q, qs[i].C, 11, qs[i].Start);
+            var times = new double[qs.Count];
+            for (int i = 0; i < qs.Count; i++)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                engine.Predict(qs[i].Q, qs[i].C, 11, qs[i].Start);
+                times[i] = (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency;
+            }
+            Array.Sort(times);
+            Console.WriteLine(FormattableString.Invariant(
+                $"round {round} exact {m,-7}: 2000 queries: mean {times.Average():0.000} ms, p50 {times[1000]:0.000}, p95 {times[1899]:0.000}, p99 {times[1979]:0.000}, max {times[^1]:0.000} ms"));
+        }
+    return;
+}
+
+if (args.Contains("--bench-split"))
+{
+    // 0.10.2 (glued words): the speed of the split pass. 2 000 queries: the glued words of the plan typed letter by letter
+    // (2 letters to full) in their contexts, a third common inputs in « il fait »; 200 warm-up queries, 3 rounds of splits
+    // off / on at k = 11 (the keyboard's 8 + 3 spares), with the grammar (and the names pack with --names). Then the ≈ list
+    // ordering (RankCorrections) of the same glued words, warm.
+    engine.Grammar = LoadGrammar(OptAfter("--grammar", DefaultGrammar), engine);
+    if (OptAfter("--names", "") is { Length: > 0 } np) engine.Names = LoadNames(np, engine);
+    (string W, string[] C)[] glued =
+    {
+        ("tème", new[] { "je" }), ("jai", Array.Empty<string>()), ("lécole", new[] { "à" }), ("cétait", new[] { "mais" }),
+        ("cest", new[] { "et" }), ("quil", new[] { "je", "pense" }), ("daccord", new[] { "oui" }), ("jusqua", new[] { "je", "marche" }),
+        ("ma", new[] { "il" }), ("sil", new[] { "ne", "sais", "pas" }), ("mappelle", new[] { "je" }), ("larbre", new[] { "dans" }),
+        ("nest", new[] { "il" }), ("lami", new[] { "avec" }), ("lhistoire", new[] { "c'est" }), ("lecole", new[] { "la", "de" }),
+    };
+    var common = new[] { "maiz", "oriz", "bo", "sou", "enfan", "ordi", "ékri", "boku", "tele", "kestion" };
+    var rnd = new Random(1);
+    var qs = new List<(string Q, string[] C, bool Start)>();
+    for (int i = 0; i < 2000; i++)
+    {
+        if (i % 3 == 2) { qs.Add((common[rnd.Next(common.Length)], new[] { "il", "fait" }, false)); continue; }
+        var (w, c) = glued[rnd.Next(glued.Length)];
+        qs.Add((w[..Math.Min(w.Length, rnd.Next(2, w.Length + 1))], c, c.Length == 0));
+    }
+    bool keep = engine.Splits;
+    for (int round = 1; round <= 3; round++)
+        foreach (var on in new[] { false, true })
+        {
+            engine.Splits = on;
+            for (int i = 0; i < 200; i++) engine.Predict(qs[i].Q, qs[i].C, 11, qs[i].Start);
+            var times = new double[qs.Count];
+            for (int i = 0; i < qs.Count; i++)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                engine.Predict(qs[i].Q, qs[i].C, 11, qs[i].Start);
+                times[i] = (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency;
+            }
+            Array.Sort(times);
+            Console.WriteLine(FormattableString.Invariant(
+                $"round {round} splits {(on ? "on " : "off")}: 2000 queries: mean {times.Average():0.000} ms, p50 {times[1000]:0.000}, p95 {times[1899]:0.000}, p99 {times[1979]:0.000}, max {times[^1]:0.000} ms"));
+        }
+    engine.Splits = true;
+    var lists = glued.Select(g => (L: engine.Check(g.W).Candidates, g.C, g.W)).Where(x => x.L.Count > 1).ToList();
+    foreach (var (l, c, w) in lists) engine.RankCorrections(l, c, w);   // warm
+    var rt = new List<double>();
+    for (int r = 0; r < 50; r++)
+        foreach (var (l, c, w) in lists)
+        {
+            var t0 = Stopwatch.GetTimestamp();
+            engine.RankCorrections(l, c, w);
+            rt.Add((Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency);
+        }
+    rt.Sort();
+    if (rt.Count > 0)
+        Console.WriteLine(FormattableString.Invariant($"RankCorrections ({lists.Count} glued ≈ lists × 50, warm): mean {rt.Average():0.000} ms, p99 {rt[(int)(rt.Count * 0.99)]:0.000}, max {rt[^1]:0.000} ms"));
+    engine.Splits = keep;
+    return;
+}
 
 if (args.Contains("--mem-grammar"))
 {
@@ -286,6 +410,15 @@ if (args.Contains("--probe"))
     if (gi >= 0 && gi + 1 < args.Length) engine.Grammar = LoadGrammar(args[gi + 1], engine);
     if (args.Contains("--grammar-off")) engine.GrammarOn = false;
     bool scores = args.Contains("--scores");
+    // 0.10.2: the context-free estimate of each elided form (per million); « kept » = Lexique has an apostrophe row
+    var et = Stopwatch.StartNew();
+    var estimates = engine.GetElisionEstimates();
+    et.Stop();
+    Console.WriteLine(FormattableString.Invariant($"elided forms (ElisionUnigram={engine.ElisionUnigram}; all {estimates.Count} estimated again in {et.Elapsed.TotalMilliseconds:0.0} ms): ") +
+        string.Join(", ", estimates.Select(x => FormattableString.Invariant($"{x.Bare}' {x.Estimate:0} ({(x.Calibrated ? "Lexique bare row" : "Lexique, kept")} {x.Lexique:0.##})"))));
+    // 0.10.2 (glued words): the bare forms' successors kept at load (words taking an elision / all successors' count)
+    Console.WriteLine("bare successors (glued words): " + string.Join(", ", engine.GetBareSuccessors().Select(x =>
+        FormattableString.Invariant($"{x.Bare}' {x.Successors}/{x.Total} ({x.PerMillion:0}/M)"))));
     foreach (var a in args.Skip(1).Where((a, i) => a.Contains('|')))
     {
         var parts = a.Split('|');

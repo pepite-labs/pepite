@@ -52,17 +52,22 @@ class Transforms(unittest.TestCase):
         insee = [("1", "GABRIEL", "2020", "4000"), ("2", "LÉA", "2015", "3000"), ("2", "GERMAINE", "1930", "5000"),
                  ("1", "_PRENOMS_RARES", "2020", "9999"), ("1", "RARE", "2000", "5")]
         statbel = [("Geert", "30000"), ("Léa", "100")]
-        old = bn.PREDICTED_FIRST_NAMES
+        old = bn.PREDICTED_FIRST_NAMES, bn.ALLTIME_PREDICTED
         try:
             bn.PREDICTED_FIRST_NAMES = 3   # Geert (Belgian share), Gabriel, Léa; Germaine has no recent birth
+            bn.ALLTIME_PREDICTED = 0       # edition 2026.1: no all-time promotion
             out = {e["nom"]: e for e in bn.first_names(insee, statbel)}
+            bn.ALLTIME_PREDICTED = 2       # 2026.2: the all-time top 2 (Geert, Germaine) are predicted too
+            out2 = {e["nom"]: e for e in bn.first_names(insee, statbel)}
         finally:
-            bn.PREDICTED_FIRST_NAMES = old
+            bn.PREDICTED_FIRST_NAMES, bn.ALLTIME_PREDICTED = old
         self.assertNotIn("Rare", out)                 # < 20 births
         self.assertNotIn("_Prenoms_Rares", out)
         self.assertEqual(out["Léa"].get("niveau"), None)
         self.assertEqual(out["Germaine"].get("niveau"), 2)   # no recent birth: recognised only
         self.assertIn("Geert", out)                          # Belgian only
+        self.assertEqual(out2["Germaine"].get("niveau"), None)   # promoted by its all-time births
+        self.assertNotIn("_promu", out2["Geert"])                # already predicted by its recent share: not « promoted »
 
     def test_countries_filter_and_flags(self):
         terr = {"BE": "Belgique", "CI": "Côte d’Ivoire", "EU": "Union européenne", "150": "Europe", "001": "Monde",
@@ -179,15 +184,69 @@ class Review(unittest.TestCase):
         insee = [("1", "JOSEPH", "2020", "4000"), ("1", "JOHAN", "1975", "500")]
         statbel_population = [("Johan", "40000"), ("Jozef", "60000"), ("Noah", "100")]
         births = {"Noah": 9000, "Joseph": 300, "Johan": 50}
-        old = bn.PREDICTED_FIRST_NAMES
+        old = bn.PREDICTED_FIRST_NAMES, bn.ALLTIME_PREDICTED
         try:
             bn.PREDICTED_FIRST_NAMES = 3
+            bn.ALLTIME_PREDICTED = 0   # the recent tier alone (the all-time promotion: test_alltime_promotion)
             out = {e["nom"]: e for e in bn.first_names(insee, statbel_population, births)}
         finally:
-            bn.PREDICTED_FIRST_NAMES = old
+            bn.PREDICTED_FIRST_NAMES, bn.ALLTIME_PREDICTED = old
         self.assertEqual(out["Jozef"].get("niveau"), 2)            # many adults, no recent birth: recognised only
         self.assertGreater(out["Joseph"]["rang"], out["Johan"]["rang"])
         self.assertGreater(out["Noah"]["rang"], out["Johan"]["rang"])
+
+    def test_alltime_promotion(self):
+        # edition 2026.2 (owner 2026-11-17): the all-time top names are predicted too, ranked below the pupils' names
+        insee = [("1", "GABRIEL", "2020", "4000"), ("2", "LÉA", "2015", "3000"), ("2", "EMMA", "2020", "100"),
+                 ("2", "GERMAINE", "1930", "50000"), ("1", "ROGER", "1940", "20000"), ("2", "JOSETTE", "1950", "400")]
+        old = bn.PREDICTED_FIRST_NAMES, bn.ALLTIME_PREDICTED
+        try:
+            bn.PREDICTED_FIRST_NAMES = 3   # Gabriel, Léa, Emma
+            bn.ALLTIME_PREDICTED = 2       # Germaine, Roger
+            firsts = bn.first_names(insee, [])
+        finally:
+            bn.PREDICTED_FIRST_NAMES, bn.ALLTIME_PREDICTED = old
+        out = {e["nom"]: e for e in firsts}
+        low = out["Emma"]["rang"]                                   # the lowest rang of the recent tier
+        for n in ("Germaine", "Roger"):
+            e = out[n]
+            self.assertNotIn("niveau", e)                           # predicted
+            self.assertEqual(e["rang"], max(low, round(bn.PROMOTED_SCALE * e["_promu"], 3)))   # no recent birth
+            self.assertEqual(e["_promu"], bn.rang({"Germaine": 50000, "Roger": 20000}[n], 50000))
+        self.assertEqual(out["Germaine"]["rang"], 0.5)              # 0.5 × all-time rang 1.0
+        self.assertLess(out["Germaine"]["rang"], out["Léa"]["rang"])
+        self.assertEqual(out["Josette"]["niveau"], 2)               # beyond the all-time top: recognised only
+        # the places' cap and the figures' low are those of the recent tier alone (places and figures unchanged)
+        recent = [e for e in firsts if "_promu" not in e]
+        place = lambda: [{"nom": "Gap", "categorie": "ville", "rang": 0.5}, {"nom": "Gabon", "categorie": "pays", "rang": 0.6}]
+        self.assertEqual(bn.below_common_first_names(place(), firsts, n=3), bn.below_common_first_names(place(), recent, n=3))
+        fig = lambda: [{"nom": "Victor Hugo", "rang": 0.8}]
+        self.assertEqual(bn.below_first_names(fig(), firsts), bn.below_first_names(fig(), recent))
+        # a place or a figure of the same name keeps its 2026.1 rang and tier
+        m = {x["nom"]: x for x in bn.merge([{"nom": "Nancy", "categorie": "ville", "rang": 0.05},
+                                            {"nom": "Nancy", "categorie": "prenom", "rang": 0.2, "_promu": 0.4},
+                                            {"nom": "Adolf Hitler", "categorie": "personnage", "rang": 0.001, "niveau": 2, "restreint": True},
+                                            {"nom": "Adolf Hitler", "categorie": "prenom", "rang": 0.2, "_promu": 0.3}])}
+        self.assertEqual(m["Nancy"]["rang"], 0.4)
+        self.assertEqual(m["Adolf Hitler"]["niveau"], 2)
+        self.assertEqual(m["Adolf Hitler"]["rang"], 0.3)
+
+    def test_promu_key_never_written(self):
+        firsts = [{"nom": "Roger", "categorie": "prenom", "rang": 0.2, "source": "insee", "_promu": 0.4},
+                  {"nom": "Nancy", "categorie": "ville", "rang": 0.05}, {"nom": "Nancy", "categorie": "prenom", "rang": 0.2, "_promu": 0.4}]
+        pub = bn.public_entries(bn.merge(firsts))
+        self.assertNotIn("_promu", json.dumps(pub))
+        self.assertEqual({e["nom"]: e["rang"] for e in pub}, {"Roger": 0.2, "Nancy": 0.4})
+        with open(bn.__file__, encoding="utf-8") as f:
+            self.assertIn("entries = public_entries(merge(entries))", f.read())   # the build writes only public entries
+
+    def test_diff_report_tiers_and_rangs(self):
+        prev = [{"nom": "Roger", "categorie": "prenom", "rang": 0.6, "niveau": 2}, {"nom": "Léa", "categorie": "prenom", "rang": 0.9}]
+        cur = [{"nom": "Roger", "categorie": "prenom", "rang": 0.3}, {"nom": "Léa", "categorie": "prenom", "rang": 0.9}]
+        r = bn.diff_report(prev, cur, "2026.2")
+        self.assertIn("Passés au niveau prédit (1) : Roger", r)
+        self.assertIn("Rang changé (1) : Roger 0.6 → 0.3", r)
+        self.assertIn("| prenom | 1 |", r)
 
     def test_zip_is_deterministic(self):
         import tempfile, time

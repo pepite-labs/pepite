@@ -127,8 +127,16 @@ internal sealed class PictureStore : IDisposable
     private static string Key(string word) => word.ToLowerInvariant();
 
     /// <summary>The picture key of a bar tile: its word in lowercase, or null for a personal name stored with a capital
-    /// (plan 10A, Q13: « Pierre » the pupil never shows the stone; 10C gives names their own pictures).</summary>
-    public static string? KeyFor(Predict.Core.Suggestion s) => s.Name ? null : Key(s.Word);
+    /// (plan 10A, Q13: « Pierre » the pupil never shows the stone; 10C gives names their own pictures). 0.10.2 (glued words,
+    /// owner Q6): a joined tile shows the picture of its main word (« l'école » → « école »).</summary>
+    public static string? KeyFor(Predict.Core.Suggestion s) =>
+        s.Name ? null : Key(PictureForm(s));
+
+    /// <summary>0.10.2 (glued words, owner Q6): the form a tile's picture is looked up by — the main word of a joined tile
+    /// (« l'école » → « école »), but a name keeps its full form (review: « N'Diaye », « M'Bappé », « D'Artagnan » look like
+    /// joined words).</summary>
+    public static string PictureForm(Predict.Core.Suggestion s) =>
+        !s.Name && Predict.Core.Elision.IsJoined(s.Word, out _, out var main) ? main : s.Word;
 
     /// <summary>Is there a picture for this word? Any thread; false until the word list is loaded.</summary>
     public bool Has(string word) => _words is { } w && w.ContainsKey(Key(word));

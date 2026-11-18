@@ -98,6 +98,24 @@ only for ranking, where it is known to work as well as Kneser-Ney at large data 
 `PredictNext` uses the same `S(w)` over the union of the successor lists of the available n-gram levels
 (no letters typed → no generators).
 
+**Elided forms' unigram (0.10.2).** Lexique has apostrophe rows only for `l' d' n' s' t'`; the other bare forms
+(`j m c qu jusqu lorsqu puisqu`) are letter names or rare rows, so at a sentence start `j` never offered `j'`. At `Load`,
+for each bare form without an apostrophe row (`Elision.FullForm`: j → je, qu → que…):
+
+```
+ est(b)    = lexFreq(full form) × Σ c(b → vowel / mute-h word) / Σ c(full form → ·)      (per million)
+ P_uni(b)  = (max(lex(b), ElisionUnigram × est(b)) + 1) / Z
+```
+
+The estimate reproduces Lexique's own rows within ≈ 35 % (l' 13 790 vs 12 747, d' 10 053 vs 11 876, n' 11 869 vs 8 860,
+s' 6 086 vs 5 392; `Predict.Cli --probe` prints them all). t' (9 111 vs 4 344) is inflated: the corpus tokens split the
+euphonic « -t- » of « a-t-il » into a bare « t » before a vowel, counted as an elision (t' keeps Lexique's row anyway). `Entry.Freq` (prefix gate, spelling order) and `Z` are not
+changed, so a bare form keeps its own prefix gate (`jusqu`, `lorsqu`, `puisqu` have rare Lexique rows: a partial gate);
+`PredictNext` is unaffected: its candidates come from the n-gram maps, so its language model never falls back to the
+unigram. `ElisionUnigram` = 1 by default, 0 restores 0.10.1 exactly (the
+loaded unigrams are kept and put back). The ≈ 11 000 bigram rows it needs (≈ 50 ms of index seeks) are read on a second
+read-only connection while `Load` builds its indexes, so the load grows by ≈ 10 ms (evaluation.md).
+
 ## 5. Memory vs. disk
 
 | In RAM (built at `Load`) | On disk (queried lazily) |
@@ -192,6 +210,11 @@ letters, every first p words hold at most ⌈p / 2⌉ names — whatever number 
 its rank; names fill only when nothing else is left);
 a mute-h name (h + vowel, not an aspirated h of `Elision.HasAspiratedH`) takes the elision boost; the caller passes
 `sentenceStart` true where a capital says nothing (`CapitalContext`: after `: « " — –`, or no known word before).
+**0.10.2** (owner 2026-11-17, D30 amendment): with no capital that tells a name (lowercase, or a sentence start) and at
+least `NamesRecognisedFrom` (4) letters, `NamesPass` also walks the tier-2 keys, keeping entries with
+`Freq ≥ NamesLexicon.FreqCap × NamesRecognisedFloor` (0.02, ≈ 300 bearers; 2 072 first names in pack 2026.2) and never a
+restricted figure; `NamesRecognisedFrom = 99` gives the 0.10.1 results. Pack 2026.2 also moves the 1 000 most given
+first names of all time into tier 1 (rang max(recent, lowest recent-tier rang, 0.5 × all-time): Roger 481st, Martine 523rd).
 `Check`: a pack form is Known; the same letters as a pack form in another case or without
 accents are SoundsLike. `KnowsAny` includes exact pack forms. Measures: [evaluation.md](../development/evaluation.md) §
 Names pack.
@@ -295,6 +318,91 @@ names after « en », « à » (« amérique », « berlin », « york »), and 
 Limits: three tokens only (« les enfants de la classe mang… », « elle n'est pas allé » are out of reach: neutral, never
 wrong), participle agreement with a preceding object after avoir is not attempted, `ces` / `ses` stay with the language
 model.
+
+## 5f. Exact typed word (0.10.2, plan exact-typed-word, owner 2026-11-17)
+
+The word being typed, when it is spelled right — the ✓ while typing, `KnowsForMark(typed, sentenceStart)`, two letters at
+least, not all capitals, not a bare elision form — is always one of the bar's words. A post-ranking step,
+`PlaceExact`, after `CapNames`; the passes and the scores are unchanged.
+
+- **Fields**: `ExactTyped` (`ExactTypedMode` Off / Present / First, default **Present**), `ExactBar` (8; the keyboard sets
+  its word count, it asks for 3 spares), `ExactMargin` (+∞, First only). `Predict(..., exactMark)`: the keyboard passes
+  its own ✓ while typing (`SpellingIndicator.Typing` with the tracker's sentence start, not the `start || neutral` it gives
+  `Predict`), so the rule applies exactly when the ✓ would (no rule after a digit, in a compound, an address…), whether the
+  marker is shown or not (the indicator setting only hides it); null = the engine judges with
+  `KnowsForMark(typed, sentenceStart)` (Predict.Eval, tests).
+- **The word X**: the result equal to the typed letters ignoring case; else the candidate of the typed form, the lexicon
+  form (first at a sentence start: « Mai » is the month), a personal or a pack form of the same letters, with its ranking
+  score (the lazy agreement term included); a pack or personal form no pass kept gets the window's lowest score − 0.001. A
+  restricted figure (D30) only where the names pass would offer it (a capital inside a sentence, 3 letters).
+- **Present (default)**: when k ≥ `ExactBar` and X is not among the first `ExactBar` results, X goes to slot `ExactBar` − 1;
+  every other result keeps its order. With k < `ExactBar` (the KSS queries, k = 1) nothing changes, so `Predict(k)` stays
+  the prefix of `Predict(n)`. **With a one-word bar (`ExactBar` < 2) the rule is off**: its last slot is its first, the
+  « first » variant the owner rejected (E3 KSS 54.6 → 50.7 with bar 1).
+- **First (measured, rejected)**: the window is N = max(k, `ExactBar`); the results ranked above X that sound like it
+  (`Homophone`: the same Lexique pronunciation or `HomophoneFamilies` family for two lexicon forms, else the same grapheme
+  fold) — or beat it by more than `ExactMargin` — stay ahead in score order, X follows (slot `ExactBar` − 1 at worst), then
+  the rest. Homophones beyond the window are found by a scan of the candidates scored above X.
+
+**Why Present** (gate table: [evaluation.md](../development/evaluation.md) § Exact typed word): First, the owner's
+preference, made every typed prefix that is itself a word win over its completions (« mai » before maison, « par » before
+partir): target top-1 at such a prefix 0.53 → 0.18 (E1), KSS −1.8 to −2.9 pt on the five held-out sets, `cases-personal`
+0.491 → 0.333, « Mes fautes » 1.000 → 0.789, grammar sets −9 to −19 pts. A margin of 1.0 (a completion ten times more
+probable stays ahead) still cost 0.21–0.38 KSS pt, `cases-personal` 0.456, « Mes fautes » 0.974. Present leaves KSS and
+top-1 unchanged (dumps byte-identical; hit@8 at 2–3 letters 0 to −0.4 pt, when the typed word takes the target's 8th
+slot) and puts X in the 8 for 0.9998–1.0000 of the held-out words typed in full (0.994–1.000 without the rule). `cases.json` top-1 is 0.64 with or without the rule (below its 0.66 gate since the names pack, before
+this work). Cost: `--bench` +0.001–0.003 ms.
+
+## 5g. Glued words (0.10.2, plan glued-words, owner 2026-11-17)
+
+A pupil who writes by ear glues an elided word to the next one: « je tème » for « je t'aime », « jai », « lécole »,
+« cest », « quil », « daccord », « jusqua », « il ma » (m'a). Minimal scope (owner Q1): one bare form + one word; fixed
+expressions (« ilya », « parceque »), double clitics (« jtaime ») and 3-word splits are for 0.10.3. No data rebuild.
+
+- **Sound map** (`Elision.Sound`, `SplitsOf`): the fold of each bare form before a vowel — `j m t s n l d` as themselves,
+  `c` → `s` (c'est), `qu` → `k`, `jusqu` → `jusk`, `lorsqu` → `lorsk`, `puisqu` → `puisk` (checked against
+  `PhoneticKey.Fold` by a test). A typed key splits where it starts with one of them and the next key letter is a vowel
+  sound (`a e i o u A E O U w`); « setet » (cétait) splits as both s' and c'.
+- **Attested pairs only**: at load the second connection (`ReadBareCounts`) also reads the bigram successors of all 12
+  bare forms; the engine keeps those that are lexicon forms taking an elision (13 000 on the shipped DB) and each form's
+  successor total. A split word must follow its bare form in the corpus.
+- **Bar (`SplitPass`, between the edit pass and the personal pass)**: from `SplitFrom` = 2 typed letters, no capital inside
+  a sentence (a name), no apostrophe / hyphen typed. The rest of the key is looked up in the sound index — its exact key for
+  one letter, a prefix range from two — and each word that takes an elision, may be offered (`Injectable`) and is attested
+  scores `Lm(ctx, bare) + Lm(ctx ⊕ bare, word) + ChainLift + grammar(ctx ⊕ bare, word) − WSplit`. The best `SplitMax` = 2
+  go in as one tile each, kind Phonetic (green « même son », owner Q4), written `bare'word` (`Elision.Join`). The grammar
+  term is in the score (the lazy ranking finds no entry for « t'aime »), from the context with the bare form at its end
+  (« je t » → a verb 1s), with its own one-entry cache. `SplitKnown` (owner Q3): a typed word that is itself a word splits
+  too (« il ma » → m'a), ranked by the context. **`Splits` is on by default, `WSplit` = 0** (owner 2026-11-18);
+  `Splits = false` turns off the pass and the joined forms of the ≈ check only — the results are then those without
+  them, byte for byte; `RankCorrections` (the ≈ list ordered by the context), `Styled` (the document's apostrophe) and the
+  hyphen rule of `Elision.Apply` stay on. A pair splits only when it is attested at least `SplitMinCount` = 50 times
+  (review 2026-11-18: below that the corpus pairs are mostly tokenisation noise), a one-letter main word only « a », « à »,
+  « y », and « au » / « aux » only after qu' jusqu' lorsqu' puisqu' (`SplitPair`, in the bar and in the ≈ check).
+- **ChainLift** (a deviation from the plan's literal formula): `Lm` discounts each level from the 4-gram down (α per
+  level), and with fewer than three context words every candidate of a query carries the missing levels once — a chain
+  would carry them twice (« jai » at a sentence start: α³ for j, then α² for ai). The chain's second word gets back the
+  levels its context (or the tables) cannot reach, so a chain and a single word share one offset.
+- **Display**: `Elision.Apply` (right after a typed « - » a joined `t'` + il / ils / elle / elles / on is dropped: « a-til »
+  never gives t'il; « va-t'en » stays) →
+  `Styled` (every apostrophe in the document's style, « aujourd'hui » and « quelqu'un » too, owner Q5) → `Cased`
+  (« Jai » → « J'ai »). The tile's picture is its main word's (`PictureStore.PictureForm`, owner Q6: « l'école » →
+  école), but a name keeps its full form (« N'Diaye », « M'Bappé »). `Homophone` folds without apostrophes, so a joined
+  form counts as a homophone of the typed letters — used only by the exact typed word rule's First mode, not by the
+  default Present.
+- **≈ check (`CheckSplits`)**: context-free and µs-fast. An unknown finished word whose key splits into a bare form and
+  the **whole** key of an attested word gets that joined form as a sound-alike (« lécole »: red → ≈ l'école); at most
+  `CheckSplitMax` = 3, each with an estimated frequency `log10(f(bare) × c(bare, word) / c(bare, ·) + 1)` (f per million:
+  the calibrated or Lexique elided form), merged into the list by that frequency after a « Mes fautes » target: before the
+  first place from which every remaining entry is rarer (the list is sorted per stage only: « sai » keeps « sais » ahead).
+- **≈ list ordered by the context (`RankCorrections`, owner Q2)**: when the list opens (click / F9) the keyboard ranks it
+  with the words before the finished word: a lexicon candidate by `Lm + grammar` (+ the elision boost), a joined one by the
+  chain without its penalty; personal words, names and the « Mes fautes » target keep their places; no context = the
+  Check order. For every ≈ list, splits on or off.
+
+Weights and gates: [evaluation.md](../development/evaluation.md) § Glued words. Speed: `--bench` +0.002–0.008 ms, `Check`
+p99 12.7–13.6 µs, `--bench-split` p99 0.6 ms once warm; its isolated maxima (12–26 ms) also occur with splits off
+(10–17 ms): pre-existing, accepted by the owner (2026-11-18), investigated separately (TODO: GC or scheduling).
 
 ## 6. Design choices and rejected alternatives
 

@@ -11,6 +11,7 @@ using Predict.Core;
 //
 // usage: Predict.Eval <prediction.sqlite> <cases.json | sentences.txt> [--max N] [--prefix P]
 //        [--no4gram] [--elision-boost F]   (F overrides PredictionEngine.ElisionBoost; 1 = off)
+//        [--elision-uni F]      0.10.2: PredictionEngine.ElisionUnigram, the context-free prior of j' m' c' qu'… (0 = 0.10.1)
 //        plan 10A, personal words:
 //        [--user <mots.json>]   load a word-list fixture (the app's mots.json format) as the personal words
 //        [--keep-case]          held-out: type the words with their capitals; a word after . ! ? (and, 0.8.3, : « " —) is a
@@ -29,6 +30,8 @@ using Predict.Core;
 //        [--dump <file>]        held-out: the letters typed per word, one line each (to diff two builds)
 //        plan 10C, names pack (any mode):
 //        [--names <noms.json | folder>] [--name-cap F] [--names-from N]   load the « Noms propres » pack as the names layer
+//        [--names-rare-from N] [--names-rare-floor F]   0.10.2: NamesRecognisedFrom / NamesRecognisedFloor (99 = the 0.10.1
+//                               engine: the recognised tier after a capital inside a sentence only)
 //        plan 11 (10D-0), grammar (any mode):
 //        [--grammar <grammar.sqlite>]   load the morphology table (Data.Build/build_grammar.py) for the sets below
 //        [--grammar-from-morph]         review 10D-0: build the entry index at load from morph instead of reading pred_index
@@ -50,6 +53,20 @@ using Predict.Core;
 //        Predict.Eval <db> <grammar-cases.json> --sweep-grammar --grammar <g> --heldout <subs.txt,wiki.txt>
 //                               the 10D-1 sweep on the dev slices: coordinate descent + a small joint grid, objective
 //                               P-agree dev + P-auto dev sib-top1 + swap top-1 under a dev KSS loss <= 0.05 pt
+//        0.10.2, the exact typed word (any mode):
+//        [--exact off|present|first] [--exact-margin F] [--exact-bar N]   PredictionEngine.ExactTyped / ExactMargin / ExactBar
+//        [--exact-report]       held-out: each word typed in full (exact-present@8, top-1, mean rank, a bar shown), and the
+//                               words that have a shorter ✓ word as a prefix (« maison » at « mai »): top-1 there vs off.
+//                               Extra queries only: KSS and the dumps are those of the same run without it
+//        cases: an optional "also" word must be in the 8 too (exact-not-first: « il et » → est, and et)
+//        0.10.2, glued words (any mode; plan glued-words.md):
+//        [--splits | --no-splits] [--w-split F] [--split-known 0|1] [--split-min N]   PredictionEngine.Splits / WSplit / SplitKnown / SplitMinCount
+//        Predict.Eval <db> <heldout.txt> --glued [--max N]   each elided pair of the text (« t'aime », « l'école ») typed glued
+//                               (« taime », « lécole ») and without its accents (« lecole »), with the words before it: the
+//                               joined form's rank at full length and at 3 letters (top-1, hit@8), the ≈ check (≈, among the
+//                               candidates), and the ≈ list's top-1 in the Check order vs ordered with the context
+//        spelling: category « glued » (text glued, "among": the joined form that must be among the ≈ candidates); every case
+//                               with a target / among: the ≈ list's top-1 without vs with the context (RankCorrections)
 
 Console.OutputEncoding = Encoding.UTF8;
 var db = args.Length > 0 ? args[0] : "Data.Build/out/prediction.sqlite";
@@ -60,6 +77,7 @@ using var engine = PredictionEngine.Load(db);
 Console.WriteLine(engine.UnlistedCount > 0 ? $"spelling reference: {engine.UnlistedCount} unlisted" : "spelling reference: absent");
 if (args.Contains("--no4gram")) engine.UseFourgrams = false;
 { int bi = Array.IndexOf(args, "--elision-boost"); if (bi >= 0 && bi + 1 < args.Length) engine.ElisionBoost = double.Parse(args[bi + 1], System.Globalization.CultureInfo.InvariantCulture); }
+{ int ui = Array.IndexOf(args, "--elision-uni"); if (ui >= 0 && ui + 1 < args.Length) engine.ElisionUnigram = double.Parse(args[ui + 1], System.Globalization.CultureInfo.InvariantCulture); }
 double ArgD(string name, double def) { int i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length ? double.Parse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture) : def; }
 string? ArgS(string name) { int i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length ? args[i + 1] : null; }
 engine.WUser = ArgD("--w-user", engine.WUser);
@@ -101,7 +119,10 @@ if (ArgS("--names") is { } namesPath)
         GC.KeepAlive(again.Item1);
     }
     engine.NamesFrom = Arg("--names-from", engine.NamesFrom);
+    engine.NamesRecognisedFrom = Arg("--names-rare-from", engine.NamesRecognisedFrom);
+    engine.NamesRecognisedFloor = ArgD("--names-rare-floor", engine.NamesRecognisedFloor);
     Console.WriteLine(FormattableString.Invariant($"names pack: « {title} » edition {edition}: {nl.NameCount} names -> {nl.Count} forms, loaded in {ms:0} ms, managed memory +{(m1 - m0) / 1048576.0:0.0} MB"));
+    Console.WriteLine(FormattableString.Invariant($"names recognised without a capital: from {engine.NamesRecognisedFrom} letters, rang >= {engine.NamesRecognisedFloor}"));
 }
 GrammarLexicon? grammar = null;
 if (ArgS("--grammar") is { } grammarPath)
@@ -123,7 +144,29 @@ if (ArgS("--grammar") is { } grammarPath)
     Console.WriteLine(args.Contains("--no-grammar-rank") ? "grammar rank: off (--no-grammar-rank, the 0.8.3 baseline)"
         : FormattableString.Invariant($"grammar rank: {(engine.GrammarOn ? "on" : "off (--grammar-off)")}; WNominal={engine.WNominal} WVerbal={engine.WVerbal} WNounSubj={engine.WNounSubj} InjectGap={engine.InjectGap} AgreeBonus={engine.AgreeBonus} wide={(engine.WideDisfavour ? 1 : 0)} sources={engine.InjectSources}x{engine.InjectPerSource} par={(engine.ParInfinitive ? 1 : 0)}"));
 }
-Console.WriteLine($"loaded {engine.Count} words; context={engine.HasContext}; 4-grams={engine.UseFourgrams}; elision boost={engine.ElisionBoost}\n");
+// 0.10.2: the exact typed word rule (plan exact-typed-word); its line is printed only when a flag changes it, so the default
+// run's output is as before
+var exactDefault = (engine.ExactTyped, engine.ExactMargin, engine.ExactBar);
+if (ArgS("--exact") is { } exactMode)
+    engine.ExactTyped = exactMode switch
+    {
+        "off" => ExactTypedMode.Off, "present" => ExactTypedMode.Present, "first" => ExactTypedMode.First,
+        _ => throw new ArgumentException("--exact off|present|first: " + exactMode),
+    };
+engine.ExactMargin = ArgD("--exact-margin", engine.ExactMargin);
+engine.ExactBar = Arg("--exact-bar", engine.ExactBar);
+bool exactReport = args.Contains("--exact-report");
+if (args.Contains("--exact") || (engine.ExactTyped, engine.ExactMargin, engine.ExactBar) != exactDefault)
+    Console.WriteLine(FormattableString.Invariant($"exact typed word: {engine.ExactTyped}, margin {engine.ExactMargin}, bar {engine.ExactBar}"));
+// 0.10.2: glued words (plan glued-words.md); the line is printed only when a flag is given, so the default run's output is as before
+if (args.Contains("--splits")) engine.Splits = true;
+if (args.Contains("--no-splits")) engine.Splits = false;
+engine.WSplit = ArgD("--w-split", engine.WSplit);
+if (ArgS("--split-known") is { } splitKnown) engine.SplitKnown = splitKnown != "0";
+engine.SplitMinCount = Arg("--split-min", engine.SplitMinCount);
+if (args.Contains("--splits") || args.Contains("--no-splits") || args.Contains("--w-split") || args.Contains("--split-known") || args.Contains("--split-min"))
+    Console.WriteLine(FormattableString.Invariant($"glued words: splits {(engine.Splits ? "on" : "off")}, WSplit {engine.WSplit}, SplitMax {engine.SplitMax}, from {engine.SplitFrom}, known {engine.SplitKnown}, min count {engine.SplitMinCount}"));
+Console.WriteLine(FormattableString.Invariant($"loaded {engine.Count} words; context={engine.HasContext}; 4-grams={engine.UseFourgrams}; elision boost={engine.ElisionBoost}; elision unigram={engine.ElisionUnigram}\n"));
 
 GrammarLexicon NeedGrammar() => grammar ?? throw new ArgumentException("this mode needs --grammar <grammar.sqlite>");
 if (args.Contains("--grammar-predict"))
@@ -145,7 +188,8 @@ else if (args.Contains("--lesson-set"))
 }
 else if (target.EndsWith(".txt"))
 {
-    if (args.Contains("--sweep")) RunSweep(engine, target, Arg("--max", 15000), Arg("--n", 6000));
+    if (args.Contains("--glued")) RunGlued(engine, target, Arg("--max", 2000));
+    else if (args.Contains("--sweep")) RunSweep(engine, target, Arg("--max", 15000), Arg("--n", 6000));
     else RunHeldout(engine, target, Arg("--max", 20000));
 }
 else RunCases(engine, target);
@@ -389,6 +433,7 @@ void RunCases(PredictionEngine eng, string casesPath)
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
     Console.WriteLine($"{cases.Count} curated cases\n");
     var agg = new Dictionary<string, Stat>();
+    var also = new SortedDictionary<string, (int N, int Hit)>(StringComparer.Ordinal);   // 0.10.2: the « also » words, per category
     foreach (var c in cases)
     {
         // empty "typed" = next-word prediction; the list is shown as the bar shows it (elisions with their apostrophe)
@@ -398,7 +443,15 @@ void RunCases(PredictionEngine eng, string casesPath)
         Bump(agg, c.Category, rank, K); Bump(agg, "overall", rank, K);
         var mark = rank == 1 ? "✓1" : rank is > 0 and <= K ? $"✓{rank}" : "✗ ";
         var shown = string.IsNullOrEmpty(c.Typed) ? $"[{c.Context}] ∅" : c.Typed;
-        Console.WriteLine($"  {mark} {shown,-11} → {c.Intended,-12} | {Trunc(string.Join(", ", sugg.Take(K).Select(x => x.Word)), 64)}");
+        string alsoMark = "";
+        if (c.Also is { Length: > 0 } a)
+        {
+            int ra = RankOfCase(sugg, a);
+            var (an, ah) = also.TryGetValue(c.Category, out var v) ? v : (0, 0);
+            also[c.Category] = (an + 1, ah + (ra is > 0 and <= K ? 1 : 0));
+            alsoMark = $"   (also {a}: {(ra is > 0 and <= K ? "✓" + ra : "✗")})";
+        }
+        Console.WriteLine($"  {mark} {shown,-11} → {c.Intended,-12} | {Trunc(string.Join(", ", sugg.Take(K).Select(x => x.Word)), 64)}{alsoMark}");
     }
     Console.WriteLine($"\n=== Quality by category (hit@{K}) ===\n{"category",-14} {"cases",5} {"top1",7} {"hit@" + K,7} {"MRR",7}");
     foreach (var k in agg.Keys.Where(k => k != "overall").OrderBy(k => k).Append("overall"))
@@ -407,6 +460,8 @@ void RunCases(PredictionEngine eng, string casesPath)
         Console.WriteLine($"{k,-14} {s.N,5} {s.Top1 / (double)s.N,7:0.00} {s.Hit / (double)s.N,7:0.00} {s.Mrr / s.N,7:0.00}"
             + (k == "overall" ? "   => " + Grade(agg["overall"]) : ""));
     }
+    foreach (var (cat, (an, ah)) in also)
+        Console.WriteLine(FormattableString.Invariant($"also words ({cat}): hit@{K} {ah}/{an} = {ah / (double)an:0.00}"));
     if (cases.Any(c => c.Category.StartsWith("fautes", StringComparison.Ordinal)))
     {
         var (w2, fa) = PersonalScores(eng, cases);
@@ -422,6 +477,13 @@ void RunHeldout(PredictionEngine eng, string path, int maxWords)
     var n = new long[4]; var t1 = new long[4]; var t3 = new long[4]; var h8 = new long[4]; var mrr = new double[4];
     long tot = 0, cov = 0, words = 0, ksUsed = 0, ksLen = 0;
     long elWords = 0, elUsed = 0, elLen = 0, elTop1 = 0;   // the subset right after an elision (l' d' qu'…), D22
+    long stWords = 0, stUsed = 0, stLen = 0;              // 0.10.2, --keep-case: the words typed at a sentence start
+    // 0.10.2: the elided forms themselves (« j » of « j'ai »: 1-letter tokens, skipped by KSS): their rank as the next word
+    // and with their first letter typed; inside a line (the KSS words' positions) and, apart, as a line's first word
+    var elf = new long[5]; var elStart = new long[3];   // n, next top-1, next hit@8, 1 letter top-1, hit@8; start: n, top-1, hit@8
+    // 0.10.2 --exact-report: the word typed in full (n ✓, in the 8, top-1, rank sum with 26 for « not in the 25 », a bar shown)
+    // and the ✓ words that are a prefix of the target (n, target top-1 off, top-1 with the rule, lost, gained, prefix word top-1)
+    var exw = new long[5]; var exp = new long[6];
     var sw = Stopwatch.StartNew();
     // --dump <file>: one line per evaluated word (index, last 3 context words, the word, letters typed): diff two builds
     using var dump = ArgS("--dump") is { } dp ? new StreamWriter(dp, false, new UTF8Encoding(false)) : null;
@@ -444,11 +506,28 @@ void RunHeldout(PredictionEngine eng, string path, int maxWords)
             starts.Add(keepCase && (toks.Count == 1 || gap.IndexOfAny(new[] { '.', '!', '?', '…' }) >= 0 || !oldStarts && CapitalContext.OpensIn(gap)));
             prevEnd = m.Index + m.Length;
         }
-        for (int j = 1; j < toks.Count; j++)
+        for (int j = 0; j < toks.Count; j++)
         {
             var tgt = toks[j];
             var typedT = typedToks[j];
             bool atStart = starts[j];
+            // 0.10.2: counted before the skips below, so that KSS and the dumps stay byte-comparable
+            if (Elision.IsBare(tgt) && j + 1 < toks.Count && eng.Knows(tgt))
+            {
+                var c0 = toks.GetRange(0, j);
+                // ranked as the bar shows it: the engine may return Lexique's own « l' » row as well as the bare « l »
+                // (Elision.Apply merges them), so the target is its displayed form; spares as the keyboard asks for
+                var shownTgt = Elision.Display(tgt);
+                int Shown(IReadOnlyList<Suggestion> s) => RankOf(Elision.Apply(s).Take(8).ToList(), shownTgt);
+                int r1 = Shown(eng.Predict(typedT.Substring(0, 1), c0, 11, atStart || j == 0));
+                if (j == 0) { elStart[0]++; if (r1 == 1) elStart[1]++; if (r1 is > 0 and <= 8) elStart[2]++; }
+                else
+                {
+                    int r0 = Shown(eng.PredictNext(c0, 11));
+                    elf[0]++; if (r0 == 1) elf[1]++; if (r0 is > 0 and <= 8) elf[2]++; if (r1 == 1) elf[3]++; if (r1 is > 0 and <= 8) elf[4]++;
+                }
+            }
+            if (j == 0) continue;
             if (tgt.Length < 2) continue;
             tot++;
             // plan 10C: with --keep-case a capitalised word the names pack knows (« Paris », « Emma ») is predictable too
@@ -457,6 +536,7 @@ void RunHeldout(PredictionEngine eng, string path, int maxWords)
                 // --oov-typed: a word the engine cannot propose costs all its letters (same words with and without a list)
                 foreach (var p in P) if (p <= tgt.Length) n[p]++;
                 ksUsed += tgt.Length; ksLen += tgt.Length;
+                if (keepCase && atStart) { stWords++; stUsed += tgt.Length; stLen += tgt.Length; }
                 if (++words >= maxWords) goto done;
                 continue;
             }
@@ -477,8 +557,10 @@ void RunHeldout(PredictionEngine eng, string path, int maxWords)
                 if (sugg.Count > 0 && Eq(sugg[0].Word, tgt)) { used = p; break; }
             }
             ksUsed += used; ksLen += tgt.Length;
+            if (keepCase && atStart) { stWords++; stUsed += used; stLen += tgt.Length; }
             dump?.WriteLine($"{words}	{string.Join(" ", ctx.Skip(Math.Max(0, ctx.Count - 3)))}	{typedT}	{used}");
             if (Elision.IsBare(ctx[^1])) { elWords++; elUsed += used; elLen += tgt.Length; if (used <= 1) elTop1++; }
+            if (exactReport) ExactReport(eng, ctx, tgt, typedT, atStart, exw, exp);
             if (++words >= maxWords) goto done;
         }
     }
@@ -491,13 +573,124 @@ done:
             Console.WriteLine($"{(p == 0 ? "next" : p + " letter"),-8} {t1[p] / (double)n[p],7:0.000} {t3[p] / (double)n[p],7:0.000} {h8[p] / (double)n[p],7:0.000} {mrr[p] / n[p],7:0.000}");
     Console.WriteLine($"\nkeystroke savings (KSS): {100.0 * (1.0 - ksUsed / (double)ksLen):0.0}%   " +
                       $"(typed {ksUsed} of {ksLen} letters to reach top-1)");
+    if (keepCase && stLen > 0)
+        Console.WriteLine($"  sentence-start words: {stWords}, KSS {100.0 * (1.0 - stUsed / (double)stLen):0.00}% (typed {stUsed} of {stLen})");
+    if (elf[0] > 0)
+        Console.WriteLine(FormattableString.Invariant($"  elided forms: {elf[0]}, next top-1/hit@8 {elf[1] / (double)elf[0]:0.000}/{elf[2] / (double)elf[0]:0.000}, 1 letter top-1/hit@8 {elf[3] / (double)elf[0]:0.000}/{elf[4] / (double)elf[0]:0.000}"));
+    if (elStart[0] > 0)
+        Console.WriteLine(FormattableString.Invariant($"  elided forms as a line's first word: {elStart[0]}, 1 letter top-1/hit@8 {elStart[1] / (double)elStart[0]:0.000}/{elStart[2] / (double)elStart[0]:0.000}"));
     if (elLen > 0)
         Console.WriteLine($"  after an elision: {elWords} words, KSS {100.0 * (1.0 - elUsed / (double)elLen):0.0}% " +
                           $"(typed {elUsed} of {elLen}), top-1 within 1 letter {elTop1 / (double)elWords:0.000}");
+    if (exactReport && exw[0] > 0)
+    {
+        Console.WriteLine(FormattableString.Invariant(
+            $"  exact typed word ({eng.ExactTyped}): {exw[0]} words typed in full and ✓, exact-present@8 {exw[1] / (double)exw[0]:0.0000}, exact-top1 {exw[2] / (double)exw[0]:0.000}, mean rank {exw[3] / (double)exw[0]:0.00}, a bar shown {exw[4] / (double)exw[0]:0.0000}"));
+        if (exp[0] > 0)
+            Console.WriteLine(FormattableString.Invariant(
+                $"  prefix words (a shorter ✓ word typed, « mai » of « maison »): {exp[0]}, target top-1 off {exp[1] / (double)exp[0]:0.000} -> {eng.ExactTyped} {exp[2] / (double)exp[0]:0.000} (lost {exp[3]}, gained {exp[4]}), the prefix word itself top-1 {exp[5] / (double)exp[0]:0.000}"));
+    }
+}
+
+// 0.10.2 --exact-report: one held-out word. Extra queries only (KSS and the dumps unchanged); the « off » queries switch the
+// rule off for one call and back
+static void ExactReport(PredictionEngine eng, List<string> ctx, string tgt, string typedT, bool atStart, long[] exw, long[] exp)
+{
+    if (eng.KnowsForMark(typedT, atStart))
+    {
+        var s = eng.Predict(typedT, ctx, 25, atStart);
+        int r = RankOf(s, tgt);
+        exw[0]++; if (r is > 0 and <= 8) exw[1]++; if (r == 1) exw[2]++; exw[3] += r > 0 ? r : 26; if (s.Count > 0) exw[4]++;
+    }
+    var mode = eng.ExactTyped;
+    for (int p = 2; p < Math.Min(typedT.Length, 9); p++)
+    {
+        var pre = typedT.Substring(0, p);
+        if (!eng.KnowsForMark(pre, atStart)) continue;
+        var on = eng.Predict(pre, ctx, 1, atStart);
+        eng.ExactTyped = ExactTypedMode.Off;
+        IReadOnlyList<Suggestion> off;
+        try { off = eng.Predict(pre, ctx, 1, atStart); } finally { eng.ExactTyped = mode; }
+        bool t0 = off.Count > 0 && Eq(off[0].Word, tgt), t1 = on.Count > 0 && Eq(on[0].Word, tgt);
+        exp[0]++; if (t0) exp[1]++; if (t1) exp[2]++; if (t0 && !t1) exp[3]++; if (t1 && !t0) exp[4]++;
+        if (on.Count > 0 && Eq(on[0].Word, pre)) exp[5]++;
+    }
+}
+
+// ------------------------------------------------------------------ 0.10.2: glued words (plan glued-words.md)
+// --glued: every elided pair of the held-out text (« t'aime », « l'école », not after a letter or « - »: no « aujourd'hui »,
+// « a-t-il ») whose word the lexicon knows, typed glued with its own letters and, apart, without accents; the context is the
+// line's words before it (a line start is a sentence start). Measured: the joined form's rank in the bar (as Elision.Apply
+// shows it) at full length and at 3 letters, the ≈ check of the glued word (≈, joined form among the candidates), and the ≈
+// list's top-1 in the Check order vs ordered by RankCorrections with the context
+void RunGlued(PredictionEngine eng, string path, int max)
+{
+    var rx = new Regex(@"(?<![a-zà-ÿœ\-])(jusqu|lorsqu|puisqu|qu|[ldjmnstc])['’]([a-zà-ÿœ]+)", RegexOptions.Compiled);
+    var tok = new Regex("[a-zà-ÿœ]+", RegexOptions.Compiled);
+    // per variant (0 glued, 1 without accents): n, full top-1, full hit@8, 3 letters top-1, 3 letters hit@8, ≈, among,
+    // list top-1 (Check order), list top-1 (with context), n with ≈ among (the list's denominator)
+    var st = new long[2, 10];
+    var byBare = new SortedDictionary<string, long[]>(StringComparer.Ordinal);   // glued variant: n, full hit@8, among
+    long pairs = 0;
+    double rankMs = 0; long rankN = 0;
+    var sw = Stopwatch.StartNew();
+    foreach (var line in File.ReadLines(path))
+    {
+        var low = line.ToLowerInvariant();
+        foreach (Match m in rx.Matches(low))
+        {
+            var bare = m.Groups[1].Value;
+            var word = TokenFold.Fold(m.Groups[2].Value);
+            if (!eng.Knows(word)) continue;
+            var joined = Elision.Join(bare, word);
+            var ctx = Tokens(tok, low[..m.Index]);
+            bool atStart = ctx.Count == 0;
+            var glued = bare + m.Groups[2].Value;
+            var plain = PhoneticKey.StripLower(glued);
+            if (!byBare.TryGetValue(bare, out var bb)) byBare[bare] = bb = new long[3];
+            bb[0]++;
+            for (int v = 0; v < 2; v++)
+            {
+                var typed = v == 0 ? glued : plain;
+                if (v == 1 && typed == glued) continue;   // no accent to strip
+                int Rank(string t) => RankOf(Elision.Apply(eng.Predict(t, ctx, 11, atStart)).Take(8).ToList(), joined);
+                int rf = Rank(typed), r3 = typed.Length > 3 ? Rank(typed[..3]) : rf;
+                st[v, 0]++; if (rf == 1) st[v, 1]++; if (rf is > 0 and <= 8) st[v, 2]++; if (r3 == 1) st[v, 3]++; if (r3 is > 0 and <= 8) st[v, 4]++;
+                var chk = eng.Check(typed);
+                bool among = chk.Status == SpellingStatus.SoundsLike && chk.Candidates.Contains(joined, StringComparer.Ordinal);
+                if (chk.Status == SpellingStatus.SoundsLike) st[v, 5]++;
+                if (among)
+                {
+                    st[v, 6]++; st[v, 9]++;
+                    if (chk.Candidates[0] == joined) st[v, 7]++;
+                    long t0 = Stopwatch.GetTimestamp();
+                    var ranked = eng.RankCorrections(chk.Candidates, ctx, typed);
+                    rankMs += (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency; rankN++;
+                    if (ranked[0] == joined) st[v, 8]++;
+                }
+                if (v == 0) { if (rf is > 0 and <= 8) bb[1]++; if (among) bb[2]++; }
+            }
+            if (++pairs >= max) goto done;
+        }
+    }
+done:
+    sw.Stop();
+    Console.WriteLine($"glued pairs: {pairs} (from {Path.GetFileName(path)}), {sw.ElapsedMilliseconds} ms\n");
+    Console.WriteLine($"{"typed",-16} {"n",5} {"full top1",10} {"full hit@8",11} {"3 top1",7} {"3 hit@8",8} {"≈",7} {"among",7} {"list top1 freq",15} {"ctx",6}");
+    for (int v = 0; v < 2; v++)
+    {
+        double n = Math.Max(1, st[v, 0]), a = Math.Max(1, st[v, 9]);
+        Console.WriteLine(FormattableString.Invariant(
+            $"{(v == 0 ? "glued" : "without accents"),-16} {st[v, 0],5} {st[v, 1] / n,10:0.000} {st[v, 2] / n,11:0.000} {st[v, 3] / n,7:0.000} {st[v, 4] / n,8:0.000} {st[v, 5] / n,7:0.000} {st[v, 6] / n,7:0.000} {st[v, 7] / a,15:0.000} {st[v, 8] / a,6:0.000}"));
+    }
+    Console.WriteLine("\nper bare form (glued): n, full hit@8, among");
+    foreach (var (b, a) in byBare)
+        Console.WriteLine(FormattableString.Invariant($"  {b + "'",-8} {a[0],5} {a[1] / (double)Math.Max(1, a[0]),7:0.000} {a[2] / (double)Math.Max(1, a[0]),7:0.000}"));
+    if (rankN > 0) Console.WriteLine(FormattableString.Invariant($"RankCorrections: {rankN} lists, mean {rankMs / rankN:0.000} ms"));
 }
 
 // ------------------------------------------------------------------ plan 10B: spelling indicator
-// spelling-cases.json: [ { cat, text, expect: known|sounds|unknown|none|notred|notknown, target? } ]. Gates (plan 10B): no correct
+// spelling-cases.json: [ { cat, text, expect: known|sounds|unknown|none|notred|notknown|nononsense, target?, among? } ]. Gates (plan 10B): no correct
 // lexicon word red; SoundsLike recall on the phonetic misspellings >= 0.8; numbers, acronyms, names, elisions, hyphenated
 // words and punctuation never red wrongly. The typed word is never printed by the app; here the cases are ours.
 void RunSpelling(PredictionEngine eng, string path)
@@ -509,6 +702,10 @@ void RunSpelling(PredictionEngine eng, string path)
     var misses = new List<string>();
     var innerMarks = new int[4];
     int names = 0, namesKnown = 0, namesSounds = 0, starts = 0, startSounds = 0, startRed = 0;
+    // 0.10.2 (glued words): the « glued » category (≈, the joined form among the candidates), and the ≈ list's top-1 for every
+    // case with an intended correction among the candidates: the Check order vs ordered with the words before (RankCorrections)
+    int glued = 0, gluedSounds = 0, gluedAmong = 0, listN = 0, listFreq = 0, listCtx = 0;
+    var tokRx = new Regex("[a-zà-ÿœ]+", RegexOptions.Compiled);
     foreach (var c in cases)
     {
         // every finished word along the text is judged as the keyboard shows it while typing (« www. » before « ecole »…);
@@ -535,6 +732,8 @@ void RunSpelling(PredictionEngine eng, string path)
             "unknown" => mark == SpellingMark.Unknown,
             "none" => mark == SpellingMark.None,
             "notknown" => mark != SpellingMark.Known,   // 0.8.3: a lexicon form the spelling reference does not have (« yeah »)
+            // 0.10.2 review (glued-neg): whatever the mark, no nonsense joined form among the ≈ candidates (« sai » → s'e)
+            "nononsense" => !chk.Candidates.Any(NonsenseJoined),
             _ => mark != SpellingMark.Unknown,   // notred
         };
         if (!byCat.TryGetValue(c.Cat, out var a)) byCat[c.Cat] = a = new int[6];
@@ -546,6 +745,20 @@ void RunSpelling(PredictionEngine eng, string path)
         // plan 10C: names (with the pack: ✓, never ≈ nor ?) and misspellings at a sentence start (« Maizon » ≈ maison)
         if (c.Cat is "name" or "name-pack") { names++; if (mark == SpellingMark.Known) namesKnown++; if (mark == SpellingMark.SoundsLike) namesSounds++; }
         if (c.Cat == "start-fault") { starts++; if (mark == SpellingMark.SoundsLike) startSounds++; if (mark == SpellingMark.Unknown) startRed++; }
+        if (c.Cat == "glued")
+        {
+            glued++;
+            if (mark == SpellingMark.SoundsLike) gluedSounds++;
+            if (mark == SpellingMark.SoundsLike && c.Among != null && chk.Candidates.Contains(c.Among, StringComparer.Ordinal)) gluedAmong++;
+        }
+        if (mark == SpellingMark.SoundsLike && (c.Target ?? c.Among) is { } want && chk.Candidates.Contains(want, StringComparer.Ordinal) && w is { } lw)
+        {
+            var before = Tokens(tokRx, c.Text);
+            if (before.Count > 0) before.RemoveAt(before.Count - 1);
+            listN++;
+            if (chk.Candidates[0] == want) listFreq++;
+            if (eng.RankCorrections(chk.Candidates, before, lw.Word)[0] == want) listCtx++;
+        }
         if (c.Cat == "phonetic")
         {
             phon++;
@@ -588,6 +801,10 @@ void RunSpelling(PredictionEngine eng, string path)
     double mean = times.Count == 0 ? 0 : times.Average(), p99 = times.Count == 0 ? 0 : times[(int)(times.Count * 0.99)], worst = times.Count == 0 ? 0 : times[^1];
     Console.WriteLine(FormattableString.Invariant($"\ngates: wrong reds {badRed} (target 0); SoundsLike recall on phonetic misspellings {phonSounds}/{phon} = {phonSounds / (double)Math.Max(1, phon):0.000} (target >= 0.8; {phonSounds}/{phon - phonKnown} = {phonSounds / (double)Math.Max(1, phon - phonKnown):0.000} without the {phonKnown} that are lexicon forms), intended word first {phonFirst}/{phon}, among the candidates {phonAmong}/{phon}"));
     Console.WriteLine(FormattableString.Invariant($"names (plan 10C): {names} cases, ✓ {namesKnown}, ≈ {namesSounds} (target 0 with the pack); sentence-start misspellings: {startSounds}/{starts} ≈ = recall {startSounds / (double)Math.Max(1, starts):0.000}, red {startRed} (a capitalised word is never red)"));
+    if (glued > 0)
+        Console.WriteLine(FormattableString.Invariant($"glued words (0.10.2): {glued} cases, ≈ {gluedSounds}/{glued} = {gluedSounds / (double)glued:0.000}, joined form among the candidates {gluedAmong}/{glued} = {gluedAmong / (double)glued:0.000}"));
+    if (listN > 0)
+        Console.WriteLine(FormattableString.Invariant($"≈ list top-1 (the intended correction, {listN} lists): Check order {listFreq}/{listN} = {listFreq / (double)listN:0.000}, with the words before {listCtx}/{listN} = {listCtx / (double)listN:0.000}"));
     Console.WriteLine(FormattableString.Invariant($"every finished word before the last: {inner} judged (✓ {innerMarks[1]}, ≈ {innerMarks[2]}, ? {innerMarks[3]}, none {innerMarks[0]}); wrong reds there {innerRed} (target 0)"));
     Console.WriteLine(FormattableString.Invariant($"Check: mean {mean * 1000:0.0} µs, p99 {p99 * 1000:0.0} µs, max {worst:0.000} ms over {times.Count} calls; {over1} calls > 1 ms; GC during the loop gen0 {dg0} gen1 {dg1} gen2 {dg2}; {alloc / (double)Math.Max(1, times.Count):0} bytes allocated per call (timing list included)"));
 }
@@ -598,6 +815,12 @@ static int RankOf(IReadOnlyList<Suggestion> s, string word)
 // a curated case typed at a sentence start: no context, or a context ending with . ! ? …
 static bool AtStart(string? context) => context is null || context.TrimEnd().Length == 0 || ".!?…".IndexOf(context.TrimEnd()[^1]) >= 0;
 static bool Eq(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+// 0.10.2 review: a joined form no French text writes — a one-letter main word but a / à / y, or « au » / « aux » after a bare
+// form that is not qu' jusqu' lorsqu' puisqu'
+static bool NonsenseJoined(string w) =>
+    Elision.IsJoined(w, out var bare, out var main) &&
+    (main.Length == 1 && main.ToLowerInvariant() is not ("a" or "à" or "y") ||
+     main.ToLowerInvariant() is "au" or "aux" && !bare.ToLowerInvariant().EndsWith("qu", StringComparison.Ordinal));
 // curated cases: an intended word with a capital (a personal name, plan 10 Q13) must come with it
 static int RankOfCase(IReadOnlyList<Suggestion> s, string word)
 {
@@ -611,8 +834,11 @@ static string Grade(Stat s)
 { double hit = s.Hit / (double)s.N, top1 = s.Top1 / (double)s.N; return hit >= 0.85 && top1 >= 0.55 ? "GOOD" : hit >= 0.65 ? "FAIR" : "POOR"; }
 static string Trunc(string s, int n) => s.Length <= n ? s : s[..n] + "…";
 
-record Case(string Category, string? Context, string Typed, string Intended);
-record SpellCase(string Cat, string Text, string Expect, string? Target);
+/// <param name="Also">0.10.2: a second word that must be in the 8 as well (exact-not-first: the typed word behind the
+/// agreeing homophone).</param>
+record Case(string Category, string? Context, string Typed, string Intended, string? Also = null);
+/// <param name="Among">0.10.2 (glued words): a correction that must be among the ≈ candidates (not necessarily first).</param>
+record SpellCase(string Cat, string Text, string Expect, string? Target, string? Among = null);
 struct Stat
 {
     public int N, Top1, Hit; public double Mrr;

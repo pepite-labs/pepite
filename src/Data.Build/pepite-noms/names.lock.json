@@ -2,7 +2,7 @@
   "comment": "Inputs of the « Noms propres » pack, pinned by SHA-256 (build_names.py fetch refuses a mismatch). A null sha256 is pinned once by « fetch --pin-new » (first edition, or a new input after review); the Wikidata / Commons snapshots are re-made only by the deliberate « snapshot » step, which records their new SHA-256 here.",
   "pack": {
     "id": "pepite-noms",
-    "edition": "2026.1",
+    "edition": "2026.2",
     "titre": "Noms propres (données ouvertes)",
     "licence": "CC BY 4.0",
     "licence_url": "https://creativecommons.org/licenses/by/4.0/deed.fr"

@@ -1,6 +1,7 @@
 """Unit tests of build_help_site.py (plan 13, A10; stdlib only), on the real help and texts of the repository:
 python -I -m unittest discover -s installer/tests -p test_build_help_site.py"""
 import io
+import json
 import os
 import shutil
 import sys
@@ -18,7 +19,8 @@ AIDE = os.path.join(REPO, "aide")
 FONTS = {"Lexend": ["Lexend-Regular.ttf", "Lexend-SemiBold.ttf"], "Andika": ["Andika-Regular.ttf", "Andika-SemiBold.ttf"],
          "OpenDyslexic": ["OpenDyslexic-Regular.otf", "OpenDyslexic-Bold.otf"]}
 SOURCE_FILES = ("THIRD-PARTY-NOTICES.txt", "COPYING", "installer/DEPLOIEMENT.txt", "installer/LISEZ-MOI.txt.in",
-                "installer/notes/credit-pierre.txt", "src/Data.Build/voices.json")
+                "installer/notes/credit-pierre.txt", "installer/notes/attestation.txt", "src/Data.Build/voices.json",
+                "src/Data.Build/data-release.lock.json")
 
 
 class BuildHelpSiteTest(unittest.TestCase):
@@ -82,6 +84,11 @@ class BuildHelpSiteTest(unittest.TestCase):
             self.assertNotIn("\r\r", lisez)
             self.assertIn("\r\n", lisez)
         self.assertIn("NOUVEAU DANS LA 0.9.3\r\n", self.read(out, "0.9", "LISEZ-MOI.txt"))
+        with open(os.path.join(REPO, "src", "Data.Build", "data-release.lock.json"), encoding="utf-8") as h:
+            tag = json.load(h)["tag"]
+        self.assertIn("/releases/tag/%s\r\n" % tag, self.read(out, self.minor, "LISEZ-MOI.txt"))   # the data link
+        version = bs.app_version(REPO)                                     # the attestation check of a public build
+        self.assertIn("--source-ref refs/tags/v%s\r\n" % version, self.read(out, self.minor, "LISEZ-MOI.txt"))
         page = self.read(out, "0.9", "aide", "index.html")
         self.assertIn("Aide en ligne de Pépite 0.9 ", page)
         self.assertIn(help_lint.CSP, page)                                 # the CSP is untouched
@@ -105,6 +112,14 @@ class BuildHelpSiteTest(unittest.TestCase):
                                  "--replace")
         self.assertEqual(rc, 1)
         self.assertIn("COPYING missing", text)
+
+    def test_bad_data_tag_refused(self):
+        src = self.source_tree("t", "0.10.7")
+        with open(os.path.join(src, "src", "Data.Build", "data-release.lock.json"), "w", encoding="utf-8") as h:
+            json.dump({"tag": "data-latest"}, h)
+        with self.assertRaises(bs.SiteError) as e:
+            bs.lisez_moi(src)
+        self.assertIn("data-YYYY.MM", str(e.exception))
 
     def test_transform_needs_its_markers(self):
         with self.assertRaises(bs.SiteError):

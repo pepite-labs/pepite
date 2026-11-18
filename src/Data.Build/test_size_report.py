@@ -79,8 +79,8 @@ class InstallerRowsTest(unittest.TestCase):
     def test_components_skip_pdbs_and_split_voices(self):
         c = sr.components(self.rel)
         cards = [len('{"licence": "CC", "public": true}'), len('{"licence": "CC", "public": false}')]
-        self.assertEqual(c["app"], 108)
-        self.assertEqual(c["images"], 42)
+        self.assertEqual(c["app"], 110)              # ARASAAC-LICENCE.txt with app (0.10.2)
+        self.assertEqual(c["images"], 40)
         self.assertEqual(c["voix\\siwis"], 300 + cards[0])
         self.assertEqual(c["voix\\pierre"], 500 + cards[1])
 

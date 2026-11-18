@@ -380,6 +380,27 @@ public class Release083Tests : IDisposable
         Assert.Equal("MAISON", SoundAlikeCorrection.CasedLike("maison", "MAIZON"));
         Assert.Equal("Maison", SoundAlikeCorrection.CasedLike("maison", "Maizon"));
         Assert.Equal("Léa", SoundAlikeCorrection.CasedLike("Léa", "léa"));   // a name keeps its capital
+        // 0.10.2 (glued words): a joined correction takes the capital of the glued word (« Jai » → « J'ai », « JAI » → « J'AI »)
+        Assert.Equal("J'ai", SoundAlikeCorrection.CasedLike("j'ai", "Jai"));
+        Assert.Equal("J’ai", SoundAlikeCorrection.CasedLike("j’ai", "Jai"));
+        Assert.Equal("J'AI", SoundAlikeCorrection.CasedLike("j'ai", "JAI"));
+        Assert.Equal("l'école", SoundAlikeCorrection.CasedLike("l'école", "lécole"));
+    }
+
+    /// <summary>0.10.2 (glued words plan, owner Q2): the ≈ list is ordered by the words before the finished word: the tracker's
+    /// context once a space finished « tème » ends with it, and it is left out.</summary>
+    [Fact]
+    public void The_List_Is_Ranked_With_The_Words_Before_The_Finished_Word()
+    {
+        var t = new WordTracker();
+        foreach (var c in "et je tème ") t.Type(c);
+        Assert.Equal(new[] { "et", "je" }, KeyboardPolicy.WordsBefore(t.Context, t.Finished!.Value.Word).ToArray());
+        Assert.Equal(new[] { "et", "je" }, KeyboardPolicy.WordsBefore(new[] { "et", "je", "Tème" }, "tème").ToArray());
+        Assert.Empty(KeyboardPolicy.WordsBefore(Array.Empty<string>(), "tème"));
+        t.Reset();
+        foreach (var c in "je tème.") t.Type(c);   // a sentence end cleared the context: nothing before
+        Assert.Empty(KeyboardPolicy.WordsBefore(t.Context, t.Finished!.Value.Word));
+        Assert.Equal(new[] { "le" }, KeyboardPolicy.WordsBefore(new[] { "le" }, "tème").ToArray());   // not the word: as it is
     }
 
     [Fact]

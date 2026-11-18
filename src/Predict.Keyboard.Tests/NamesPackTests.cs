@@ -265,6 +265,75 @@ public class NamesPackTests : IDisposable
         Assert.Equal(2, d.Noms[0].Niveau);
     }
 
+    // ------------------------------------------------------------------ 0.10.2: adults' first names (owner 2026-11-17)
+
+    private NamesLexicon AdultLex() => Lex(N("Emma", 0.8), N("Rodolphe", 0.3, 2), N("Rodrigue", 0.015, 2), N("Zoltan", 0.2, 2),
+                                           Restricted("Adolf Hitler"), N("Adolphe", 0.2, 2));
+
+    [Fact]
+    public void Recognised_Tier_From_Four_Letters_Without_A_Capital()
+    {
+        _e.Names = AdultLex();
+        Assert.Contains("Rodolphe", W(_e.Predict("rodo", new[] { "avec" }, 8)));                      // lowercase, 4 letters
+        Assert.DoesNotContain("Rodolphe", W(_e.Predict("rod", new[] { "avec" }, 8)));                 // 3 letters: not yet
+        Assert.Contains("Rodolphe", W(_e.Predict("Rodo", null, 8, sentenceStart: true)));             // a sentence start
+        Assert.Contains("Rodolphe", W(_e.Predict("rodol", null, 8, sentenceStart: true)));
+        Assert.Contains("Zoltan", W(_e.Predict("zolt", new[] { "avec" }, 8)));
+        Assert.True(_e.Predict("rodo", new[] { "avec" }, 8).First(s => s.Word == "Rodolphe").Name);
+    }
+
+    [Fact]
+    public void A_Very_Rare_Recognised_Name_Still_Needs_A_Capital()
+    {
+        _e.Names = AdultLex();   // Rodrigue: rang 0.015, below the 0.02 floor
+        Assert.DoesNotContain("Rodrigue", W(_e.Predict("rodr", new[] { "avec" }, 8)));
+        Assert.DoesNotContain("Rodrigue", W(_e.Predict("Rodr", null, 8, sentenceStart: true)));
+        Assert.Contains("Rodrigue", W(_e.Predict("Rodr", new[] { "avec" }, 8)));                     // a capital inside a sentence
+        _e.NamesRecognisedFloor = 0.01;
+        try { Assert.Contains("Rodrigue", W(_e.Predict("rodr", new[] { "avec" }, 8))); }
+        finally { _e.NamesRecognisedFloor = 0.02; }
+    }
+
+    [Fact]
+    public void Restricted_Figures_Never_Without_A_Capital()
+    {
+        _e.Names = AdultLex();
+        foreach (var t in new[] { "adol", "adolf", "hitler" })
+        {
+            Assert.DoesNotContain(_e.Predict(t, new[] { "avec" }, 8), s => s.Word is "Adolf Hitler" or "Hitler");
+            var cap = char.ToUpperInvariant(t[0]) + t[1..];
+            Assert.DoesNotContain(_e.Predict(cap, null, 8, sentenceStart: true), s => s.Word is "Adolf Hitler" or "Hitler");
+        }
+        Assert.Contains("Adolphe", W(_e.Predict("adol", new[] { "avec" }, 8)));                        // the first name is offered
+        Assert.Contains("Adolf Hitler", W(_e.Predict("Adol", new[] { "avec" }, 8)));                   // a capital inside a sentence
+    }
+
+    [Fact]
+    public void Recognised_From_99_Gives_The_Old_Results()
+    {
+        var probes = new[] { ("rodo", false), ("Rodo", true), ("rodol", true), ("zolt", false), ("Zolt", false), ("adol", false),
+                             ("Adol", true), ("emma", false), ("Rodr", false), ("pierr", false) };
+        _e.Names = AdultLex();
+        _e.NamesRecognisedFrom = 99;
+        try
+        {
+            var old = probes.Select(p => _e.Predict(p.Item1, new[] { "avec" }, 8, p.Item2).Select(s => (s.Word, s.Score, s.Name)).ToList()).ToList();
+            Assert.DoesNotContain(old[0], s => s.Word == "Rodolphe");                                // the 0.10.1 behaviour
+            Assert.DoesNotContain(old[1], s => s.Word == "Rodolphe");
+            // the same as a pack whose recognised tier is never searched without a capital: the tier-1 names alone
+            var tier1 = Lex(N("Emma", 0.8));
+            for (int i = 0; i < probes.Length; i++)
+            {
+                if (probes[i].Item1[0] is var c && char.IsUpper(c) && !probes[i].Item2) continue;   // a capital inside a sentence: tier 2 as before
+                _e.Names = tier1;
+                var t1 = _e.Predict(probes[i].Item1, new[] { "avec" }, 8, probes[i].Item2).Select(s => (s.Word, s.Score, s.Name)).ToList();
+                Assert.Equal(t1, old[i]);
+                _e.Names = AdultLex();
+            }
+        }
+        finally { _e.NamesRecognisedFrom = 4; }
+    }
+
     [Fact]
     public void D2_A_Very_Rare_Name_That_Sounds_Like_A_Word_Is_Approx_At_A_Sentence_Start_Only()
     {

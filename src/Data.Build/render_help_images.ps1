@@ -13,7 +13,7 @@
   dotnet build Predict.Keyboard -c Release); the PNGs are small and committed with the help. One render at a time.
 #>
 param(
-    [string]$Exe = (Join-Path $PSScriptRoot '..\Predict.Keyboard\bin\Release\net6.0-windows\Pepite.exe'),
+    [string]$Exe = (Join-Path $PSScriptRoot '..\Predict.Keyboard\bin\Release\net10.0-windows\Pepite.exe'),
     [string]$Out = (Join-Path $PSScriptRoot '..\..\aide\img'),
     [int]$Dpi = 144
 )

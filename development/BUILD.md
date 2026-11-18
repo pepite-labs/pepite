@@ -2,11 +2,18 @@
 
 ## Prerequisites
 
-- **.NET SDK** — exactly the version pinned in [`global.json`](../global.json) (6.0.424, `rollForward: disable`: the
-  SDK patch fixes the bundled runtime packs of a self-contained publish, 6.0.32 here, which THIRD-PARTY-NOTICES.txt
+- **.NET SDK** — exactly the version pinned in [`global.json`](../global.json) (10.0.115, `rollForward: disable`: the
+  SDK patch fixes the bundled runtime packs of a self-contained publish, 10.0.15 here, which THIRD-PARTY-NOTICES.txt
   names; the CI installs the same SDK and checks `dotnet --version`, so a local rebuild matches the CI one).
-  The projects target `net6.0` / `net6.0-windows`. On a PC that has only a newer .NET *runtime* (e.g. 8.0), set
-  `DOTNET_ROLL_FORWARD=Major` so the 6.0-built tools and tests run on it.
+  The projects target `net10.0` / `net10.0-windows` (.NET 10 LTS, since 0.10.2). A portable SDK unpacked in a folder
+  works too: call its `dotnet.exe` by path, or put that folder first in `PATH` for the session (`build_installer.ps1`
+  calls `dotnet` from `PATH`). No `DOTNET_ROLL_FORWARD` is needed any more. The framework-dependent exes it builds
+  (`Predict.Cli.exe`, `Predict.Eval.exe`, the `Pepite.exe` of a dev build that `render_help_images.ps1` starts) do not
+  search `PATH` for the runtime: with a portable SDK also set `DOTNET_ROOT` to that folder for the session, or run
+  `dotnet <the .dll>` instead (`dotnet run` works as is).
+  Control-flow Enforcement Technology (CET shadow stacks): .NET 10 marks the app CET-compatible by default and we keep
+  that default. Fallback if a third-party DLL loaded in the process (a voice engine, an injected hook) crashes on a
+  CET-enabled CPU: `<CETCompat>false</CETCompat>` in `Predict.Keyboard.csproj`, then rebuild.
 - **Python 3.12** (standard library only for the build and test scripts — uses `sqlite3`); run scripts with `python -I`.
 - **Lexique 3.83** — only to rebuild the word base (maintainers, § 1): `Lexique383.tsv` from <http://www.lexique.org>
   (CC BY-SA 4.0). Not committed.
@@ -16,7 +23,7 @@
 
 The word base and the other data are **provided already built** (owner decision 2026-11-16): a normal build — a
 developer, the GitHub Actions « app » workflow — does not rebuild them. One command downloads the data release
-(`src\Data.Build\data-release.lock.json`: GitHub Release `data-2026.11` of `pepite-labs/pepite`), checks every asset's
+(`src\Data.Build\data-release.lock.json`: GitHub Release `data-2026.11.2` of `pepite-labs/pepite`), checks every asset's
 SHA-256 and size, unpacks it into `src\Data.Build\out\` and checks the word base with `verify_data_pack.py`:
 
 ```
@@ -27,7 +34,7 @@ python -I src\Data.Build\fetch_data_release.py --cache <work>\data-cache
 |---|---|---|
 | `pepite-data-2026.11.1.zip` | `prediction.sqlite`, `prediction-SOURCES.txt`, `spelling.sqlite` + `spelling\`, `grammar.sqlite` + `grammar\` | CC BY-SA 4.0 + MPL-2.0 |
 | `pictos-arasaac-2026-11-08.zip` | `pictos.sqlite`, `ARASAAC-LICENCE.txt` | CC BY-NC-SA 4.0 (separate component) |
-| `noms-2026.1.zip` | `noms-pack\noms\` | CC BY 4.0 |
+| `noms-2026.2.zip` | `noms-pack\noms\` | CC BY 4.0 |
 | `fonts-2026.11.zip` | `fonts\` | OFL 1.1 |
 | `espeak-ng-win-x64-724808c5.zip` | `espeak\` | GPL-3.0-or-later |
 | `espeak-ng-<commit>.tar.gz` | kept as a file (the source offer; `build_installer.ps1 -EspeakSourceArchive`) | GPL-3.0-or-later |
@@ -309,6 +316,12 @@ Pepite.exe --speech-bench <outDir> --profile normal --audio device ^
     --sentences development\voice-test\sentences.txt [--volume 30]
 ```
 
+`--sentences` is needed by the default bench and by `--wav` alone: an installed or published copy has no
+`development\voice-test\` (only a build output under `bin\` finds it by itself); without it the bench exits 2 and says
+so in `bench.md` (0.10.2; in the 0.10.1 VM the reason was only in `bench-error.txt`). `--wav … --word`,
+`--wav … --word-items` and `--switch` do not read it. Exit codes: 0 = done, 1 = a gate failed (device audio), 2 = could
+not run (reason in `bench.md`, `bench.log` or `bench-error.txt`).
+
 Options: `--voice siwis|pierre` (default siwis), `--switch` (siwis configured, a preview of pierre, its unload 30 s
 later: switch time and working sets), `--wav <dir> [--items L01,…] [--variant ns,ls,nw]` (each item once, saved as a
 WAV, with the liaison consonant durations in `liaison.json`; the listening page of plan 08b step 7),
@@ -341,6 +354,31 @@ Before uploading, scan the unpacked tree (`export.py … --scan-data <verify-out
 created by the owner (`gh release create data-YYYY.MM`, published, not a pre-release); a published asset is never
 replaced: a new pack is a new tag and a new lock.
 
+**`data-2026.11.2` (0.10.2, made 2026-11-18):** the same eight asset names as `data-2026.11` except `noms-2026.2.zip`
+(replaces `noms-2026.1.zip`). Six assets are **byte-identical** to `data-2026.11` (pepite-data 2026.11.1, pictures,
+fonts, espeak-ng build and source, pierre). Two changed: `noms-2026.2.zip` (`2df79a67…cd5a`, 464 079 bytes; its
+`noms.json` is `54b08005…78fe`; the zip `0f03da2b…8568` of `build_names.py` holds the same files, only its entry date
+differs: 2026-01-01 there, the tag's month here) and `voice-siwis-cf910fb5.zip` (`5de127f0…d90a`: `fetch_voices.py pack
+--voice siwis` again, so its `voice.json` carries `word_carrier` « Le mot : {0}. » and `word_carrier_except` « eu »,
+« les »; `SOURCE.txt` records the new pack date). Its name is unchanged (the name follows the piper-voices revision), so
+an old download cache holding the `data-2026.11` siwis zip fails the SHA-256 check and is fetched again. Checked with
+`fetch_data_release.py --from` (8 × ok, 314 files, data pack 0 problems) and the `Data.Build` Python suite. The
+release command, for the release session — run it **before pushing the commits that pin `data-2026.11.2` / opening
+their PR to `pepite-labs/pepite`**: the `test` job of `app.yml` (every PR and push to `main`) and `pages.yml` fetch
+the tag the lock names, so the release must exist first; `--target main` works without those commits. `--latest`
+follows the `data-2026.11` precedent: the app releases are still pre-releases, which GitHub never marks Latest, so the
+data release keeps that mark (bash, `S` = the staging folder on the work disk; title, body and asset
+list as `data-2026.11`: « Données … », `BUILD-INFO.txt` as notes, the eight lock assets + `SHA256SUMS.txt` +
+`BUILD-INFO.txt`; published, not a pre-release, on `main`):
+
+```
+S=<work>/data-release/data-2026.11.2-local-staging
+(cd "$S" && sha256sum -c --strict SHA256SUMS.txt)
+gh release create data-2026.11.2 --repo pepite-labs/pepite --target main --title "Données 2026.11.2" --latest \
+    --notes-file "$S/BUILD-INFO.txt" "$S"/*.zip "$S"/espeak-ng-*.tar.gz "$S/SHA256SUMS.txt" "$S/BUILD-INFO.txt"
+gh release view data-2026.11.2 --repo pepite-labs/pepite --json tagName,isDraft,isImmutable,assets   # 10 assets, tag set
+```
+
 ## 2. Installer (plan 12, from 0.10.0)
 
 One command builds the installer from a clean checkout with the pinned data of § 1 in `src\Data.Build\out\`
@@ -350,10 +388,10 @@ committed.
 
 ```
 powershell -ExecutionPolicy Bypass -File installer\fetch_innosetup.ps1 -WorkDir <work> -Pin     # once: Inno Setup 7.1.1
-powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.10.1 -WorkDir <work> [-Private] [-VerifyReproducible]
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.10.2 -WorkDir <work> [-Private] [-VerifyReproducible]
 python -I -m unittest discover -s installer\tests -p test_release_lint.py
 # the CI form (plan 13, .github/workflows/app.yml): no word list, no earlier release, the data release's source archive
-powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.10.1 -WorkDir <work> -NoForbiddenList ^
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.10.2 -WorkDir <work> -NoForbiddenList ^
     -OldRelease '' -EspeakSourceArchive <cache>\espeak-ng-<commit>.tar.gz
 ```
 
@@ -367,7 +405,10 @@ powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 
   in the binaries) to `<work>\build\stage-<ver>` → voice packs (a public build removes every `"public": false` pack and
   fails if one remains, D28; `-Private` keeps them and adds the `-test` suffix) → `LISEZ-MOI.txt` from
   `installer\LISEZ-MOI.txt.in` (placeholders `{VERSION}`, `{PRIVE}`, `{SUFFIXE}`, `{NOTES}` = `installer\notes\<ver>.txt`,
-  `{CREDIT_PIERRE}` = `installer\notes\credit-pierre.txt` in private builds) → **release lint** → PDBs to `symbols-<ver>.zip`
+  `{CREDIT_PIERRE}` = `installer\notes\credit-pierre.txt` when pierre ships, `{DONNEES}` = the tag of
+  `data-release.lock.json`, the link of the credits; the text opens with the « préversion non signée » banner and step 1
+  of INSTALLER shows `gh attestation verify … --source-ref refs/tags/v<ver>` (`{ATTESTATION}` =
+  `installer\notes\attestation.txt`, public builds only: a `-Private` build has no attestation)) → **release lint** → PDBs to `symbols-<ver>.zip`
   (not installed) → `files.sha256` (one line per installed file; the installed `prediction.sqlite` must equal the
   source one) → `ISCC.exe installer\pepite.iss` → `size-report.md` (`size_report.py --installer`; `-OldRelease ''` =
   no comparison) → the espeak-ng source archive (`git archive` of the pinned commit, or `-EspeakSourceArchive` = the
@@ -393,7 +434,8 @@ powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 
   is missing; a framework-dependent dev build does not copy them.
 - **Embedded help** (`freeware/aide/`, plan « aide intégrée »): copied by the csproj to `aide\` with the fonts of
   `src/Data.Build/out/fonts` in `aide\fonts\`. Check the pages with `python -I installer\help_lint.py aide` (tests:
-  `python -I -m unittest discover -s installer\tests -p test_help_lint.py`). The bar pictures `aide\img\barre-*.png`
+  `python -I -m unittest discover -s installer\tests -p test_help_lint.py`). The bar pictures `aide\img\barre-*.png` (the real screenshots are
+  `aide\img\capture-*.png`, never redrawn by the script)
   are redrawn by `powershell -File src\Data.Build\render_help_images.ps1` (a Release build with its fonts;
   `Pepite.exe --render-bar --no-pictures`, no hook) after a change of the bar's look; contributor notes in
   `aide\README.md`.
@@ -401,6 +443,37 @@ powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 
   installed-file dates are the commit date (`TouchDate` / `TouchTime`, UTC). Checked on 2026-11-15 with an earlier
   build of the 0.10.0 tree (identical `files.sha256`, byte-identical installer); `-VerifyReproducible` writes
   `reproducibility.txt` next to the installer when it is run.
+- **Preconditions of `build_installer.ps1`** (0.10.2): it stops with a clear message when `git status` fails (not a
+  repository, « dubious ownership », git missing: never read as a clean tree), when `dotnet` is not on `PATH` or does
+  not start as `global.json` asks (it names the `dotnet.exe` it found and its SDKs: put the folder of SDK 10.0.115 first
+  in `PATH`), and when a version variable is set in the environment (`VERSION`, `VersionPrefix`, `VersionSuffix`,
+  `AssemblyVersion`, `FileVersion`, `InformationalVersion`, `PackageVersion`). MSBuild reads every environment variable
+  as a property, names compared without case, so `VERSION` became the `Version` of each project without its own: in
+  0.10.1 the CI's `Predict.Core.dll` said 0.10.1 and a local rebuild 1.0.0. The workflow now passes the version in
+  `PEPITE_VERSION` (checked locally: `VERSION=9.9.9` → `Predict.Core.dll` 9.9.9.0, `PEPITE_VERSION=9.9.9` → 1.0.0.0).
+- **Comparing a CI build with a local rebuild** (plan 13 A8; byte-equal from 0.10.2). The CI publish uses SDK 10.0.115,
+  whose bundled 10.0.15 runtime also runs the compiler, so a host with the same SDK (installed or portable, first in
+  `PATH`; `DOTNET_ROOT` = that folder; no `DOTNET_ROLL_FORWARD`) gives the same compiled bytes. In 0.10.1 the host ran the
+  compiler on another runtime (no 6.0 runtime there) and the PDB / DLL bytes differed. Steps, on the work disk:
+
+  ```
+  git clone --branch v<ver> https://github.com/pepite-labs/pepite <work>\rebuild\src     # a fresh clone of the tag
+  cd <work>\rebuild\src
+  python -I src\Data.Build\fetch_data_release.py --cache <work>\rebuild\data-cache        # the lock's data release
+  powershell -ExecutionPolicy Bypass -File src\Data.Build\stage_vcruntime.ps1
+  powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version <ver> -WorkDir <work>\rebuild ^
+      -OldRelease '' -EspeakSourceArchive <work>\rebuild\data-cache\espeak-ng-<commit>.tar.gz   # full forbidden list
+  gh release download v<ver> --repo pepite-labs/pepite --pattern files.sha256 --pattern BUILD-INFO.txt --dir <work>\rebuild\ci
+  python -I -c "import sys; r=lambda p: dict(l.rstrip('\n').split('  ',1)[::-1] for l in open(p,encoding='utf-8') if l.strip()); a,b=r(sys.argv[1]),r(sys.argv[2]); d=sorted(k for k in a.keys()|b.keys() if a.get(k)!=b.get(k)); print(len(a),len(b),'differ:',len(d)); print('\n'.join(d))" <work>\rebuild\ci\files.sha256 <work>\rebuild\release-<ver>\files.sha256
+  ```
+
+  `files.sha256` lists every installed file (`<sha256>  <path>`), so the comparison is file by file. Expected: no
+  difference except `msvcp140.dll`, `msvcp140_1.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` and
+  `licenses\vcruntime\SOURCE.txt`, which `stage_vcruntime.ps1` takes from the build machine (the runner image's Visual
+  C++ runtime; compare the versions in the two `BUILD-INFO.txt`). Any other line is a finding (0.10.1 had two more,
+  `Pepite.dll` and `Predict.Core.dll`: the version variable and the compiler's runtime above). The installer itself is byte-equal only when `files.sha256` is fully
+  identical (same VC++ runtime, same Inno Setup of `innosetup.lock.json`, same commit date). `-NoForbiddenList` is the
+  CI's switch only: the local rebuild runs the full lint.
 - **The installer script** (`installer\pepite.iss`, GPL-3 « Corresponding Source »): fixed `AppId`
   `{999AA879-43C2-4C22-9785-691AA95A3455}` (never change it; `InstallInfo.AppId` in the app reads the same uninstall
   entry), per-user by default, all-users on demand, Windows 11 x64 only, components `app` (fixed), `images`,
@@ -450,7 +523,6 @@ fonctionne sans Internet. » on every page (style rule appended to `style.css`),
 ## 2b. Try the predictor
 
 ```
-export DOTNET_ROLL_FORWARD=LatestMajor      # only if running net6 apps on the net8 runtime
 dotnet run --project src/Predict.Cli -c Release -- src/Data.Build/out/prediction.sqlite orizon maizon boku
 ```
 

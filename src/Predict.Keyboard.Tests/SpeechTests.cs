@@ -1,3 +1,6 @@
+// xUnit1031: blocking on a task (Wait / Result) is deliberate here: the test checks, synchronously, the state that the
+// app's background write, load or worker leaves behind (no xUnit sync context, so no deadlock)
+#pragma warning disable xUnit1031
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

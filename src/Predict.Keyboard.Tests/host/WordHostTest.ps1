@@ -11,10 +11,9 @@
 # document is closed unsaved; Word is quit only if this script started it; the app (Pepite.exe since 0.6.1,
 # PredictKeyboard.exe before; both accepted, started with --no-welcome) is stopped with
 # --quit (and --exit-after 300 as a backstop), never killed.
-# The host has no Microsoft.WindowsDesktop.App runtime, so a framework-dependent build only shows "You must
-# install .NET": use a SELF-CONTAINED publish and pass the DB explicitly.
-# Usage:  $env:DOTNET_ROLL_FORWARD='Major'
-#         dotnet publish src/Predict.Keyboard -c Release -r win-x64 --self-contained true -o <work>\host-keyboard
+# A framework-dependent build needs the Microsoft.WindowsDesktop.App 10.x runtime installed on the host (otherwise it
+# only shows "You must install .NET"): use a SELF-CONTAINED publish, which carries it, and pass the DB explicitly.
+# Usage:  dotnet publish src/Predict.Keyboard -c Release -r win-x64 --self-contained true -o <work>\host-keyboard
 #         powershell -ExecutionPolicy Bypass -File src\Predict.Keyboard.Tests\host\WordHostTest.ps1 -Exe <work>\host-keyboard\Pepite.exe
 #                    [-Suite plan01|plan04|plan06|plan07|all] [-Only WP4en,WP4fr2] [-OutDir <dir>]
 #         (<work> = a bulk-data folder off the system drive; or set PREDICT_WORK_DIR and omit -Exe / -OutDir)

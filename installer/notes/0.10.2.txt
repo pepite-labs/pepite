@@ -1,0 +1,118 @@
+NOUVEAU DANS LA 0.10.2 : J', M', C', QU' DÈS LA PREMIÈRE LETTRE
+  - En début de phrase, tape « j » : la barre propose aussi « J' »
+    à côté de « je ». De même « m » -> « m' », « c » -> « c' »,
+    « qu » -> « qu' », « ju » -> « jusqu' », « lor » -> « lorsqu' »,
+    « pui » -> « puisqu' ». Après « j' », pas d'espace : la barre
+    propose tout de suite « ai, étais… ».
+  - L'apostrophe suit celle du texte : si le texte écrit déjà « ’ »
+    (apostrophe courbe), Pépite l'utilise aussi ; sinon « ' ».
+
+NOUVEAU DANS LA 0.10.2 : LES PRÉNOMS DES GRANDES PERSONNES
+  - Les 1 000 prénoms les plus portés, toutes générations (Roger,
+    Gérard, Rodolphe, Jean-Pierre…), sont proposés aussi en début
+    de phrase et quand on les tape en minuscules.
+  - Un prénom plus rare (environ 300 personnes ou plus) arrive dès
+    4 lettres, même sans majuscule. Noms propres : édition 2026.2.
+
+NOUVEAU DANS LA 0.10.2 : TON MOT EST TOUJOURS DANS LA BARRE
+  - Quand le mot que tu tapes est bien écrit (le rond ✓), il est
+    toujours dans la barre, au pire à la dernière place : « la mai »
+    -> « mai », « je par » -> « par ». Le choisir ajoute l'espace (et
+    la majuscule en début de phrase).
+
+NOUVEAU DANS LA 0.10.2 : LES MOTS COLLÉS (« JE TÈME » -> « JE T'AIME »)
+  - Quand tu colles deux mots comme tu les entends, la barre propose
+    le mot avec son apostrophe, dans une case verte (« même son ») :
+    « je tème » -> « t'aime », « jai » -> « j'ai », « lécole » ->
+    « l'école », « cest » -> « c'est », « quil » -> « qu'il »,
+    « daccord » -> « d'accord », « jusqua » -> « jusqu'à »,
+    « il ma » -> « m'a ». La case montre l'image du mot principal
+    (« l'école » -> l'image de « école »).
+  - Pépite regarde les mots d'avant : après « je », « t'aime » ;
+    après « le », « thème ».
+  - Un mot collé fini (« lécole␣ ») a le rond bleu ≈ : un clic ou F9
+    propose « l'école », qui remplace le mot (« Jai » -> « J'ai »).
+  - La liste du rond ≈ est maintenant rangée selon les mots d'avant,
+    pour toutes les corrections.
+  - Toutes les apostrophes suivent celle du texte, aussi dans
+    « aujourd'hui » et « quelqu'un ».
+
+NOUVEAU DANS LA 0.10.2 : .NET 10
+  - Pépite utilise maintenant .NET 10, encore suivi par Microsoft. Il
+    quitte .NET 6, qui ne reçoit plus de corrections. Rien ne change
+    pour toi.
+  - Le moteur de base de données (SQLite) est aussi mis à jour : il
+    corrige des failles connues (par ex. CVE-2025-6965).
+
+CORRIGÉ DANS LA 0.10.2
+  - La voix Siwis lit un mot seul dans la tournure « Le mot : … »,
+    comme prévu dans la 0.10.1 (prononciation plus claire, par
+    exemple « papa ») ; « eu » et « les » restent lus seuls.
+
+À TESTER (merci de noter ce qui ne va pas)
+  E1. Dans un texte vide, tape « j » : « J' » est-il proposé ? Après
+      l'avoir choisi, la barre propose-t-elle « ai », « étais »… et
+      le texte devient-il « J'ai » sans espace en trop ?
+  N1. Dans un Bloc-notes vide, tape « Rodol » : « Rodolphe » est-il
+      proposé ? Et « Rog » -> « Roger » ?
+  N2. Tape « avec rodolphe » : la case « Rodolphe » apparaît-elle, et
+      le mot est-il inséré avec sa majuscule ?
+  N3. Après « : », dans le champ du nom de fichier de la fenêtre
+      « Enregistrer sous », et après un saut du curseur, tape
+      « Martine » : « Martine » est-il proposé ?
+  N4. En début de phrase, « Ros » propose-t-il toujours « rose » avec
+      son image ? Et « une ros » -> « rose » en premier ?
+  T1. Tape « la mai » : la case « mai » est-elle visible ? Et « je
+      par » -> « par » ?
+  T2. Dans un texte vide, tape « Rodolphe » : la case « Rodolphe »
+      est-elle là ?
+  T3. Tape « la maison. » : le rond ✓ seul ne fait pas apparaître la
+      barre (elle reste cachée) ?
+  T4. Barre en taille XL avec 8 mots, sur un petit écran : quand le
+      mot tapé est bien écrit (le rond ✓), sa case est-elle visible
+      même si la barre est raccourcie ?
+  G1. Dans le Bloc-notes, tape « je tèm » : la case « t'aime » est-
+      elle là, en vert ? La choisir donne-t-il « je t'aime » suivi
+      d'une espace ? La voix dit-elle « t'aime » d'un seul coup ?
+  G2. En début de texte, tape « Jai » : « J'ai » est-il proposé ?
+  G3. Tape « lécole » puis une espace : le rond ≈ apparaît-il ? F9
+      propose-t-il « l'école », et le choisir remplace-t-il le mot ?
+      La case « l'école » a-t-elle l'image de « école » ?
+  G4. Dans un texte qui écrit déjà « ’ » (apostrophe courbe), « je
+      tèm » donne-t-il « t’aime » avec cette apostrophe ?
+  G5. Tape « a-til » : la barre ne propose jamais « t'il » ?
+  G6. Tape « le tème␣ » puis F9, et « je tème␣ » puis F9 : la liste
+      met-elle « thème » en premier dans le premier cas, « t'aime »
+      dans le second ?
+  G7. Dans Word (si possible) : « je tèm » -> « t'aime », et la
+      correction de « lécole » avec F9.
+  G8. Les mots écrits juste restent en premier : « la dame », « un
+      verre de lait », « il sait » : le mot tapé est-il la première
+      case (pas « d'âme », « l'est », « s'est ») ?
+  G9. Dans un texte qui écrit « ’ », tape « lécole␣ » puis F9 : la
+      liste propose-t-elle « l’école » avec cette apostrophe ? Et en
+      début de texte, « Sai␣ » puis F9 : aucune forme bizarre
+      (« S'e », « C'e ») dans la liste ?
+  R1. Tape longtemps (plusieurs minutes, vite) : la barre suit-elle
+      sans retard, et marche-t-elle encore à la fin ?
+  R2. Choisir un mot avec F1 à F8 ou un clic, effacer avec la touche
+      retour arrière, « l' » / « j' » : le texte est-il juste ?
+  R3. Après un clic ailleurs dans le texte, la barre propose-t-elle
+      des mots qui vont avec ce qui est écrit avant le curseur ?
+  R4. La barre reste-t-elle au-dessus des fenêtres, sans prendre la
+      main (on continue d'écrire), à 100 % et à 150 % d'affichage ?
+  R5. L'icône près de l'horloge et son menu (Pause, Réglages, Aide,
+      À propos, Quitter) : tout s'affiche-t-il et marche-t-il ?
+  R6. Lecture à voix haute : voix Windows, puis voix « siwis » et
+      « pierre » : la voix parle-t-elle bien, sans coupure ? Avec
+      « siwis », un mot seul (« papa ») est-il dit clairement ?
+      (Testeurs : « Pepite.exe --speech-bench <dossier> --audio
+      null » s'arrête-t-il avec un message clair dans bench.md ?)
+  R7. Installe Pépite sur un ordinateur où il n'est pas, puis
+      installe la 0.10.2 par-dessus la 0.10.1, puis désinstalle-le ;
+      refais-le avec un compte non administrateur. Tout se passe-t-
+      il sans message d'erreur ? Après la mise à jour, le dossier de
+      Pépite ne contient-il plus « ucrtbase.dll » ni de fichier
+      « api-ms-win-… .dll » ?
+  R8. Pépite démarre-t-il aussi vite qu'avant ? Le lancer deux fois
+      n'ouvre-t-il qu'un seul Pépite ?

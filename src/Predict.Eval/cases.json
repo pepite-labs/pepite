@@ -316,5 +316,413 @@
     "context": "tu",
     "typed": "fé",
     "intended": "fais"
+  },
+  {
+    "category": "elision-start",
+    "typed": "j",
+    "intended": "j'"
+  },
+  {
+    "category": "elision-start",
+    "typed": "m",
+    "intended": "m'"
+  },
+  {
+    "category": "elision-start",
+    "typed": "c",
+    "intended": "c'"
+  },
+  {
+    "category": "elision-start",
+    "typed": "qu",
+    "intended": "qu'"
+  },
+  {
+    "category": "elision-start",
+    "typed": "ju",
+    "intended": "jusqu'"
+  },
+  {
+    "category": "elision-start",
+    "typed": "lor",
+    "intended": "lorsqu'"
+  },
+  {
+    "category": "elision-start",
+    "typed": "pui",
+    "intended": "puisqu'"
+  },
+  {
+    "category": "elision-start",
+    "context": "puis",
+    "typed": "j",
+    "intended": "j'"
+  },
+  {
+    "category": "elision-start",
+    "context": "j'",
+    "typed": "aim",
+    "intended": "aime"
+  },
+  {
+    "category": "elision-start",
+    "context": "c'",
+    "typed": "e",
+    "intended": "est"
+  },
+  {
+    "category": "elision-start",
+    "context": "qu'",
+    "typed": "i",
+    "intended": "il"
+  },
+  {
+    "category": "elision-start",
+    "context": "s'",
+    "typed": "i",
+    "intended": "il"
+  },
+  {
+    "category": "elision-start",
+    "context": "n'",
+    "typed": "e",
+    "intended": "est"
+  },
+  {
+    "category": "elision-start",
+    "context": "je m'",
+    "typed": "appel",
+    "intended": "appelle"
+  },
+  {
+    "category": "elision-start",
+    "context": "je l'",
+    "typed": "a",
+    "intended": "ai"
+  },
+  {
+    "category": "elision-start",
+    "context": "l'",
+    "typed": "h",
+    "intended": "homme"
+  },
+  {
+    "category": "elision-start",
+    "context": "d'",
+    "typed": "ab",
+    "intended": "abord"
+  },
+  {
+    "category": "elision-start",
+    "context": "jusqu'",
+    "typed": "",
+    "intended": "à"
+  },
+  {
+    "category": "split",
+    "context": "je",
+    "typed": "tème",
+    "intended": "t'aime"
+  },
+  {
+    "category": "split",
+    "context": "je",
+    "typed": "tèm",
+    "intended": "t'aime"
+  },
+  {
+    "category": "split",
+    "context": "je",
+    "typed": "taime",
+    "intended": "t'aime"
+  },
+  {
+    "category": "split",
+    "typed": "jai",
+    "intended": "j'ai"
+  },
+  {
+    "category": "split",
+    "typed": "Jai",
+    "intended": "j'ai"
+  },
+  {
+    "category": "split",
+    "context": "et",
+    "typed": "jai",
+    "intended": "j'ai"
+  },
+  {
+    "category": "split",
+    "context": "hier",
+    "typed": "jai",
+    "intended": "j'ai"
+  },
+  {
+    "category": "split",
+    "context": "je vais à",
+    "typed": "lécole",
+    "intended": "l'école"
+  },
+  {
+    "category": "split",
+    "context": "à",
+    "typed": "lécole",
+    "intended": "l'école"
+  },
+  {
+    "category": "split",
+    "context": "de",
+    "typed": "lécole",
+    "intended": "l'école"
+  },
+  {
+    "category": "split",
+    "context": "mais",
+    "typed": "cétait",
+    "intended": "c'était"
+  },
+  {
+    "category": "split",
+    "context": "il",
+    "typed": "sétait",
+    "intended": "s'était"
+  },
+  {
+    "category": "split",
+    "typed": "cest",
+    "intended": "c'est"
+  },
+  {
+    "category": "split",
+    "context": "et",
+    "typed": "cest",
+    "intended": "c'est"
+  },
+  {
+    "category": "split",
+    "context": "je pense",
+    "typed": "quil",
+    "intended": "qu'il"
+  },
+  {
+    "category": "split",
+    "context": "parce",
+    "typed": "quil",
+    "intended": "qu'il"
+  },
+  {
+    "category": "split",
+    "context": "je ne sais pas",
+    "typed": "sil",
+    "intended": "s'il"
+  },
+  {
+    "category": "split",
+    "context": "oui",
+    "typed": "daccord",
+    "intended": "d'accord"
+  },
+  {
+    "category": "split",
+    "typed": "daccord",
+    "intended": "d'accord"
+  },
+  {
+    "category": "split",
+    "context": "je marche",
+    "typed": "jusqua",
+    "intended": "jusqu'à"
+  },
+  {
+    "category": "split",
+    "context": "il",
+    "typed": "ma",
+    "intended": "m'a"
+  },
+  {
+    "category": "split",
+    "context": "elle",
+    "typed": "ma",
+    "intended": "m'a"
+  },
+  {
+    "category": "split",
+    "context": "elle",
+    "typed": "maime",
+    "intended": "m'aime"
+  },
+  {
+    "category": "split",
+    "context": "je",
+    "typed": "mappelle",
+    "intended": "m'appelle"
+  },
+  {
+    "category": "split",
+    "context": "il",
+    "typed": "nest",
+    "intended": "n'est"
+  },
+  {
+    "category": "split",
+    "context": "ce",
+    "typed": "nest",
+    "intended": "n'est"
+  },
+  {
+    "category": "split",
+    "context": "je",
+    "typed": "lai",
+    "intended": "l'ai"
+  },
+  {
+    "category": "split",
+    "context": "dans",
+    "typed": "larbre",
+    "intended": "l'arbre"
+  },
+  {
+    "category": "split",
+    "context": "avec",
+    "typed": "lami",
+    "intended": "l'ami"
+  },
+  {
+    "category": "split",
+    "context": "tu",
+    "typed": "mas",
+    "intended": "m'as"
+  },
+  {
+    "category": "split",
+    "context": "je",
+    "typed": "tai",
+    "intended": "t'ai"
+  },
+  {
+    "category": "split",
+    "context": "je",
+    "typed": "men",
+    "intended": "m'en"
+  },
+  {
+    "category": "split",
+    "context": "je",
+    "typed": "naime",
+    "intended": "n'aime"
+  },
+  {
+    "category": "split",
+    "context": "il",
+    "typed": "sappelle",
+    "intended": "s'appelle"
+  },
+  {
+    "category": "split",
+    "context": "c'est",
+    "typed": "lhistoire",
+    "intended": "l'histoire"
+  },
+  {
+    "category": "split",
+    "typed": "lorsquil",
+    "intended": "lorsqu'il"
+  },
+  {
+    "category": "split-neg",
+    "context": "le",
+    "typed": "thème",
+    "intended": "thème"
+  },
+  {
+    "category": "split-neg",
+    "context": "du",
+    "typed": "lait",
+    "intended": "lait"
+  },
+  {
+    "category": "split-neg",
+    "context": "une",
+    "typed": "dame",
+    "intended": "dame"
+  },
+  {
+    "category": "split-neg",
+    "context": "il",
+    "typed": "sait",
+    "intended": "sait"
+  },
+  {
+    "category": "split-neg",
+    "context": "ma",
+    "typed": "tante",
+    "intended": "tante"
+  },
+  {
+    "category": "split-neg",
+    "context": "la",
+    "typed": "lune",
+    "intended": "lune"
+  },
+  {
+    "category": "split-neg",
+    "context": "le",
+    "typed": "sel",
+    "intended": "sel"
+  },
+  {
+    "category": "split-neg",
+    "context": "il",
+    "typed": "mange",
+    "intended": "mange"
+  },
+  {
+    "category": "split-neg",
+    "context": "le",
+    "typed": "lit",
+    "intended": "lit"
+  },
+  {
+    "category": "split-neg",
+    "context": "la",
+    "typed": "dent",
+    "intended": "dent"
+  },
+  {
+    "category": "split-neg",
+    "context": "le",
+    "typed": "temps",
+    "intended": "temps"
+  },
+  {
+    "category": "split-neg",
+    "context": "sa",
+    "typed": "mère",
+    "intended": "mère"
+  },
+  {
+    "category": "split-neg",
+    "context": "un",
+    "typed": "lac",
+    "intended": "lac"
+  },
+  {
+    "category": "split-neg",
+    "context": "il",
+    "typed": "dit",
+    "intended": "dit"
+  },
+  {
+    "category": "split-neg",
+    "context": "le",
+    "typed": "ciel",
+    "intended": "ciel"
+  },
+  {
+    "category": "split-neg",
+    "context": "il",
+    "typed": "sort",
+    "intended": "sort"
   }
 ]

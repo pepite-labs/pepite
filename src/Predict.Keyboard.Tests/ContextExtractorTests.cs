@@ -194,4 +194,16 @@ public class ContextExtractorTests
             Assert.Equal("", c.Suffix);
         }
     }
+
+    /// <summary>0.10.2 (owner Q2): the document's apostrophe is the last one before the caret; none read = none.</summary>
+    [Fact]
+    public void Apostrophe_Is_The_Last_One_Before_The_Caret()
+    {
+        Assert.Equal('’', End("C’est vrai. ").Apostrophe);
+        Assert.Equal('’', End("C’est vrai. J").Apostrophe);
+        Assert.Equal('\'', End("l’arbre et l'eau ").Apostrophe);
+        Assert.Equal('’', End("l'arbre et l’eau ").Apostrophe);
+        Assert.Equal(default(char), End("il fait beau ").Apostrophe);
+        Assert.Equal(default(char), X("il fait beau. C’est", 5).Apostrophe);   // after the caret: not the style before it
+    }
 }

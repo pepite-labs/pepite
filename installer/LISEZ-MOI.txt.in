@@ -8,6 +8,18 @@ applications Windows (Bloc-notes, Word, navigateur...). Les mots
 s'affichent avec une image (pictogramme) au-dessus, et peuvent être
 lus à voix haute. Tout fonctionne sur cet ordinateur, sans Internet.
 
+PRÉVERSION NON SIGNÉE : À LIRE AVANT D'INSTALLER
+--------------------------------------------------------------------
+  Cette version est une version de test (préversion), pour essai,
+  pas encore pour les élèves.
+  Elle n'est pas encore signée : Windows ne connaît pas encore son
+  auteur. À l'installation, Windows peut donc afficher « Windows a
+  protégé votre ordinateur » (SmartScreen). Ce message ne veut pas
+  dire qu'un virus a été trouvé : Windows prévient ainsi pour tout
+  programme récent qu'il ne connaît pas encore. Vérifiez d'abord le
+  fichier (INSTALLER, étape 1), puis cliquez sur « Informations
+  complémentaires » et « Exécuter quand même ».
+
 {NOTES}
 
 CONFIGURATION RECOMMANDÉE (provisoire, pas encore mesurée)
@@ -36,7 +48,7 @@ INSTALLER
      puis tapez :
         Get-FileHash .\Pepite-{VERSION}{SUFFIXE}-installation.exe
      Le résultat doit être celui du fichier SHA256SUMS.txt.
-  2. Double-cliquez sur « Pepite-{VERSION}{SUFFIXE}-installation.exe ».
+{ATTESTATION}  2. Double-cliquez sur « Pepite-{VERSION}{SUFFIXE}-installation.exe ».
   3. Si Windows affiche « Windows a protégé votre ordinateur » :
      cliquez sur « Informations complémentaires », puis sur
      « Exécuter quand même ». (Cette version de test n'est pas encore
@@ -149,6 +161,10 @@ CRÉDITS ET LICENCES
   publié avec elle, à côté du programme d'installation (fichier
   espeak-ng-<commit>.tar.gz) ; voir aussi
   licenses\espeak-ng\SOURCE.txt.
+  Données (base de mots, orthographe, images, voix, noms propres,
+  polices) : version de données {DONNEES}, avec leurs empreintes
+  et leurs licences :
+    https://github.com/pepite-labs/pepite/releases/tag/{DONNEES}
   Logo : dessin original.
   Composants et licences : THIRD-PARTY-NOTICES.txt et le dossier
   « licenses » (dans le dossier d'installation).
@@ -183,7 +199,7 @@ CRÉDITS ET LICENCES
   Polices : OpenDyslexic (Abbie Gonzalez), Lexend, Andika (SIL) -
   SIL Open Font License 1.1 ; licences dans le dossier « fonts ».
   Noms propres : paquet de données ouvertes « Noms propres (données
-  ouvertes) », édition 2026.1, licence CC BY 4.0 ; sources, auteurs
+  ouvertes) », édition 2026.2, licence CC BY 4.0 ; sources, auteurs
   et licences : noms\LICENCE.txt et noms\SOURCES.md (Insee, Statbel,
   Unicode CLDR, Wikidata, flag-icons, Wikimedia Commons). Statbel et
   l'Insee ne cautionnent pas Pépite ni l'usage fait de leurs

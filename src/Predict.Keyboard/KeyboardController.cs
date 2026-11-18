@@ -120,6 +120,9 @@ internal sealed class KeyboardController : IDisposable
 
     // settings (written on the UI thread, read on the hook thread)
     private volatile int _wordCount = 8;
+    /// <summary>0.10.2: the words the bar could show last time it was full or trimmed to fit the screen (XL on a small
+    /// monitor): the exact typed word goes in the last of those slots, never in one trimmed away.</summary>
+    private int _barFits = 8;
     private volatile bool _keysOn = true, _speakInserted = true;
     private volatile int _punct = (int)PunctuationSpacing.French;
     private volatile bool _spellingOn = true;              // plan 10B: « Indicateur d'orthographe »
@@ -196,6 +199,8 @@ internal sealed class KeyboardController : IDisposable
     public void Configure(AppSettings s)
     {
         _wordCount = s.WordCount;
+        _barFits = s.WordCount;
+        _engine.ExactBar = s.WordCount;   // 0.10.2: the exact typed word goes in the bar's last slot at worst, not in a spare
         _keysOn = s.Keys == KeyMode.F1F8;
         _punct = (int)s.Punctuation;
         _speakInserted = s.Speech.SpeakInserted;
@@ -214,6 +219,18 @@ internal sealed class KeyboardController : IDisposable
     public void SyncVisibleCount()
     {
         if (_sugg.Count > 0) _suggCount = Math.Min(_sugg.Count, _win.VisibleCount);
+        SyncExactBar();
+    }
+
+    /// <summary>0.10.2: <see cref="PredictionEngine.ExactBar"/> = the slots the bar shows — the word count, or fewer when the
+    /// last bar was trimmed to fit the screen (learnt again from each full or trimmed bar; a bar of fewer words than the
+    /// count, not trimmed, tells nothing). One slot: the engine applies no rule. UI thread.</summary>
+    private void SyncExactBar()
+    {
+        int shown = _win.VisibleCount;
+        if (_sugg.Count > 0 && shown < _sugg.Count) _barFits = Math.Max(1, shown);   // trimmed to fit the screen
+        else if (shown >= _wordCount) _barFits = _wordCount;                       // the full bar fits
+        _engine.ExactBar = Math.Min(_wordCount, _barFits);
     }
 
     /// <summary>Tray « Pause »: nothing more is said (the hooks already skip everything while paused).</summary>
@@ -945,7 +962,7 @@ internal sealed class KeyboardController : IDisposable
                     && !(agrees = q.Reason == ReasonBackspace && Agrees(r.Ctx)))
                 {
                     var c = r.Ctx;
-                    _tracker.Seed(c.Prefix, c.Context, c.Separators, c.Suffix, c.NextChar, r.Source, c.AtSentenceStart);
+                    _tracker.Seed(c.Prefix, c.Context, c.Separators, c.Suffix, c.NextChar, r.Source, c.AtSentenceStart, c.Apostrophe);
                     // a caret at a sentence start (no word before it in the sentence) is not an edit of a sentence; after a
                     // Backspace the echo keeps what it restored itself (its sentence, liaison grouping), unless it lost all
                     if (q.Reason != ReasonBackspace || _echo.IsBlank) _echo.Seed(c.Prefix, c.AtSentenceStart && c.Context.Count == 0);
@@ -1237,13 +1254,14 @@ internal sealed class KeyboardController : IDisposable
             return;
         }
         bool loggable = _probe != ProbePending;   // typed since the jump and not answered yet: no text in the log
-        string cur, origin, suffix; List<string> ctx; bool after, start, hyphen, neutral;
+        string cur, origin, suffix; List<string> ctx; bool after, start, hyphen, neutral; char apostrophe;
         FinishedWord? typing, finished;
         lock (_sync)
         {
             cur = _tracker.Current; ctx = _tracker.Context.ToList(); after = _tracker.AfterSeparator;
             origin = _tracker.Origin; suffix = _tracker.Suffix; start = _tracker.AtSentenceStart;
             hyphen = _tracker.LastSeparator == '-';
+            apostrophe = _tracker.ApostropheStyle;   // 0.10.2: j' or j’, as the document writes it
             neutral = _tracker.CapitalNeutral;   // 0.8.3: « : Mer », « « Je », an unknown context: no name bonus for the capital
             typing = _tracker.Typing;
             // a word finished by a line break is shown only by the line-end check (never by a later update: a chat that sent
@@ -1256,14 +1274,17 @@ internal sealed class KeyboardController : IDisposable
         try
         {
             // one spare: the display step may drop a pseudo-word
-            if (cur.Length > 0) s = _engine.Predict(cur, ctx, _wordCount + 3, start || neutral);   // spares: the display step may drop a pseudo-word or merge « Pierre » + « pierre »
+            // 0.10.2: the exact typed word rule follows the ✓ while typing exactly — the tracker's own sentence start, not
+            // « start || neutral » — and also when the marker setting is off
+            bool tick = typing is { } jw && SpellingIndicator.Typing(jw, w => _engine.KnowsForMark(w, jw.SentenceStart)) == SpellingMark.Known;
+            if (cur.Length > 0) s = _engine.Predict(cur, ctx, _wordCount + 3, start || neutral, tick);   // spares: the display step may drop a pseudo-word or merge « Pierre » + « pierre »
             else if (after && ctx.Count > 0) s = _engine.PredictNext(ctx, _wordCount + 1);
         }
         catch (Exception ex) { Log?.Invoke("predict error: " + ex.Message); }
 
         // D22: elisions with their apostrophe (l'), capital at the start of a sentence
         // plan 10A: a capitalised personal word and the cased lexicon word with the same text make one tile
-        _sugg = KeyboardPolicy.CasedDistinct(Elision.Apply(s, hyphen), cur, start, _wordCount);
+        _sugg = KeyboardPolicy.Shown(s, hyphen, apostrophe, cur, start, _wordCount);
         _suggCount = _sugg.Count;
 
         // plan 10B: the spelling marker — ✓ while typing a known word; on the word just finished ✓ ≈ ? (Q8)
@@ -1272,7 +1293,8 @@ internal sealed class KeyboardController : IDisposable
         string marked = mark == SpellingMark.None ? "" : FormattableString.Invariant($" mark={mark} ({checkMs:0.00} ms)");
         if (loggable) Log?.Invoke($"typed='{cur}' ctx=[{string.Join(" ", ctx)}]{(start ? " start" : "")} src={origin} suffix='{suffix}' -> {string.Join(", ", _sugg.Select(x => x.Word))}  ({Environment.TickCount64 - t0} ms){marked}");
         else Log?.Invoke($"typed=(pending field probe) -> {_sugg.Count} words{marked}");
-        // Q10: with no word to propose the bar shows the marker alone for ≈ and ?, never for ✓ alone
+        // Q10: with no word to propose the bar shows the marker alone for ≈ and ?, never for ✓ alone. While typing, a ✓ word
+        // is itself a tile with the exact typed word rule (0.10.2), so this hides the ✓ alone of a finished word (owner Q5)
         if (_sugg.Count == 0 && mark is not (SpellingMark.SoundsLike or SpellingMark.Unknown)) { _win.HideBar(); return; }
         ShowBar(mark);
     }
@@ -1308,6 +1330,7 @@ internal sealed class KeyboardController : IDisposable
         var t3 = Environment.TickCount64;
         _win.Place(caret);
         _suggCount = Math.Min(_sugg.Count, _win.VisibleCount);   // a bar trimmed to fit the screen shows fewer words
+        SyncExactBar();
         _markAction = mark is SpellingMark.SoundsLike or SpellingMark.Unknown;
         if (Environment.TickCount64 - t1 > 100)
             Log?.Invoke($"  slow UI: show {t2 - t1} ms, caret({src}) {t3 - t2} ms, place {Environment.TickCount64 - t3} ms");
@@ -1386,8 +1409,8 @@ internal sealed class KeyboardController : IDisposable
     {
         var mark = _win.Mark;
         if (!_win.Shown || _markWord is not { } word || mark is not (SpellingMark.SoundsLike or SpellingMark.Unknown)) return;
-        string cur; bool start;
-        lock (_sync) { cur = _tracker.Current; start = _tracker.AtSentenceStart; }
+        string cur; bool start; List<string> ctx; char apostrophe;
+        lock (_sync) { cur = _tracker.Current; start = _tracker.AtSentenceStart; ctx = _tracker.Context.ToList(); apostrophe = _tracker.ApostropheStyle; }
         if (cur.Length > 0) return;
         if (mark == SpellingMark.Unknown)
         {
@@ -1403,11 +1426,18 @@ internal sealed class KeyboardController : IDisposable
             can = _tracker.CanCorrect(word, out sep); v = _tracker.Version;
             wordStart = _tracker.Finished?.SentenceStart ?? start;
         }
-        var cands = _markCheck.Candidates.Select(c => new Suggestion(c, 0, MatchKind.Phonetic));
+        // 0.10.2 (glued words plan, owner Q2): the list ordered by the words before the finished word, when it opens; then
+        // every apostrophe in the document's style (« j’ai »), then the case of the word's place
+        IReadOnlyList<string> ordered = _markCheck.Candidates;
+        long r0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        try { ordered = _engine.RankCorrections(_markCheck.Candidates, KeyboardPolicy.WordsBefore(ctx, word), word); }
+        catch (Exception ex) { Log?.Invoke("spelling: ranking error " + ex.GetType().Name); }
+        double rankMs = (System.Diagnostics.Stopwatch.GetTimestamp() - r0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        var cands = ordered.Select(c => new Suggestion(Elision.Styled(c, apostrophe), 0, MatchKind.Phonetic));
         _sugg = KeyboardPolicy.CasedDistinct(cands, "", can ? wordStart : start, _wordCount);
         _suggCount = _sugg.Count;
         _correction = can ? new SoundAlikeCorrection.Target(word, sep, v, Native.GetForegroundWindow(), _sugg) : null;
-        Log?.Invoke($"spelling: sound-alike words shown ({_sugg.Count}, {how}){(can ? ", may replace" : ", insert only")}");
+        Log?.Invoke(FormattableString.Invariant($"spelling: sound-alike words shown ({_sugg.Count}, {how}, ranked in {rankMs:0.0} ms){(can ? ", may replace" : ", insert only")}"));
         if (_sugg.Count > 0) ShowBar(mark);
     }
 

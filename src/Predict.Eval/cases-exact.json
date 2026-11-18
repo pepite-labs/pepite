@@ -1,0 +1,255 @@
+[
+  {
+    "category": "exact-first",
+    "context": "la",
+    "typed": "maison",
+    "intended": "maison"
+  },
+  {
+    "category": "exact-first",
+    "context": "un",
+    "typed": "bon",
+    "intended": "bon"
+  },
+  {
+    "category": "exact-first",
+    "context": "c'est",
+    "typed": "bon",
+    "intended": "bon"
+  },
+  {
+    "category": "exact-first",
+    "context": "il",
+    "typed": "est",
+    "intended": "est"
+  },
+  {
+    "category": "exact-first",
+    "context": "il",
+    "typed": "mange",
+    "intended": "mange"
+  },
+  {
+    "category": "exact-first",
+    "context": "je",
+    "typed": "mange",
+    "intended": "mange"
+  },
+  {
+    "category": "exact-first",
+    "context": "le",
+    "typed": "thème",
+    "intended": "thème"
+  },
+  {
+    "category": "exact-first",
+    "context": "la",
+    "typed": "mer",
+    "intended": "mer"
+  },
+  {
+    "category": "exact-first",
+    "context": "le",
+    "typed": "chat",
+    "intended": "chat"
+  },
+  {
+    "category": "exact-first",
+    "context": "on",
+    "typed": "va",
+    "intended": "va"
+  },
+  {
+    "category": "exact-first",
+    "context": "je",
+    "typed": "suis",
+    "intended": "suis"
+  },
+  {
+    "category": "exact-first",
+    "context": "les",
+    "typed": "enfants",
+    "intended": "enfants"
+  },
+  {
+    "category": "exact-first",
+    "context": "avec",
+    "typed": "Rodolphe",
+    "intended": "Rodolphe"
+  },
+  {
+    "category": "exact-first",
+    "typed": "Rodolphe",
+    "intended": "Rodolphe"
+  },
+  {
+    "category": "exact-first",
+    "typed": "maison",
+    "intended": "maison"
+  },
+  {
+    "category": "exact-first",
+    "context": "le mois de",
+    "typed": "mai",
+    "intended": "mai"
+  },
+  {
+    "category": "exact-first",
+    "context": "en",
+    "typed": "mai",
+    "intended": "mai"
+  },
+  {
+    "category": "exact-present",
+    "context": "la",
+    "typed": "mai",
+    "intended": "mai"
+  },
+  {
+    "category": "exact-present",
+    "typed": "mai",
+    "intended": "mai"
+  },
+  {
+    "category": "exact-present",
+    "context": "elle",
+    "typed": "mai",
+    "intended": "mai"
+  },
+  {
+    "category": "exact-present",
+    "context": "je",
+    "typed": "par",
+    "intended": "par"
+  },
+  {
+    "category": "exact-present",
+    "context": "il",
+    "typed": "par",
+    "intended": "par"
+  },
+  {
+    "category": "exact-present",
+    "context": "dire",
+    "typed": "bon",
+    "intended": "bon"
+  },
+  {
+    "category": "exact-present",
+    "context": "je vais",
+    "typed": "par",
+    "intended": "par"
+  },
+  {
+    "category": "exact-present",
+    "context": "le",
+    "typed": "ver",
+    "intended": "ver"
+  },
+  {
+    "category": "exact-present",
+    "context": "un",
+    "typed": "ver",
+    "intended": "ver"
+  },
+  {
+    "category": "exact-present",
+    "context": "la",
+    "typed": "faim",
+    "intended": "faim"
+  },
+  {
+    "category": "exact-present",
+    "context": "ils",
+    "typed": "son",
+    "intended": "son"
+  },
+  {
+    "category": "exact-present",
+    "context": "il",
+    "typed": "pas",
+    "intended": "pas"
+  },
+  {
+    "category": "exact-not-first",
+    "context": "il",
+    "typed": "et",
+    "intended": "est",
+    "also": "et"
+  },
+  {
+    "category": "exact-not-first",
+    "context": "ils",
+    "typed": "mange",
+    "intended": "mangent",
+    "also": "mange"
+  },
+  {
+    "category": "exact-not-first",
+    "context": "ils",
+    "typed": "son",
+    "intended": "sont",
+    "also": "son"
+  },
+  {
+    "category": "exact-not-first",
+    "context": "je",
+    "typed": "par",
+    "intended": "pars",
+    "also": "par"
+  },
+  {
+    "category": "exact-not-first",
+    "context": "le",
+    "typed": "ver",
+    "intended": "verre",
+    "also": "ver"
+  },
+  {
+    "category": "prefix-word",
+    "context": "la",
+    "typed": "mai",
+    "intended": "maison"
+  },
+  {
+    "category": "prefix-word",
+    "context": "je vais",
+    "typed": "par",
+    "intended": "partir"
+  },
+  {
+    "category": "prefix-word",
+    "context": "dire",
+    "typed": "bon",
+    "intended": "bonjour"
+  },
+  {
+    "category": "prefix-word",
+    "context": "il fait",
+    "typed": "bo",
+    "intended": "beau"
+  },
+  {
+    "category": "prefix-word",
+    "context": "une",
+    "typed": "mai",
+    "intended": "maison"
+  },
+  {
+    "category": "prefix-word",
+    "typed": "mai",
+    "intended": "maintenant"
+  },
+  {
+    "category": "prefix-word",
+    "context": "le",
+    "typed": "pas",
+    "intended": "passage"
+  },
+  {
+    "category": "exact-limit",
+    "context": "avec",
+    "typed": "martine",
+    "intended": "Martine"
+  }
+]

@@ -26,7 +26,8 @@ mots personnels restent sur l'ordinateur. Les champs de mot de passe ne sont jam
 - Installation pour vous seul, ou pour tous les utilisateurs de l'ordinateur (écoles : installation silencieuse et fichier
   de configuration de l'établissement, voir `installer/DEPLOIEMENT.txt`).
 
-0.10.1 est une version de test publique (pré-version, non signée) ; la première version stable suivra le passage à .NET 10.
+0.10.2 est une version de test publique (préversion, non signée), sous .NET 10 ; la première version stable
+(0.11.0) suivra.
 
 ## Licences
 
@@ -39,10 +40,12 @@ mots personnels restent sur l'ordinateur. Les champs de mot de passe ne sont jam
 | « Noms propres » (Insee, Statbel, Wikidata, CLDR) | CC BY 4.0 |
 | Voix Siwis / Pierre | CC BY 4.0 / CC BY-SA 4.0 (le modèle de base de Pierre a été entraîné sur des données réservées à la recherche : cette voix pourra être retirée) |
 | Polices OpenDyslexic, Lexend, Andika | SIL OFL 1.1 |
+| Aide (`aide/`) | CC BY-SA 4.0 (`prefs.js` : GPL-3.0-or-later) ; les pictogrammes ARASAAC visibles dans quelques captures d'écran restent sous CC BY-NC-SA 4.0 (légende sous chaque image) |
 
 **Attention, usage commercial :** les pictogrammes ARASAAC (Gouvernement d'Aragon, auteur Sergio Palao) ne peuvent pas être
-utilisés dans un produit commercial. Si vous réutilisez le code de Pépite dans un cadre commercial, retirez-les ou
-obtenez l'accord d'ARASAAC.
+utilisés dans un produit commercial. Si vous réutilisez le code de Pépite dans un cadre commercial, retirez-les (`pictos.sqlite`, et
+les quatre captures d'écran de l'aide qui les montrent : `aide/img/capture-qui-es-tu.png`,
+`capture-espace-enseignant.png`, `capture-barre-images.png`, `capture-barre-lecture.png`) ou obtenez l'accord d'ARASAAC.
 
 Détails, sources et versions : [DONNEES.md](DONNEES.md) et [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
 
@@ -56,7 +59,7 @@ dotnet test Pepite.sln -c Release
 ```
 
 La base de mots et les autres données ne sont pas reconstruites à chaque fois : elles sont fournies déjà construites,
-dans la version de données `data-2026.11` des Releases. Une commande les télécharge dans un dossier de votre choix,
+dans la version de données `data-2026.11.2` des Releases. Une commande les télécharge dans un dossier de votre choix,
 vérifie leurs empreintes SHA-256, les dépose dans `src\Data.Build\out\` et vérifie la base de mots
 ([development/BUILD.md](development/BUILD.md) § 0) :
 

@@ -36,7 +36,7 @@ sit at the root or in one top folder.
 | `variantes` | other spellings, same rule: recognised (✓) and offered with the name (« Ieper » brings « Ieper » and « Ypres ») |
 | `categorie` | free text (`prenom`, `pays`, `commune-be`, `ville`, `personnage`…) |
 | `rang` | popularity 0–1 (default 1): the name's weight in the bar; the pack maps it to at most 5 occurrences per million words, below the common content words |
-| `niveau` | 1 (default) = predicted; 2 = recognised (✓) and predicted only after a capital typed inside a sentence |
+| `niveau` | 1 (default) = predicted; 2 = recognised (✓), predicted after a capital typed inside a sentence and, since 0.10.2, from 4 typed letters without that capital when its `rang` is at least 0.02 (a rarer one still needs the capital) |
 | `restreint` | `true`: a figure taught for the harm done (owner 2026-11-15) — recognised, offered only after a capital typed inside a sentence and at least 3 letters, after every other name, never with a picture (an `image` is ignored); implies `niveau` 2 |
 | `image` | a relative path inside the database; PNG / JPEG ≤ 5 MB, ≤ 4096 × 4096 px (read from the header before any decoding) |
 | `source` | an id of the `sources` table, or a URL / free text |

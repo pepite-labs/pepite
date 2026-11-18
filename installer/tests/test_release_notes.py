@@ -47,7 +47,7 @@ class ReleaseNotesTest(unittest.TestCase):
                      "Informations complémentaires", "Exécuter quand même", "Smart App Control",
                      "Ordinateurs gérés", "%s  Pepite-0.10.1-installation.exe" % EXE_SHA, "Get-FileHash",
                      "gh attestation verify Pepite-0.10.1-installation.exe --repo o/r "
-                     "--signer-workflow o/r/.github/workflows/app.yml", "gh auth login",
+                     "--signer-workflow o/r/.github/workflows/app.yml --source-ref refs/tags/v0.10.1", "gh auth login",
                      "https://github.com/pepite-labs/pepite/releases/tag/%s" % rn.read_data_release()["tag"],
                      "GPL-3.0-or-later", "https://github.com/o/r/tree/v0.10.1", SRC,
                      "usage non commercial uniquement", "Voix Pierre", "réservées à la recherche", rn.SITE,

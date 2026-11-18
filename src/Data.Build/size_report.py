@@ -71,7 +71,7 @@ def components(release):
             n = os.path.getsize(os.path.join(root, f))
             if parts[:1] == ["voices"] and len(parts) >= 2:
                 key = "voix\\" + parts[1]
-            elif not parts and f in ("pictos.sqlite", "ARASAAC-LICENCE.txt"):
+            elif not parts and f == "pictos.sqlite":   # ARASAAC-LICENCE.txt is in app since 0.10.2 (the help shows pictograms)
                 key = "images"
             else:
                 key = "app"

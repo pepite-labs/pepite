@@ -1,0 +1,7 @@
+     Utilisateurs avancés : l'attestation de provenance prouve que
+     le fichier téléchargé depuis GitHub a été construit par GitHub
+     Actions (workflow app.yml) à partir du code de l'étiquette
+     v{VERSION} du dépôt. Avec l'outil « gh » de GitHub, après
+     « gh auth login », dans le dossier du fichier :
+        gh attestation verify Pepite-{VERSION}-installation.exe --repo pepite-labs/pepite --signer-workflow pepite-labs/pepite/.github/workflows/app.yml --source-ref refs/tags/v{VERSION}
+     La commande doit répondre que la vérification a réussi.

@@ -156,14 +156,23 @@ function BarShown { [bool](PepWins | Where-Object { $_.Current.Name -match '^P.p
 function RegVal([string]$root, [string]$key, [string]$name) { try { (Get-ItemProperty -Path "${root}:\$key" -Name $name -EA Stop).$name } catch { $null } }
 function RunValue([string]$root) { RegVal $root $RUNKEY 'Pepite-Prediction' }
 function Installed([string]$root) { Test-Path "${root}:\$UKEY" }
-# installed files against files.sha256 (the full component set): missing / different files
+# installed files against files.sha256 (the full component set): missing / different files, and extra files (a file
+# of an older version that the upgrade left behind, e.g. the .NET 6 runtime files after 0.10.2; Inno's unins000.* and
+# the $skip patterns excepted)
 function TreeCheck([string]$dir, [string]$list, [string[]]$skip = @()) {
-  $bad = @()
+  $bad = @(); $expected = @{}
   foreach ($l in Get-Content $list) {
     $h, $rel = $l -split '  ', 2
+    $expected[$rel] = 1
     if ($skip | Where-Object { $rel -like $_ }) { continue }
     $p = Join-Path $dir $rel
     if (-not (Test-Path $p)) { $bad += "missing $rel" } elseif ((Get-FileHash $p -Algorithm SHA256).Hash.ToLower() -ne $h) { $bad += "differs $rel" }
+  }
+  $root = (Resolve-Path $dir).Path.TrimEnd('\') + '\'
+  foreach ($f in Get-ChildItem $dir -Recurse -File) {
+    $rel = $f.FullName.Substring($root.Length)
+    if ($expected.ContainsKey($rel) -or $rel -match '^unins\d{3}\.(exe|dat|msg)$' -or ($skip | Where-Object { $rel -like $_ })) { continue }
+    $bad += "extra $rel"
   }
   $bad
 }
@@ -332,6 +341,22 @@ function T7 {
     Verd 'T7c start with Windows unticked: Run value gone' (-not $run) "'$run'"
     Verd 'T7d next upgrade without switches keeps the choices' ($r2.Exit -eq 0 -and -not (Test-Path "$PU\pictos.sqlite") -and -not (RunValue 'HKCU') -and (Test-Path "$PU\voices\siwis")) "exit $($r2.Exit)"
     "T7 setup log: $((Select-String -Path "$OUT12\T7-setup.log" -Pattern 'Pepite:' | ForEach-Object Line) -join ' | ')"
+  )
+}
+
+# T15 upgrade from the previous release (0.10.2: from 0.10.1 = .NET 6 to .NET 10), silent, per-user, all components:
+# the installed tree is exactly files.sha256 of the new build (in -Setup), no file of the old version left behind.
+# $OldSetup: the previous public installer (kept OUT of -Setup, so InstPublic still picks the new one).
+function T15([Parameter(Mandatory)][string]$OldSetup) {
+  $r1 = RunWatched $OldSetup @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/LOG=`"$OUT12\T15-old-setup.log`"")
+  $r2 = RunWatched (InstPublic) @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/LOG=`"$OUT12\T15-setup.log`"")
+  PepQuit "$PU\Pepite.exe"
+  $bad = @(TreeCheck $PU (Join-Path $SETUP 'files.sha256'))
+  $extra = @($bad | Where-Object { $_ -like 'extra *' })
+  @(
+    Verd 'T15a old then new install: exit 0, 0' ($r1.Exit -eq 0 -and $r2.Exit -eq 0) "exit $($r1.Exit), $($r2.Exit)"
+    Verd 'T15b no file of the old version left (extra)' ($extra.Count -eq 0) "$($extra.Count): $(($extra | Select-Object -First 8) -join ' ; ')"
+    Verd 'T15c installed files = files.sha256' ($bad.Count -eq 0) "$($bad.Count): $(($bad | Select-Object -First 8) -join ' ; ')"
   )
 }
 

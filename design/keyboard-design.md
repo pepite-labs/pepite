@@ -385,6 +385,18 @@ vowel or `w`/`8` — *oiseau*, *huile* — minus a short list of aspirated-h wor
 h aspiré: *haricot* = `aRiko`) get `ElisionBoost` (×8). In practice the n-grams after `l d qu…` already contain almost
 only such words, so the boost changes little (see evaluation.md).
 
+**From the first letter (0.10.2).** With no word before it (a sentence start), `j` now offers `J'` next to `je` (`m'`,
+`c'`, `qu'`, `jusqu'`, `lorsqu'`, `puisqu'` alike): the engine gives these bare forms a context-free prior estimated at
+load (predict-core-design §4, `ElisionUnigram`); the keyboard side is unchanged (display mapping, no space, next-word bar
+at once). **Apostrophe style** (owner Q2: follow the document, no setting): `ContextExtractor` returns the last `'` or
+`’` before the caret (`TextContext.Apostrophe`); `WordTracker.ApostropheStyle` (default `'`) takes it from a read
+(`Seed`) or from a typed apostrophe, keeps it across a digit or an untracked Backspace, and returns to `'` on every `Reset`
+(every jump: click, arrow, focus or window change) until a read or a key says otherwise. Where the text cannot be read
+(keys-only hosts), the style follows the apostrophe key the pupil last typed since the jump. `KeyboardPolicy.Shown` writes the bar's elisions in that
+style after `Elision.Apply` (`Elision.Styled`: after « C’est vrai. », `j` → `J’`), so the tile and the inserted text
+match the document. Speech is unchanged (owner Q3): a right-click on `j'` says « j' »; the inserted elision is said with
+the next word.
+
 **Our automatic space** (`AutoSpaceState`, under `_sync`): armed by an insertion that added a space, for that tracker
 version in that foreground window. Every other tracker mutation (a key, a jump, a Backspace, a read) changes the
 version, so it disarms by itself; a window change too.
@@ -1275,7 +1287,15 @@ has the state, never the word.
   outside the words' panel, so `VisibleCount` and F1–F8 are unchanged; the trimming of a bar wider than the monitor
   counts it in the fixed part (`BarPlacement.WordsThatFit`, unit-tested).
 - **Bar (Q10)**: shown with the marker alone for ≈ and ? when there is no word to propose (after « xqzt␣ » the context
-  predicts nothing); never for ✓ alone (« la maison. »: hidden as before).
+  predicts nothing); never for ✓ alone (« la maison. »: hidden as before, owner Q5 of plan exact-typed-word). **0.10.2**:
+  while typing, a ✓ word is itself one of the bar's words (`PredictionEngine.ExactTyped` Present, at worst the last
+  slot). `Update` passes the ✓ it computes for the marker as `exactMark`, so the rule applies exactly when the ✓ does —
+  also when the spelling indicator is off in the settings (the marker is hidden, the rule still applies). `Configure`
+  sets `ExactBar` to the word count; after a bar trimmed to fit the screen (XL on a small monitor) it is the slots that
+  bar showed (`SyncExactBar` after each `Place` and in `SyncVisibleCount`, back to the count when a full bar fits again).
+  With a one-word bar (« Nombre de mots proposés » 1, or trimmed to one) the rule is off: the only tile stays the most
+  probable word. So Q10 only concerns a finished word. The tile looks like any other (owner Q6); choosing it retypes the
+  word with its space (and its capital at a sentence start).
 - **The last word of a line** (owner decision 2026-11-14, option B: « je m'attends à une correction »): Enter finishes the
   word like a space. The hook records the focused control and its **system caret** (`GetGUIThreadInfo`: caret window and
   top) before the app handles Enter and arms a one-shot timer (`LineEndDelayMs` = 130 ms, UI thread); any key, jump, focus
@@ -1439,8 +1459,11 @@ has the state, never the word.
 Static French HTML pages installed in `{app}\aide\` (source `freeware/aide/`, CC BY-SA 4.0; `prefs.js` GPL), opened
 in the user's default browser. Local only: every page carries the CSP `default-src 'none'; script-src 'self';
 style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'`; external sites are written as
-text, never links; no e-mail; no pictogram (bar pictures are `--render-bar --no-pictures` renders, the drawings are
-ours). The same pages are also published as an online copy on GitHub Pages (plan 13, A10; `pepite-labs.github.io/pepite`,
+text, never links; no e-mail; no pictogram in the drawings and the bar renders (`--render-bar --no-pictures`; the
+drawings are ours). Amended (owner 2026-11-17, D32): « les pictogrammes ARASAAC sont admis dans les vraies captures
+d'écran de l'aide, avec la légende de crédit ; ils restent hors de la licence CC BY-SA 4.0 de l'aide » — 0.10.2: the
+real screenshots `aide\img\capture-*.png`, each with pictograms captioned « Pictogrammes : Sergio Palao, ARASAAC,
+Gouvernement d'Aragon, CC BY-NC-SA 4.0 ». The same pages are also published as an online copy on GitHub Pages (plan 13, A10; `pepite-labs.github.io/pepite`,
 one folder per minor version, a banner saying the installed help works offline, and a privacy line for the web host;
 `installer/build_help_site.py`, `development/BUILD.md` § 2c); the « À propos » page names that address as plain text.
 

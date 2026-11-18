@@ -10,8 +10,8 @@ namespace Predict.Keyboard.Tests;
 public class DataSearchTests
 {
     [Theory]
-    [InlineData(@"C:\src\freeware\src\Predict.Keyboard\bin\Release\net6.0-windows\win-x64\", true)]
-    [InlineData(@"C:\src\freeware\src\Predict.Keyboard.Tests\bin\Debug\net6.0", true)]
+    [InlineData(@"C:\src\freeware\src\Predict.Keyboard\bin\Release\net10.0-windows\win-x64\", true)]
+    [InlineData(@"C:\src\freeware\src\Predict.Keyboard.Tests\bin\Debug\net10.0", true)]
     [InlineData(@"C:\Program Files\Pepite-Prediction\", false)]
     [InlineData(@"C:\Users\eleve\AppData\Local\Programs\Pepite-Prediction", false)]
     [InlineData(@"D:\bin\Pepite-Prediction\", false)]          // a bare \bin\ chosen at install time
@@ -22,7 +22,7 @@ public class DataSearchTests
     [Fact]
     public void MayWalkUp_Needs_A_Project_File_Next_To_Bin()
     {
-        const string bin = @"C:\x\src\Predict.Keyboard\bin\Release\net6.0-windows\win-x64";
+        const string bin = @"C:\x\src\Predict.Keyboard\bin\Release\net10.0-windows\win-x64";
         Assert.True(DataSearch.MayWalkUp(bin, d => d == @"C:\x\src\Predict.Keyboard"));
         Assert.False(DataSearch.MayWalkUp(bin, _ => false));                       // a look-alike folder without a project
         Assert.False(DataSearch.MayWalkUp(@"D:\bin\Release\Pepite", _ => true));   // bin right under the drive root
@@ -38,7 +38,7 @@ public class DataSearchTests
     [Fact]
     public void Next_To_The_Exe_Wins_Then_The_Nearest_Parent_In_A_Dev_Build()
     {
-        const string bin = @"C:\r\src\Predict.Keyboard\bin\Release\net6.0-windows\win-x64";
+        const string bin = @"C:\r\src\Predict.Keyboard\bin\Release\net10.0-windows\win-x64";
         var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { @"C:\r\src\Data.Build\out\pictos.sqlite", @"C:\Data.Build\out\pictos.sqlite" };
         Assert.Equal(@"C:\r\src\Data.Build\out\pictos.sqlite", DataSearch.Find(bin, "pictos.sqlite", files.Contains, _ => true));
         files.Add(Path.Combine(bin, "pictos.sqlite"));
@@ -210,5 +210,34 @@ public class InstallInfoTests
         Assert.Contains("#define AppIdGuid \"" + InstallInfo.AppId.Trim('{', '}') + "\"", text);
         Assert.Contains("AppId={{{#AppIdGuid}}", text);
         Assert.Contains(SingleInstance.QuitName.Replace(@"Local\", ""), text);
+    }
+
+    /// <summary>0.10.2 (.NET 6 → .NET 10): an upgrade from 0.10.1 must delete the 45 .NET 6 runtime files the new
+    /// publish no longer ships (an app-local ucrtbase.dll next to the .NET 10 runtime); one exact name per line, never a
+    /// wildcard over {app}.</summary>
+    [Fact]
+    public void Upgrade_Deletes_The_Net6_Runtime_Files_One_By_One()
+    {
+        string? iss = null;
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null && iss is null; d = d.Parent)
+        {
+            var p = Path.Combine(d.FullName, "installer", "pepite.iss");
+            if (File.Exists(p)) iss = p;
+        }
+        Assert.NotNull(iss);
+        var lines = File.ReadAllLines(iss!);
+        int start = Array.IndexOf(lines, "[InstallDelete]");
+        Assert.True(start >= 0);
+        var section = lines.Skip(start + 1).TakeWhile(l => !l.StartsWith("[", StringComparison.Ordinal)).ToList();
+        var files = section.Where(l => l.StartsWith("Type: files; Name: \"{app}\\", StringComparison.Ordinal))
+                           .Select(l => l.Substring("Type: files; Name: \"{app}\\".Length).Split('"')[0]).ToList();
+        Assert.DoesNotContain(section, l => l.StartsWith("Type:", StringComparison.Ordinal) && (l.Contains('*') || l.Contains('?')));
+        Assert.Contains("ucrtbase.dll", files);
+        Assert.Contains("dbgshim.dll", files);
+        Assert.Contains("mscordaccore_amd64_amd64_6.0.3224.31407.dll", files);
+        Assert.Equal(27, files.Count(f => f.StartsWith("api-ms-win-core-", StringComparison.Ordinal)));
+        Assert.Equal(15, files.Count(f => f.StartsWith("api-ms-win-crt-", StringComparison.Ordinal)));
+        // nothing the .NET 10 build ships (InstallDelete runs before the copy, but a listed live file would be a typo)
+        Assert.DoesNotContain(files, f => f is "Pepite.exe" or "Pepite.dll" or "coreclr.dll" or "hostfxr.dll" or "e_sqlite3.dll");
     }
 }

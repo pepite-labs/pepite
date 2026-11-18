@@ -37,12 +37,12 @@ neural reranker, § 4). Each component has its own design note:
 ## 2. Dependency graph
 
 ```
-Predict.Keyboard (net6.0-windows, WPF + WinForms tray, System.Speech 6.0.0, UIAutomationClient)
+Predict.Keyboard (net10.0-windows, WPF + WinForms tray, System.Speech 10.0.15, UIAutomationClient)
         │
         ▼
-Predict.Core (net6.0) ──► Microsoft.Data.Sqlite 6.0.25 ──► SQLite (bundled e_sqlite3)
+Predict.Core (net10.0) ──► Microsoft.Data.Sqlite 10.0.15 ──► SQLite (bundled e_sqlite3)
         ▲          ▲
-Predict.Eval    Predict.Cli   (net6.0 consoles)
+Predict.Eval    Predict.Cli   (net10.0 consoles)
 ```
 
 `Predict.Core` has a single NuGet dependency and no Windows-specific code, so it is portable (Linux/macOS/ARM64)
@@ -89,7 +89,7 @@ because measurements showed it was already fast enough:
 | Core language | C++ DLL behind a C ABI | **C#** library | lookups are light (0.26 ms/prediction); one language, simpler build |
 | Context model | KenLM (Kneser-Ney) | **stupid backoff**, 4-gram → unigram, in SQLite | KN skipped: small expected ranking gain at this data size vs. complexity; SQLite keeps RAM flat (see [evaluation.md](../development/evaluation.md)) |
 | G2P | espeak-ng or rules | **rules** (`PhoneticKey.Fold`) + Lexique's own `phon` column | permissive licence, no GPL dependency |
-| UI | WinUI 3 or WPF | **WPF** (.NET 6) | available with the installed SDK, mature `WS_EX_NOACTIVATE` story |
+| UI | WinUI 3 or WPF | **WPF** (.NET 6, .NET 10 since 0.10.2) | available with the installed SDK, mature `WS_EX_NOACTIVATE` story |
 | Caret / text | UIA TextPattern | Win32 caret first, **UIA** fallback; word tracked from keys | UIA word *reading* is next step ([keyboard.md](../development/keyboard.md)) |
 | TTS | SAPI 5 | **SAPI 5** (`System.Speech`), word progress (`SpeakProgress`) for the reading highlight | as planned; neural voices behind the same `ISynth` next (plan 08) |
 | Neural reranker | optional ONNX | not built | not needed: the benchmark targets are met without it |
@@ -137,5 +137,5 @@ The C ABI boundary stays the plan for a future native/neural tier; nothing in v1
   edits, the idea behind the transposition / sound-alike penalties.
 - Jurafsky & Martin, *Speech and Language Processing*, 3rd ed. draft, Appendix D (noisy-channel spelling),
   <https://web.stanford.edu/~jurafsky/slp3/D.pdf>.
-- Microsoft Learn: *LowLevelKeyboardProc*, *SendInput*, *GetGUIThreadInfo*, *UI Automation TextPattern* (Win32 / .NET 6 docs, 2024–2026).
-- Microsoft.Data.Sqlite 6.0.25; .NET 6.0 SDK 6.0.424.
+- Microsoft Learn: *LowLevelKeyboardProc*, *SendInput*, *GetGUIThreadInfo*, *UI Automation TextPattern* (Win32 / .NET docs, 2024–2026, read for .NET 6; the Win32 calls do not depend on the .NET version).
+- Microsoft.Data.Sqlite 10.0.15; .NET SDK 10.0.115 (runtime 10.0.15; .NET 6.0 SDK 6.0.424 until 0.10.1).

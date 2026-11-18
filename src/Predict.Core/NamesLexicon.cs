@@ -16,7 +16,7 @@ public sealed class NamesLexicon
     {
         public readonly string Form, Lower, Shown;   // Shown: the name a variant stands for (the same string for a name)
         public readonly float Freq;                  // pseudo frequency per million (cap × rang)
-        public readonly bool Recognised;             // tier 2: predicted only after a capital typed inside a sentence
+        public readonly bool Recognised;             // tier 2: after a capital typed inside a sentence, else from 4 letters (0.10.2)
         public readonly bool Elides;                 // starts with a vowel: takes « l' », « d' » (D22: « d'Emma »)
         public readonly bool Restricted;             // owner 2026-11-15: offered only after a capital inside a sentence + 3 letters
         public Entry(string form, string shown, double freq, bool recognised, bool restricted = false)
@@ -37,7 +37,7 @@ public sealed class NamesLexicon
     // sorted lowercase keys, one array per tier: a query without a capital inside a sentence never walks the ≈ 24 000
     // recognised-only first names (plan 10C review, speed)
     internal readonly string[] Keys1; internal readonly int[] Idx1;   // tier 1 (predicted)
-    internal readonly string[] Keys2; internal readonly int[] Idx2;   // tier 2 (recognised; predicted after a capital)
+    internal readonly string[] Keys2; internal readonly int[] Idx2;   // tier 2 (recognised; predicted after a capital, or from 4 letters above a floor)
     private readonly Dictionary<string, int> _strip;            // accent-stripped lowercase → first entry
     private readonly int[] _next;                               // the next entry with the same stripped letters, or -1
 
@@ -51,6 +51,9 @@ public sealed class NamesLexicon
     /// <summary>Names read from the pack (variants and parts not counted).</summary>
     public int NameCount { get; private set; }
     public string? Edition { get; private set; }
+    /// <summary>The pseudo frequency (per million) of a rang-1 name in this layer (<see cref="Build"/>'s freqCap): the engine
+    /// turns a rang floor into a frequency with it (0.10.2, <see cref="PredictionEngine.NamesRecognisedFloor"/>).</summary>
+    public double FreqCap { get; private set; } = 5.0;
 
     private NamesLexicon(Entry[] entries)
     {
@@ -138,7 +141,7 @@ public sealed class NamesLexicon
             }
         }
 
-        public NamesLexicon Done(string? edition) => new(_byForm.Values.ToArray()) { NameCount = _count, Edition = edition };
+        public NamesLexicon Done(string? edition) => new(_byForm.Values.ToArray()) { NameCount = _count, Edition = edition, FreqCap = _cap };
     }
 
     /// <summary>The frequency (per million) of a restricted figure: below any name of the pack (whose floor is cap × 0.001).</summary>

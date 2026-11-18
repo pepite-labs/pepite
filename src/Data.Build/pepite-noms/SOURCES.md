@@ -1,4 +1,4 @@
-# Sources of the « Noms propres » pack (edition 2026.1)
+# Sources of the « Noms propres » pack (edition 2026.2)
 
 Every input is pinned in [names.lock.json](names.lock.json) (URL, version, SHA-256); the built pack repeats the table with
 the snapshot dates in `noms/SOURCES.md`, plus the author and licence of every Commons flag. Licence statements below were
@@ -21,7 +21,8 @@ read on 2026-11-14 (an internal study of Pépite gives the quotes and URLs).
 
 - First names: INSEE names title-cased (« JEAN-PIERRE » → « Jean-Pierre »), births summed per name; Statbel persons summed
   over municipalities and sexes; Statbel newborns 2016–2025 summed per name (they rank the Belgian names of the predicted tier); names with fewer than 20 births since 1900 and fewer than 20 Belgian persons dropped;
-  two tiers (owner Q2 / Q11).
+  two tiers (owner Q2 / Q11); since edition 2026.2 the predicted tier also holds the 1 000 names most given since 1900
+  (France or Belgium, the higher share), ranked by max(recent rang, lowest recent-tier rang, 0.5 × all-time rang).
 - Places: current REFNIS lines only; French name shown, disambiguation in brackets removed, Dutch / German names and the
   Wikidata French label as variants; regions and provinces also take their Wikidata French aliases (« Wallonie »).
 - Countries: ISO 3166-1 alpha-2 codes only (macro-regions and reserved codes left out), the typographic apostrophe

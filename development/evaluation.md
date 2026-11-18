@@ -887,6 +887,274 @@ pair (`spelling.sqlite` next to it):
 | held-out subtitles `--max 20000` (context set) | KSS 51.7 % (43 154 / 89 426) | identical output |
 | held-out Wikipedia `--max 20000` | KSS 47.4 % (50 800 / 96 525) | identical output |
 
+## Elided forms from the first letter (0.10.2)
+
+Plan `elisions.md`: the context-free prior of `j' m' c' qu' jusqu' lorsqu' puisqu'` (`ElisionUnigram`, predict-core-design
+§4). Same binary, `--grammar out\grammar.sqlite`, no names pack; `base` = `--elision-uni 0`, `calib` = default (1), plus
+the sweep 0.5 / 2. Outputs: `<work>\corpus-light\runs-elision\` (`runs\<label>\`, `results-*.md`, probes). `base`
+reproduces the 0.10.1 dumps byte for byte (all five sets identical to `runs\Dfull-g2`).
+
+Estimates (per million; Lexique row in brackets): j' 10 982 (bare 64), m' 3 880 (70), c' 3 320 (60), qu' 1 718 (22),
+jusqu' 642 (2.3), lorsqu' 186 (0.04), puisqu' 91 (0.03); check against Lexique's apostrophe rows: l' 13 790 (12 747),
+d' 10 053 (11 876), n' 11 869 (8 860), s' 6 086 (5 392), t' 9 111 (4 344). Ranks at a sentence start: j' 2nd, m' 3rd,
+c' 3rd, qu' 5th, jusqu' 2nd, lorsqu' 3rd, puisqu' 7th, all within hit@8 (the plan expected qu' 4th, lorsqu' 2nd,
+puisqu' 3rd: the literal-prefix gate still reads the bare rows' Lexique frequency, which the plan keeps; weight kept at 1,
+owner Q4).
+
+| Set (words) | base KSS | calib KSS | Δ | ×0.5 Δ | ×2 Δ |
+|---|---|---|---|---|---|
+| E1 (5 000) | 45.28 | 45.29 | +0.00 | +0.00 | −0.04 |
+| E2 (5 000) | 51.98 | 51.98 | +0.00 | +0.00 | −0.02 |
+| E3 (1 536) | 54.58 | 54.57 | −0.01 | +0.00 | −0.04 |
+| **KSS(E)** | 50.61 | 50.61 | −0.00 [−0.01, +0.01] | +0.00 | −0.03 [−0.05, −0.01] |
+| W (10 000) | 46.96 | 46.95 | −0.00 | −0.00 | −0.04 |
+| S-unseen (10 000) | 47.28 | 47.28 | −0.00 | +0.00 | −0.04 |
+
+New Eval line « elided forms » (the 1-letter tokens KSS skips, inside a line; `next` = next-word bar), ranked as the bar
+shows them (`Elision.Apply` of the engine's list against `Elision.Display` of the target: the engine also returns
+Lexique's own « l' » row, which the first count, against the bare token, wrongly took for a miss; review 2026-11-17;
+KSS and the dumps are unchanged). 1-letter hit@8 base → calib: E1 0.945 → 0.976, E2 0.963 → 0.990, E3 1.000 → 1.000
+(20 forms, already at the ceiling), W 0.967 → 0.980, S-unseen 0.946 → 0.984; next-word unchanged (top-1/hit@8 0.076/0.543,
+0.097/0.685, 0.100/0.950, 0.071/0.684, 0.052/0.515). As a line's first word (no context, the case the change is for)
+1-letter hit@8 base → calib: E1 0.269 → 0.962 (26 forms), E2 0.706 → 0.941 (17), E3 0.176 → 1.000 (17), W 0.737 → 0.947
+(38), S-unseen 0.168 → 0.988 (167); base is not 0 there because l' d' n' s' t' already had their Lexique rows. Top-1
+there stays 0 at weight 1 (je / le / ce / que first). The ×0.5 / ×2 sweep was read with the first (bare-token) count
+only: in-sentence hit@8 within 0.003 of ×1, line-start top-1 0.18–0.42 at ×2. The metric is noisy at the margin: a
+1-letter bare token is also the euphonic « t » of « a-t-il », an abbreviation (« M. ») or an initial.
+
+| Gate | base | calib | ×0.5 | ×2 |
+|---|---|---|---|---|
+| `elision-start` hit@8 = 1 (planner's 18 cases) | 0.56 | 0.94 | 0.89 | 0.94 |
+| `elision-start` hit@8 = 1 (case fixed, below) | 0.61 | **1.00** (top-1 0.50) | | |
+| 57 old cases hit@8 1.00, top-1 ≥ 0.66 | 1.00 / 0.68 | 1.00 / 0.68 | 1.00 / 0.68 | 1.00 / 0.68 |
+| KSS Δ ≥ −1.0 pt on every set | — | met | met | met |
+| `cases-personal` ≥ 0.474, « Mes fautes » 1.000 | 0.491 / 1.000 | 0.491 / 1.000 | same | same |
+| `--spelling` wrong reds | 0 | 0 | 0 | 0 |
+| G-invented within 2 pts | 0.55 / 0.84 | 0.55 / 0.84 | same | same |
+| elided forms 1-letter hit@8 rises on E2 and E3 | — | E2 yes; E3 1.000 → 1.000: met at its ceiling | same | same |
+| load + ≤ 50 ms (median) | ≈ 749 ms | ≈ 760 ms (+11) | | |
+
+The one `elision-start` miss at every weight was the planner's case « jusqu' » + `a` → « à »: « à » is not a literal
+prefix of `a`, and the phonetic keys need 2 letters, so a typed `a` never reaches « à » (base misses it too, and no
+weight can change that). « à » is first in the next-word bar after « jusqu' » before any letter, so the case now tests
+that: « jusqu' » + nothing typed → « à » (orchestrator decision, 2026-11-17). The E3 elided-forms line cannot rise: its
+20 in-sentence forms are already all within the 8 (1.000 → 1.000), counted as met at its ceiling (E2 rises, and the
+line-start forms of E3 go 0.176 → 1.000). **Verdict: every gate met at weight 1**; KSS unchanged (no Δ near −0.2 pt).
+
+Speed: `Predict.Cli --bench` (3 runs, mean per prediction) 0.180–0.182 ms base, 0.186–0.224 ms calib (one noisy run; the
+query path is unchanged), working set 101–103 MB both. **Load** (alternating fresh processes, median of 8 pairs) ≈ 749 →
+≈ 760 ms, **+11 ms**. Deviation from the plan's « at load »: the calibration's ≈ 11 000 bigram rows cost ≈ 51 ms of index
+seeks on the load thread (over the 50 ms gate), so `Load` reads them on a second read-only connection (≈ 64 ms there)
+while it builds its indexes, and applies the estimates at the end of the constructor (the main connection is the
+fallback if the second one fails).
+
+## First names of all generations (0.10.2)
+
+Plan `prenoms-adultes.md` (owner 2026-11-17, D30 amendment): the names pack **2026.2** also predicts the 1 000 first names
+most given since 1900, and the engine searches the recognised tier without a capital from 4 letters
+(`NamesRecognisedFrom`, rang ≥ `NamesRecognisedFloor` 0.02; predict-core-design § 5d). `names-base` = HEAD `f8751c4` +
+pack 2026.1; `names-new` = the new engine + pack 2026.2; `new-rare-off` = `names-new` with `--names-rare-from 99`. Every run
+uses `--grammar out\grammar.sqlite --names <pack>`, one at a time. Outputs: `<work>\corpus-light\runs-names\`
+(`runs\<label>\`, probes, binaries, packs).
+
+**Pack 2026.2** (`build_names.py build --previous` the shipped 2026.1, `noms.json` `41e3b2b5…`): 31 299 names, 0 added and
+0 removed in every category. Tiers: `prenom` 4 962 → 5 226, `prenom (reconnu)` 24 129 → 23 865. 265 names promoted; one of
+them, Brecht (a Belgian municipality), keeps its 2026.1 values. Only these 264 `prenom` entries change (`niveau`, `rang`),
+and the header changes only in its edition text; the images are identical. Roger is 481st and Martine 523rd among the
+predicted first names. The places and the figures are byte-identical. `noms.json`
+`54b0800586b5567fdbba56d7552647afde1b71e83fd2056123f7d6bbbd7178fe`; `noms-2026.2.zip`
+`0f03da2bf04a4eb69366e97beef98092fcfb470806aef3e7d4d8374fe4508568` (464 079 bytes); folder 2 878 714 bytes.
+
+Probes (`Predict.Cli --probe`): `|Rodol|start` empty → Rodolphe 1st; `|Rog|start` → Roger 3rd; `avec|rodolphe` empty →
+Rodolphe; `|rodol|start` → Rodolphe; `|Ros|start`, `une|ros` and `la|pierr` are unchanged (rose and pierre first).
+
+New `Predict.Eval\cases-names.json` (38 cases; `--names-rare-from` / `--names-rare-floor` flags; with `--keep-case` a
+« sentence-start words » line, while the total KSS and the dumps stay as before):
+
+| Category | base | new | new-rare-off |
+|---|---|---|---|
+| `name-start` (10: Rodol, Rodo, Rog, Martine, Franço, Gérar, Sylv, Sandr, Moniq, Ginet) hit@8 | 0.00 | **1.00** (top-1 0.40) | 1.00 |
+| `name-neutral` (2, after « Il pleut. ») | 0.00 | **1.00** | 1.00 |
+| `name-lower` (3, « avec » + rodolphe, roger, gérard in full) | 0.00 | **1.00** | 1.00 |
+| `name-start-lower` (2: rodol, sandr) | 0.00 | **1.00** | 1.00 |
+| `name-band` (4, recognised, rang 0.027–0.097: Edwig, Romua, Lysia, Goulv) | 0.00 | **1.00** | 0.00 |
+| `name-guard` (14 common words) | hit@8 1.00, top-1 0.79 | every rank equal | equal |
+| `name-limit` (3, reported, not gated) | 0 / 3 | 0 / 3 | 0 / 3 |
+
+**Known limits (`name-limit`, owner 2026-11-17).** In these 3 cases common words outrank the name:
+- `Marti` at a start: martiale, martini, martinez and Martin fill the 8. Martine scores −7.68 (typed in full), and the 8th
+  word scores −7.46. Typed in full, « Martine » is 5th, which is now the `name-start` case.
+- `Franç` at a start: français, française and francs fill the 8. « Franço » gives Françoise 2nd.
+- `avec martine`, typed in full in lowercase: a lowercase name inside a sentence keeps ×0.1, and martin, marine and
+  martinez stay ahead.
+
+Neither of the plan's fallbacks helps, because both lower names: floor 0.05 keeps the same 3 misses and drops `name-band`
+to 3 / 4; `PROMOTED_SCALE` 0.35 keeps the same 3 misses. Even 1.0 (information only) still misses Franç and martine. The
+upcoming « exact typed word » rule (plan `exact-typed-word.md`) is expected to guarantee the fully typed name (« avec
+martine » → Martine).
+
+| Gate | base | new | Result |
+|---|---|---|---|
+| `cases-names` positives hit@8 = 1.00 | 0 / 21 | 21 / 21 | met (with the `name-limit` cases moved, owner) |
+| `name-guard` keeps its base rank | — | 14 / 14 equal | met |
+| `cases.json --names` top-1 / hit@8 | 0.64 / 1.00 | 0.64 / 1.00 | met |
+| `cases-personal` / « Mes fautes » / start | 0.491 / 1.000 / 0.500 | same | met |
+| `--spelling --names` | 0 wrong reds, ✓ 86 ≈ 0, start 30 / 35, recall 0.827 | same | met |
+| Held-out lowercase KSS (E1 / E2 / E3 / W / S-unseen) | 45.29 / 51.98 / 54.57 / 46.95 / 47.28 | dumps byte-identical | met (Δ 0) |
+| Held-out keep-case `--oov-typed`, all words | 44.41 / 48.73 / 54.48 / 43.80 / 43.82 | +0.00 / +0.00 / +0.00 / +0.01 / +0.01 | met |
+| Keep-case, sentence-start words | E1 21.97 (73 words), E2 19.83 (48), W 21.96 (84), S-unseen 18.72 (122) | Δ 0.00 everywhere | met |
+| `--bench-names` rounds 2–3, pack on | 0.345–0.361 ms, p95 1.07–1.21 | 0.350–0.359 ms, p95 1.10–1.22 | met |
+| `--mem-names-stream` private bytes (3 runs) | 13.3 / 12.8 / 13.3 MB | 12.8 / 13.5 / 12.1 MB (median 12.8) | met |
+| Pack diff | — | only `prenom` tiers and rangs | met |
+
+E1 and E2 use `--max 5000`, E3 all its words, W and S-unseen `--max 10000`. E3 has no sentence-start word (its lines are
+single sentences, and a line's first word is not scored). The base sentence-start numbers come from the new binary with
+`--names-rare-from 99` on pack 2026.1, which reproduces the base binary byte for byte (cases, personal, spelling and the five
+keep-case dumps). The new keep-case dumps differ from base in 3 / 6 / 5 words (E2 / W / S-unseen), all of them capitalised
+names inside a sentence (±1–4 letters); the cause is the tier change of the pack (the same differences with
+`new-rare-off`). Lowercase held-out runs are unchanged, because a name typed in lowercase inside a sentence keeps ×0.1.
+
+Floor sweep (information): 0.0105 gives the same results as 0.02 on the curated sets and S-unseen keep-case (KSS 43.8 %,
+start 18.72 %); 0.05 is the same except `name-band` 3 / 4. Working set +14.5–14.7 MB for both packs (`--mem-names-stream`).
+
+## Exact typed word (0.10.2)
+
+Plan `exact-typed-word.md` (owner 2026-11-17; predict-core-design § 5f): the word typed in full and spelled right (✓ while
+typing) is always among the bar's words. Three modes measured with the same binary (`--exact off|present|first`, then
+`first --exact-margin 1.0` because First failed), each with `--grammar out\grammar.sqlite --names <pack 2026.2>` and
+`--exact-report`, one run at a time. E1 and E2 `--max 5000`, E3 all, W and S-unseen `--max 10000`; « lc » = lowercase,
+« kc » = `--keep-case --oov-typed`. `off` reproduces the base binary (HEAD `35f7791`) byte for byte: the curated, spelling
+and grammar outputs and the ten dumps. Outputs: `<work>\corpus-light\runs-exact\` (`runs\<label>\`, probes, benches).
+**Decision (owner): Present, the engine default.**
+
+New `Predict.Eval\cases-exact.json` (42 cases; a case may carry `also`, a second word that must be in the 8):
+`exact-first` 17, `exact-present` 12, `exact-not-first` 5 (« il et » → est, also et), `prefix-word` 7 (« la mai » →
+maison), `exact-limit` 1 (« avec martine », reported, not gated: a lowercase first name inside a sentence is not ✓ — a
+pack form needs its capital — so the rule does not reach it). `--exact-report` adds, per held-out set: the words typed in
+full and ✓ (exact-present@8, exact-top1, mean rank, a bar shown), and the ✓ words that are a prefix of the target (« mai »
+of « maison »): the target's top-1 there with the rule off and on.
+
+| Gate | off (= base) | **present** | first (V1) | first + margin 1.0 |
+|---|---|---|---|---|
+| KSS lc E1 / E2 / E3 / W / S-unseen (Δ ≥ −0.2 pt) | 45.29 / 51.98 / 54.57 / 46.95 / 47.28 | **identical** (dumps byte-identical) | 43.21 / 50.13 / 51.66 / 45.14 / 45.01 ✗ | 44.91 / 51.77 / 54.21 / 46.73 / 46.93 ✗ |
+| KSS kc, same sets | 44.41 / 48.73 / 54.48 / 43.81 / 43.83 | identical | 42.36 / 46.97 / 51.57 / 42.04 / 41.64 ✗ | 44.03 / 48.50 / 54.13 / 43.57 / 43.47 ✗ |
+| kc sentence-start words E1 / E2 / W / S-unseen | 21.97 / 19.83 / 21.96 / 18.72 | identical | 21.97 / 18.14 / 19.64 / 18.11 | 21.97 / 19.41 / 21.45 / 18.31 |
+| Held-out hit@8 at 1 / 2 / 3 letters, lc (Δ ≥ −0.5 pt) | E1 .705 / .841 / .883, E2 .719 / .839 / .880, E3 .738 / .891 / .951 | E1 .705 / .839 / .882, E2 .719 / .838 / .879, E3 .738 / .887 / .951 (Δ 0 to −0.4 pt) | E1 .705 / .838 / .880, E2 .719 / .836 / .877, E3 .738 / .887 / .949 (Δ 0 to −0.4 pt) | E1 .705 / .839 / .882, E2 .719 / .838 / .878, E3 .738 / .887 / .951 (Δ 0 to −0.4 pt) |
+| Same, W / S-unseen lc and the kc runs (Δ) | W .670 / .799 / .850, S-unseen .726 / .854 / .897 | 0 to −0.4 pt | 0 to −0.5 pt | 0 to −0.4 pt |
+| Held-out exact-present@8 (≥ 0.999), lc / kc | 0.994–1.000 / 0.994–1.000 | **1.0000** / 0.9998–1.0000 | 1.0000 / 0.9998–1.0000 | 1.0000 / 0.9998–1.0000 |
+| Held-out exact-top1 (info) | 0.904–0.964 | same | 0.962–0.995 | 0.948–0.989 |
+| Prefix words: target top-1 at the shorter word (E1 lc, 3 860) | 0.525 | 0.525 | 0.175 (1 389 lost) | 0.474 (200 lost) |
+| `cases.json` (75) hit@8 / top-1 (gate 1.00 / 0.66) | 1.00 / 0.64 | 1.00 / 0.64 | 1.00 / 0.64 | 1.00 / 0.63 |
+| `exact-first` + `exact-present` + `also` hit@8 (1.00) | 1.00 / 0.58 / 0.80 | **1.00 / 1.00 / 1.00** | 1.00 / 1.00 / 1.00 | 1.00 / 1.00 / 1.00 |
+| `exact-first` top-1 (≥ 0.90, V1) | 1.00 | 1.00 | 1.00 | 1.00 |
+| `exact-not-first` top-1 (≥ off) | 0.60 | 0.60 | 0.80 | 0.60 |
+| `prefix-word` hit@8 (top-1: V1's cost) | 1.00 (0.57) | 1.00 (0.57) | 1.00 (0.00) | 1.00 (0.57) |
+| `cases-personal` (≥ 0.491) / « Mes fautes » (1.000) | 0.491 / 1.000 | 0.491 / 1.000 | 0.333 / 0.789 ✗ | 0.456 / 0.974 ✗ |
+| `cases-names` unchanged | — | unchanged | changed ✗ | changed ✗ |
+| `--spelling` wrong reds | 0 | 0 | 0 | 0 |
+| `grammar-cases` all, top-1 p2 / p3; G-invented top-1 (within 2 pts) | 0.76 / 0.62; 0.55 | identical | 0.57 / 0.53; 0.48 ✗ | 0.73 / 0.61; 0.56 |
+| `--bench` (3 runs, +≤ 0.02 ms) | 0.182–0.184 ms | 0.183–0.186 ms | 0.185–0.186 ms | — |
+| `--bench-exact` rounds 2–3 (p99 < 1 ms, max < 5 ms) | p99 0.51–0.55, max 10–15 ms | p99 0.50–0.55, max 0.7–16 ms | p99 0.50–0.57, max 0.9–18 ms | — |
+
+**`cases.json` top-1** was 0.64, below its 0.66 gate, before this work (since the names pack); the rule does not change it
+(the gate is not attributable to this plan). **`--bench-exact`** (2 000 grammar-context queries whose letters are words, k = 11,
+two runs): the p99 gate is met in every mode once warm; the cold first round has p99 ≈ 1.2 ms and isolated maxima of
+8–19 ms appear in every mode, **Off included**, at the same rate (GC / scheduling, not the rule): TODO.
+
+**Why not First.** Every typed prefix that is a ✓ word wins over its completions (« mai » / maison, « par » / partir,
+« bon » / bonjour), and V1 lets only homophones go ahead (owner Q4): the target is top-1 at such a prefix 0.53 → 0.18, which
+costs 1.8–2.9 KSS points, the personal names, the « Mes fautes » targets and the agreement
+sets. A margin of 1.0 (a completion ten times more probable stays ahead) keeps most completions but still costs 0.2–0.4
+pt and fails `cases-personal`. **What Present changes**: only the bar's last slot when the typed word is not in it — in
+the curated sets « sou », « to », « lu », « kan », « jam »… in 8th place, with the same hit@8 and top-1 there. On the
+held-out sets KSS and top-1 cannot change (k = 1 is below the bar), but hit@8 at 2 and 3 letters loses up to 0.4 pt
+(E3 2 letters .891 → .887): the typed prefix that is a word (« ma », « par ») sometimes takes the 8th slot of the target.
+Re-measured with the Present default, no flag (E1 / E2 `--max 5000`, E3 all, `runs\hit8-recheck\`): the same numbers.
+
+Probes (`Predict.Cli --probe`, present): « la mai » → maison, main, mais, même, mairie, mer, mère, **mai**; « je par » →
+… **par** 8th; « elle mai » → **mai** 8th; « Mai » at a start → **mai** 8th; « il et » → et 7th (in the 8 already), « ils
+mange » → mangent 1st, mange 6th; « avec Rodolphe », « Rodolphe » at a start → Rodolphe; « avec martine » unchanged (not ✓).
+First gave « mais, mai, maison », « pars, par », « ait, est, et » (« ait » shares the pronunciation of « et » in Lexique),
+« mangent, mange », « bon, bonjour » for « dire bon », « par, partir » for « je vais par ».
+
+## Glued words (0.10.2)
+
+Plan `glued-words.md` (owner 2026-11-17; predict-core-design § 5g): « je tème » → « t'aime », « jai » → « j'ai »,
+« lécole » → « l'école ». Same binary (HEAD `332218e`, step 7) with `--no-splits` and `--splits --w-split 0 | 0.5 | 1`, each
+with `--grammar out\grammar.sqlite --names <pack 2026.2>`, one run at a time; E1 and E2 `--max 5000`, E3 all, W and
+S-unseen `--max 10000`, « lc » / « kc » as § Exact typed word; `--glued --max 2000` per set (fewer pairs exist). Outputs:
+`<work>\corpus-light\runs-glued\` (`runs\<label>\`, `gates.py`, benches). `--no-splits` reproduces the base binary
+(HEAD `e6563a7`) byte for byte: the ten dumps, the held-out, grammar, names, personal and `cases-exact` logs; `cases.json`
+and `spelling-cases.json` differ only by the cases added at their end (and the counts).
+
+New cases: `cases.json` `split` (36: « je tème », « jai » at a start, « je vais à lécole », « il ma » → m'a, « je ne sais
+pas sil » → s'il…) and `split-neg` (16: the typed word intended — thème, lait, dame, sait, tante, lune, sel, mange, lit,
+dent, temps, mère, lac, dit, ciel, sort); `spelling-cases.json` `glued` (20, `among`: the joined form among the ≈
+candidates). `--glued`: every elided pair of a held-out set (not after a letter or « - »), typed glued and without
+accents, with the words before it.
+
+| Gate | base (off) | **WSplit 0** | 0.5 | 1.0 |
+|---|---|---|---|---|
+| `split` hit@8 ≥ 0.90, top-1 ≥ 0.60 | — | **1.00 / 0.81** | 1.00 / 0.69 | 0.94 / 0.61 |
+| `split-neg` top-1 = 1.00 | — | **1.00** | 1.00 | 1.00 |
+| 57 old cases hit@8 1.00, top-1 ≥ 0.66; 18 elision-start | 1.000 / 0.685; 1.00 / 0.50 | **identical** (ranks unchanged) | identical | identical |
+| `--glued` full length hit@8 ≥ 0.80, E1 / E2 / E3 | — | **0.927 / 0.913 / 1.000** | 0.886 / 0.906 / 1.000 | 0.874 / 0.892 / 1.000 |
+| `--glued` full length top-1, E1 / E2 / E3 / W / S-unseen | — | **0.664 / 0.726 / 0.946 / 0.747 / 0.651** | 0.553 / 0.642 / 0.784 / 0.665 / 0.501 | 0.456 / 0.590 / 0.676 / 0.585 / 0.413 |
+| KSS lc E1 / E2 / E3 / W / S-unseen (Δ ≥ −0.2 pt) | 45.29 / 51.98 / 54.57 / 46.95 / 47.28 | 45.26 / 51.97 / 54.57 / 46.94 / 47.26 (Δ ≤ −0.03) | 45.27 / 51.97 / 54.57 / 46.94 / 47.27 | 45.28 / 51.97 / 54.57 / 46.95 / 47.27 |
+| KSS kc, same sets | 44.41 / 48.73 / 54.48 / 43.81 / 43.83 | 44.39 / 48.73 / 54.48 / 43.79 / 43.81 (Δ ≤ −0.02) | 44.39 / 48.73 / 54.48 / 43.80 / 43.82 | 44.40 / 48.73 / 54.48 / 43.80 / 43.83 |
+| `--spelling`: wrong reds; old categories; `glued` ≈ / among (≥ 0.9) | 0; — | **0; unchanged; 1.000 / 1.000** | same | same |
+| ≈ list top-1 of the intended correction, Check order → with the words before (142 lists) | — | **0.817 → 0.901** | same | same |
+| `--glued` ≈ list top-1, Check order → with context, E3 (known cross-domain cost) | — | **0.784 → 0.730 (−5.4 pts)**; E1 / E2 / W / S-unseen gain | same | same |
+| G-invented top-1 (within 2 pts) | 0.55 | **0.55** | 0.55 | 0.55 |
+| `cases-personal` (≥ 0.474) / « Mes fautes » (1.000) | 0.491 / 1.000 | **0.491 / 1.000** | same | same |
+| `cases-exact` (42), `cases-names` (38) | 0.60 / 0.98; 0.66 / 0.92 | **identical ranks** | identical | identical |
+
+Held-out hit@8 at 1 / 2 / 3 letters moves by 0 to −0.2 pt (a joined tile takes an 8th slot: E3 3 letters .951 → .949 at
+WSplit 0). At 3 letters the joined form is rarely reached (`--glued` 3-letter hit@8 0.28–0.38): « léc » is still mostly
+« lec… » words; the full word is the case the plan targets. Without accents (« lecole ») full-length hit@8 is 0.84–1.00.
+Per bare form (E1, WSplit 0, full hit@8 / among the ≈): c' j' jusqu' 1.00, l' 0.95 / 0.90, n' 0.95 / 0.90, d' 0.93 / 0.80,
+s' 0.91 / 0.79, qu' 0.88 / 0.79, m' 0.76 / 0.68 (« m'a », « m'en »: a word typed in full that is itself a word competes).
+**Known cost: the context-ranked ≈ list loses on E3** (top-1 of the joined form 0.784 → 0.730 with the context, 37 pairs:
+the n-grams of the other domains outvote it there), while the other sets gain (E1 0.874 → 0.898, W 0.852 → 0.887,
+S-unseen 0.887 → 0.907) and the curated spelling lists gain 0.817 → 0.901. (After the review fixes below: E3 0.784 →
+0.811.)
+
+**Choice: WSplit = 0** — every gate met at 0, 0.5 and 1.0 except `split` hit@8 at 1.0; 0 is the smallest and has the best
+glued top-1. The penalty's job is done by **ChainLift** (a deviation from the plan's literal `Lm(ctx ⊕ bare, w)`): with
+the literal formula the chain's second word carried the missing n-gram levels a second time (−0.7 to −1.4 in log10:
+« jai » with no context and « il ma » left j'ai and m'a out of the 8, at WSplit 0.5), which the plan's
+WSplit grid {0, 0.5, 1} could not give back. Probes (WSplit 0): « je tème » → t'aime 1st, « le tème » → thème 1st,
+« tème » alone → même, tête, t'aime…, « jai » → j'ai 1st, « je pense quil » → qu'il, qu'ils, « a-til » → t'il dropped by
+the display step after « - », « il ma » → m'a 3rd. « ce », « cé », « sé », « nè » never give c'est / n'est: Fold(« ce ») = `s`
+has no vowel after the bare sound (no split), and for « cé » / « nè » the rest `e` is not the key of « est » — its
+spelled key is `est`, and keys shorter than 2 letters are not indexed from Lexique's pronunciation (TODO 0.10.3).
+The plan's step-3 test « tème alone → thème first » holds on the xUnit fixture at WSplit 0 and 0.5; on the real database
+« tème » alone gives même, tête, t'aime… with thème 6th, splits on or off (no context: the frequent sound-alikes lead).
+
+Speed (idle machine, 3 runs): `--bench` mean +≤ 0.05 ms: base 0.161–0.167, splits off 0.158–0.164, on 0.168–0.170 ms;
+load +≤ 50 ms: 755–780 ms (base) vs 770–799 ms (warm runs; the 13 000 successors are read on the second connection);
+working set 112–119 MB in every variant (noise ±4 MB). `Check` p99 < 20 µs: 12.7–13.6 µs with splits (6.6–6.7 µs off;
+one earlier run under load 18.5 µs). `--bench-split` (2 000 queries, glued words typed letter by letter + common inputs,
+k = 11): p99 < 1 ms met once warm (rounds 2–3: 0.59–0.61 ms on, 0.59–0.66 off; cold round 1.4 ms both); **max < 5 ms
+warm not met: 12–26 ms with splits on, and 10–17 ms with splits off or with SplitKnown = false** — the same isolated
+maxima as `--bench-exact` (GC / scheduling, not the pass: TODO). `RankCorrections` warm: mean 0.003 ms, max 0.016 ms
+(budget 5 ms). **Owner 2026-11-18: on by default with WSplit = 0**; the max spikes are pre-existing (splits off has them
+too; the plan's fallback, SplitKnown = false, does not change them) and accepted, investigated separately (TODO).
+
+**Review fixes (2026-11-18, `runs\fix-min50\`).** The attested-pair filter let corpus noise make joined forms (« sai » →
+s'e / c'e, « jo » → j'o, « mo » → m'au, « to » → t'o, « ju » → j'ou, « ty » → t'i, « lau » / « dau » → l'au / d'au). Now a
+one-letter main word is only a / à / y, « au » / « aux » only after qu' jusqu' lorsqu' puisqu', and a pair needs
+**`SplitMinCount` = 50** bigram counts: between 10 and 50 the pairs left are mostly noise (« c on » 44, « d ou » 45,
+« c un » 42, « m un » 40, « j et » 37), the rarest wanted curated pair is « m aime » (241). Re-checked, WSplit 0:
+`split` 1.00 / 0.81, `split-neg` 1.00, old cases and `cases-exact` ranks unchanged (only bar tails: « j'amène »,
+« jusqu'a » gone), `--spelling` 0 wrong reds, `glued` 1.000 / 1.000, new `glued-neg` (sai, Sai, jo, mo, to, ju, ty, lau,
+dau: no nonsense joined form) 9/9, ≈ list top-1 0.811 → 0.902, `--glued` full length hit@8 / top-1 E1 0.842 / 0.608, E2
+0.865 / 0.691, E3 1.000 / 0.946 (W 0.874, S-unseen 0.874), ≈ among E1 0.775 / E2 0.806 / E3 1.000, G-invented 0.55,
+`cases-personal` 0.491 / 1.000, names unchanged. The minimum costs 4–8 pts of `--glued` hit@8 (rare true pairs: minimum 10
+→ E1 0.904, 20 → 0.886, 30 → 0.874) but every gate holds. The ≈ merge now puts a joined form before the first place from
+which every remaining entry is rarer (« sai » keeps « sais » ahead). `Check` p99 13.0 µs. KSS was not re-run: the change
+only removes split candidates, and the KSS harness never ranks a joined form as a target.
+
 ## Performance / footprint (the resource budget)
 
 Measured (`Predict.Cli --bench`, .NET 6, 125 k words, 746 k bigrams, 1.1 M trigrams):

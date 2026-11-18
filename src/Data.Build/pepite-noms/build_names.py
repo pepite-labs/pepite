@@ -49,6 +49,8 @@ PREDICTED_FIRST_NAMES = 5000           # owner Q2: the top ≈ 5 000 predicted, 
 MIN_COUNT = 20                         # ≥ 20 births since 1900 (France) or ≥ 20 persons (Belgium)
 RECENT = range(2010, 2026)             # owner Q11: the predicted tier ranks by recent births (pupils' generation)
 COMMON_FIRST_NAMES = 1000              # owner 2026-11-15: places rank after these first names (« avec Jo » → Joseph)
+ALLTIME_PREDICTED = 1000               # owner 2026-11-17 (edition 2026.2): the all-time top 1 000 are predicted too (Roger, Martine)
+PROMOTED_SCALE = 0.5                   # their rang: max(recent rang, tier-1 minimum, 0.5 × all-time rang), below the pupils' names
 PLACE_CATEGORIES = {"continent", "pays", "region-be", "province-be", "commune-be", "region-fr", "departement-fr", "ville"}
 HOME_COUNTRIES = {"BE", "FR", "LU", "CH", "NL", "DE", "CA"}   # ISO 3166 codes (Belgium, France and neighbours, Canada)
 TOP_PLACES = {"continent", "pays", "region-be", "province-be", "region-fr"}   # 0.8.3: above the towns in the places band
@@ -332,7 +334,14 @@ def label_of(row):
 def first_names(insee_rows, statbel_rows, statbel_births=None):
     """insee_rows: (sexe, prenom, periode, valeur); statbel_rows: (name, frequency) of the whole population;
     statbel_births: {name: births 2016–2025} (Statbel newborns, owner 2026-11-15: Belgian names weighted by recent
-    births like the French ones; None falls back to the population shares). → [entry] with two tiers."""
+    births like the French ones; None falls back to the population shares). → [entry] with two tiers.
+
+    Edition 2026.2 (owner 2026-11-17): the ALLTIME_PREDICTED names most given since 1900 are predicted too, so that the
+    grown-ups' names (Roger, Martine, Rodolphe) come at a sentence start and typed in lowercase; such a promoted name ranks
+    by max(its recent rang, the lowest rang of the recent tier, PROMOTED_SCALE × its all-time rang), so it comes below the
+    ≈ 480 most given pupils' names (Roger 481st, measured). It carries a transient « _promu » key (its recognised rang of
+    2026.1): the places' cap and the figures' scale leave it out, a place or figure of the same name keeps its 2026.1
+    values (merge), and the key is never written (public_entries)."""
     fr_total, fr_recent, be = {}, {}, {}
     be_births = {clean(n): c for n, c in (statbel_births or {}).items()}
     for _, prenom, periode, valeur in insee_rows:
@@ -362,13 +371,19 @@ def first_names(insee_rows, statbel_rows, statbel_births=None):
     alltime = {n: max(fr_total.get(n, 0) / tot_fr, be.get(n, 0) / tot_be) for n in names}
     ranked = sorted(names, key=lambda n: (-recent[n], -alltime[n], n))
     predicted = set(ranked[:PREDICTED_FIRST_NAMES])
+    promoted = set(sorted(names, key=lambda n: (-alltime[n], -recent[n], n))[:ALLTIME_PREDICTED]) - predicted
     top_r = max(recent.values(), default=1)
     top_a = max(alltime.values(), default=1)
+    low = min((rang(recent[n], top_r) for n in predicted), default=0.01)
     out = []
     for n in ranked:
         src = "insee" if fr_total.get(n, 0) >= be.get(n, 0) * (tot_fr / tot_be) else "statbel"
         if n in predicted:
             out.append({"nom": n, "categorie": "prenom", "rang": rang(recent[n], top_r), "source": src})
+        elif n in promoted:
+            ra = rang(alltime[n], top_a)
+            out.append({"nom": n, "categorie": "prenom", "rang": max(rang(recent[n], top_r), low, round(PROMOTED_SCALE * ra, 3)),
+                        "source": src, "_promu": ra})
         else:
             out.append({"nom": n, "categorie": "prenom", "rang": rang(alltime[n], top_a), "niveau": 2, "source": src})
     return out
@@ -512,7 +527,7 @@ def below_common_first_names(places, firsts, n=None):
     that rang, every other place (municipalities, departments, towns) into (0.05 … 0.80) ×, each keeping its own order. Never below 0.0105, so a place stays out of the
     « rare recognised name » floor the spelling indicator treats as a possible misspelling (D2)."""
     n = n or COMMON_FIRST_NAMES
-    ranks = sorted((e["rang"] for e in firsts if e.get("niveau") != 2), reverse=True)
+    ranks = sorted((e["rang"] for e in firsts if e.get("niveau") != 2 and "_promu" not in e), reverse=True)   # 2026.2: as before
     if not ranks:
         return places
     cap = ranks[min(n, len(ranks)) - 1]
@@ -537,6 +552,9 @@ def merge(entries):
             continue
         cur = by[k]
         a, b = (cur, e) if PRIORITY.index(cur["categorie"]) <= PRIORITY.index(e["categorie"]) else (e, cur)
+        if "_promu" in b and a["categorie"] != "prenom":
+            # 2026.2: a place or a figure that is also a promoted first name keeps its 2026.1 rang and tier
+            b = dict(b, rang=b["_promu"], niveau=2)
         m = dict(a)
         m["rang"] = max(a["rang"], b["rang"])
         if a.get("niveau") == 2 and b.get("niveau") != 2:
@@ -557,8 +575,14 @@ def merge(entries):
     return sorted(by.values(), key=lambda e: (PRIORITY.index(e["categorie"]), -e["rang"], e["nom"]))
 
 
+def public_entries(entries):
+    """The entries as written to noms.json: the transient keys (« _promu ») removed."""
+    return [{k: v for k, v in e.items() if not k.startswith("_")} for e in entries]
+
+
 def diff_report(prev, cur, edition):
-    """Markdown: names added / removed per category against the previous edition (owner Q10: reviewed before shipping)."""
+    """Markdown: names added / removed per category against the previous edition (owner Q10: reviewed before shipping);
+    since 2026.2 also the names that became predicted and the names whose rang changed."""
     def key(e):
         return (e["categorie"], e["nom"])
     p = {key(e) for e in prev}
@@ -581,6 +605,25 @@ def diff_report(prev, cur, edition):
             lines.append("Ajoutés (%d) : %s%s" % (len(added), ", ".join(added[:300]), " …" if len(added) > 300 else ""))
         if removed:
             lines.append("Retirés (%d) : %s%s" % (len(removed), ", ".join(removed[:300]), " …" if len(removed) > 300 else ""))
+    pm = {key(e): e for e in prev}
+    both = [(pm[key(e)], e) for e in cur if key(e) in pm]
+    promoted = sorted(e["nom"] for a, e in both if a.get("niveau") == 2 and e.get("niveau") != 2)
+    demoted = sorted(e["nom"] for a, e in both if a.get("niveau") != 2 and e.get("niveau") == 2)
+    if promoted or demoted:
+        lines += ["", "## Passés au niveau prédit"]
+        lines.append("Passés au niveau prédit (%d) : %s%s" % (len(promoted), ", ".join(promoted[:300]), " …" if len(promoted) > 300 else ""))
+        if demoted:
+            lines.append("Passés au niveau reconnu (%d) : %s%s" % (len(demoted), ", ".join(demoted[:300]), " …" if len(demoted) > 300 else ""))
+    changed = [(a, e) for a, e in both if a.get("rang") != e.get("rang")]
+    if changed:
+        lines += ["", "## Rang changé", "", "| catégorie | noms |", "|---|---|"]
+        for cat in cats:
+            n = sum(1 for _, e in changed if e["categorie"] == cat)
+            if n:
+                lines.append("| %s | %d |" % (cat, n))
+        changed.sort(key=lambda x: (PRIORITY.index(x[1]["categorie"]) if x[1]["categorie"] in PRIORITY else 99, x[1]["nom"]))
+        shown = ["%s %s → %s" % (e["nom"], a.get("rang"), e.get("rang")) for a, e in changed[:300]]
+        lines += ["", "Rang changé (%d) : %s%s" % (len(changed), ", ".join(shown), " …" if len(changed) > 300 else "")]
     return "\n".join(lines) + "\n"
 
 
@@ -739,7 +782,7 @@ def cmd_build(a):
     entries = below_common_first_names(places, firsts)
     entries += below_first_names(historical(bindings(read_snapshot(raw, lock, "wd-historiques")), selection_qids(), selection_restricted()), firsts)
     entries += firsts
-    entries = merge(entries)
+    entries = public_entries(merge(entries))
 
     out = os.path.abspath(a.out)
     pack = os.path.join(out, "noms")
@@ -857,7 +900,7 @@ def write_zip(zpath, pack, out):
 def below_first_names(figures, firsts):
     """Plan 10C review: a historical figure ranks below every predicted first name (« Ad » gives « Adam » before
     « Adolf »): its rang is scaled into (0.5 … 0.95) × the lowest rang of the predicted first names, by its own share."""
-    low = min((e["rang"] for e in firsts if e.get("niveau") != 2), default=0.01)
+    low = min((e["rang"] for e in firsts if e.get("niveau") != 2 and "_promu" not in e), default=0.01)   # 2026.2: as before
     for e in figures:
         e["rang"] = 0.001 if e.get("restreint") else round(max(0.001, low * (0.5 + 0.45 * e["rang"])), 4)
     return figures

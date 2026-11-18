@@ -4,7 +4,9 @@ Pages HTML statiques en français, installées dans `{app}\aide\` et ouvertes da
 l'icône « Aide », boutons « ? » et <kbd>F1</kbd> dans Réglages, « En savoir plus » de la fenêtre de bienvenue). Ce
 fichier n'est pas installé.
 
-Licence : pages, dessins et feuille de style **CC BY-SA 4.0** ; `prefs.js` **GPL-3.0-or-later**. Les polices
+Licence : pages, dessins, captures d'écran et feuille de style **CC BY-SA 4.0**, sauf les pictogrammes ARASAAC visibles
+dans quatre captures (`capture-qui-es-tu`, `capture-espace-enseignant`, `capture-barre-images`, `capture-barre-lecture`), qui restent sous **CC BY-NC-SA
+4.0** (légende « Pictogrammes : Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0 » sous chacune) ; `prefs.js` **GPL-3.0-or-later**. Les polices
 (`fonts/`) sont copiées à la construction depuis `src/Data.Build/out/fonts` (SIL OFL 1.1) et ne sont jamais
 versionnées.
 
@@ -16,7 +18,8 @@ versionnées.
 | `enseignants.html`, `installation.html`, `vie-privee.html`, `a-propos.html` | pages des adultes (`content="adulte"`, « vous ») |
 | `aller/reglages-*.html` | renvois vers une partie de `reglages.html` : Windows perd le `#fragment` d'un fichier ouvert par l'application, le renvoi le garde (`meta refresh` + lien visible) |
 | `style.css`, `prefs.js` | une seule feuille de style ; le script garde les cases « Lettres OpenDyslexic » / « Texte plus grand » d'une page à l'autre (rien d'autre, aucun réseau) |
-| `img/*.svg` | dessins originaux (aucun pictogramme ARASAAC dans l'aide) |
+| `img/*.svg` | dessins originaux |
+| `img/capture-*.png` | vraies captures d'écran (machine de test, 0.10.1), recadrées et réduites à 256 couleurs ; une capture qui montre des pictogrammes ARASAAC porte la légende de leur licence |
 | `img/barre-*.png` | la vraie barre, dessinée par `Pepite.exe --render-bar --no-pictures` : `src/Data.Build/render_help_images.ps1` les refait |
 
 ## Règles d'écriture

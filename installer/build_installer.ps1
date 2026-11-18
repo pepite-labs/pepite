@@ -4,7 +4,7 @@
   src\Data.Build\out\.
 
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.10.1 [-Private] [-VerifyReproducible]
+  powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.10.2 [-Private] [-VerifyReproducible]
 
 .DESCRIPTION
   -WorkDir <work> (or $env:PEPITE_WORK): the bulk-data folder outside the repository. Outputs:
@@ -72,13 +72,49 @@ function Sha([string]$p) { (Get-FileHash $p -Algorithm SHA256).Hash.ToLowerInvar
 
 # ---------------------------------------------------------------- 1. preconditions
 Step 'preconditions'
-$status = (& git -C $repo status --porcelain -- . 2>$null) -join "`n"
+# MSBuild reads every environment variable as a property (names are case-insensitive): a VERSION variable becomes the
+# Version of each project without its own (Predict.Core got 0.10.1 in the 0.10.1 CI build, 1.0.0 locally), so the
+# binaries would differ from a clean rebuild. Refuse rather than build different bytes.
+$leak = @(@('Version', 'VersionPrefix', 'VersionSuffix', 'AssemblyVersion', 'FileVersion', 'InformationalVersion',
+          'PackageVersion') | Where-Object { Test-Path "Env:$_" })
+if ($leak) { throw "environment variable(s) $($leak -join ', ') set: MSBuild would take them as project properties (the binaries would differ from a clean build); remove them for this session (Remove-Item Env:$($leak[0])), the version comes from -Version" }
+# A native command with its stderr merged: under 'Stop', Windows PowerShell 5.1 turns the first stderr line into a
+# terminating NativeCommandError, so run it with 'Continue' and read $LASTEXITCODE instead (lines as plain strings).
+function Native([scriptblock]$cmd) {
+  $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+  try { & $cmd 2>&1 | ForEach-Object { "$_" } } finally { $ErrorActionPreference = $old }
+}
+# git must work: a failing "git status" (not a repository, git missing, "dubious ownership") must not read as clean
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'git not found on PATH' }
+# stdout only for the status (a warning on stderr must never read as a changed file); stderr only for the error message
+$gitOut = @(); $gitErr = @()
+$old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+try {
+  & git -C $repo status --porcelain -- . 2>&1 | ForEach-Object {
+    if ($_ -is [System.Management.Automation.ErrorRecord]) { $gitErr += "$_" } else { $gitOut += "$_" }
+  }
+} finally { $ErrorActionPreference = $old }
+if ($LASTEXITCODE) { throw "git status failed ($LASTEXITCODE) in ${repo}:`n$($gitErr -join "`n")" }
+$status = $gitOut -join "`n"
 $dirty = [bool]$status
 if ($dirty -and -not $AllowDirty) { throw "the working tree has uncommitted changes (git status): commit first, or pass -AllowDirty for a test build`n$status" }
-$commit = (& git -C $repo rev-parse HEAD).Trim()
+$commit = (& git -C $repo rev-parse HEAD)
+if ($LASTEXITCODE -or -not $commit) { throw "git rev-parse HEAD failed ($LASTEXITCODE)" }
+$commit = $commit.Trim()
 $commitDate = [DateTimeOffset]::Parse((& git -C $repo log -1 --format=%cI HEAD).Trim()).UtcDateTime
 $touchDate = $commitDate.ToString('yyyy-MM-dd'); $touchTime = $commitDate.ToString('HH:mm:ss')
-$sdk = (& dotnet --version).Trim()
+# the SDK must start and be exactly the global.json one (rollForward: disable): say how to fix it, not a null error
+$wantSdk = (Get-Content (Join-Path $repo 'global.json') -Raw | ConvertFrom-Json).sdk.version
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+  throw "dotnet not found on PATH: install the .NET SDK $wantSdk (global.json), or put a portable SDK folder first in PATH for this session (`$env:PATH = '<sdk folder>;' + `$env:PATH)"
+}
+$sdkOut = (Native { dotnet --version }) -join ' '
+$sdkRc = $LASTEXITCODE
+if ($sdkRc -or $sdkOut.Trim() -ne $wantSdk) {
+  $found = (Native { dotnet --list-sdks }) -join '; '
+  throw "the .NET SDK does not start as global.json asks (SDK $wantSdk, rollForward disable): dotnet --version gave exit code ${sdkRc}: $($sdkOut.Trim())`nSDKs of the dotnet on PATH ($((Get-Command dotnet).Source)): $found`nput the folder of SDK $wantSdk first in PATH for this session"
+}
+$sdk = $sdkOut.Trim()
 foreach ($f in @('prediction.sqlite', 'prediction-SOURCES.txt', 'spelling.sqlite', 'spelling\SOURCE.txt', 'spelling\MPL-2.0.txt',
                  'grammar.sqlite', 'grammar\SOURCE.txt', 'grammar\MPL-2.0.txt', 'pictos.sqlite', 'ARASAAC-LICENCE.txt',
                  'noms-pack\noms\noms.json', 'noms-pack\noms\LICENCE.txt', 'fonts', 'espeak\libespeak-ng.dll', 'espeak\COPYING',
@@ -129,8 +165,16 @@ function Build-Stage([string]$stageDir) {
   }
   $prive = if ($Private) { ' - VERSION DE TEST PRIVEE' } else { ' - VERSION DE TEST' }
   $prive = $prive.Replace('PRIVEE', 'PRIV' + [char]0xC9 + 'E')
+  # the gh attestation check (installer\notes\attestation.txt): public builds only, a -Private build has no attestation
+  $att = ''
+  if (-not $Private) { $att = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'notes\attestation.txt'), [Text.Encoding]::UTF8).TrimEnd() + "`n" }
+  $t = $t.Replace('{ATTESTATION}', $att)
   $t = $t.Replace('{VERSION}', $Version).Replace('{SUFFIXE}', $suffix).Replace('{PRIVE}', $prive).Replace('{NOTES}', $notes)
   $t = $t.Replace('{CREDIT_PIERRE}', $pierre)
+  # the data release the build fetched (its tag in data-release.lock.json): the link of the LISEZ-MOI credits
+  $dataTag = (Get-Content (Join-Path $src 'Data.Build\data-release.lock.json') -Raw | ConvertFrom-Json).tag
+  if ($dataTag -notmatch '^data-\d{4}\.\d{2}(\.\d+)?$') { throw "data-release.lock.json: tag '$dataTag' is not data-YYYY.MM[.n]" }
+  $t = $t.Replace('{DONNEES}', $dataTag)
   $t = ($t -replace "`r`n", "`n") -replace "`n", "`r`n"
   [IO.File]::WriteAllText((Join-Path $stageDir 'LISEZ-MOI.txt'), $t, $utf8)
   # ---------------------------------------------------------------- 5. release lint

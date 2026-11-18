@@ -167,7 +167,7 @@ public class WordLayeringTests
         Assert.Equal(new[] { "Léa", "Tom", "cratère" }, WordLayering.Of(cls, null).Words.Select(w => w.Form));
         // a list switched off gives nothing
         var off = cls.SetActive(WordBook.DefaultListId, false);
-        Assert.Empty(WordLayering.Of(lea, off).Words.Where(w => w.Form == "Tom"));
+        Assert.DoesNotContain(WordLayering.Of(lea, off).Words, w => w.Form == "Tom");
     }
 
     [Fact]

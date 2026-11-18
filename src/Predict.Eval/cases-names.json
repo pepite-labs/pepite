@@ -1,0 +1,206 @@
+[
+  {
+    "category": "name-start",
+    "typed": "Rodol",
+    "intended": "Rodolphe"
+  },
+  {
+    "category": "name-start",
+    "typed": "Rodo",
+    "intended": "Rodolphe"
+  },
+  {
+    "category": "name-start",
+    "typed": "Rog",
+    "intended": "Roger"
+  },
+  {
+    "category": "name-start",
+    "typed": "Martine",
+    "intended": "Martine"
+  },
+  {
+    "category": "name-start",
+    "typed": "Franço",
+    "intended": "Françoise"
+  },
+  {
+    "category": "name-start",
+    "typed": "Gérar",
+    "intended": "Gérard"
+  },
+  {
+    "category": "name-start",
+    "typed": "Sylv",
+    "intended": "Sylvie"
+  },
+  {
+    "category": "name-start",
+    "typed": "Sandr",
+    "intended": "Sandrine"
+  },
+  {
+    "category": "name-start",
+    "typed": "Moniq",
+    "intended": "Monique"
+  },
+  {
+    "category": "name-start",
+    "typed": "Ginet",
+    "intended": "Ginette"
+  },
+  {
+    "category": "name-neutral",
+    "context": "Il pleut.",
+    "typed": "Rodol",
+    "intended": "Rodolphe"
+  },
+  {
+    "category": "name-neutral",
+    "context": "Il pleut.",
+    "typed": "Gérar",
+    "intended": "Gérard"
+  },
+  {
+    "category": "name-lower",
+    "context": "avec",
+    "typed": "rodolphe",
+    "intended": "Rodolphe"
+  },
+  {
+    "category": "name-lower",
+    "context": "avec",
+    "typed": "roger",
+    "intended": "Roger"
+  },
+  {
+    "category": "name-lower",
+    "context": "avec",
+    "typed": "gérard",
+    "intended": "Gérard"
+  },
+  {
+    "category": "name-start-lower",
+    "typed": "rodol",
+    "intended": "Rodolphe"
+  },
+  {
+    "category": "name-start-lower",
+    "typed": "sandr",
+    "intended": "Sandrine"
+  },
+  {
+    "category": "name-band",
+    "typed": "Edwig",
+    "intended": "Edwige"
+  },
+  {
+    "category": "name-band",
+    "typed": "Romua",
+    "intended": "Romuald"
+  },
+  {
+    "category": "name-band",
+    "typed": "Lysia",
+    "intended": "Lysiane"
+  },
+  {
+    "category": "name-band",
+    "typed": "Goulv",
+    "intended": "Goulven"
+  },
+  {
+    "category": "name-guard",
+    "context": "une",
+    "typed": "ros",
+    "intended": "rose"
+  },
+  {
+    "category": "name-guard",
+    "typed": "Ros",
+    "intended": "rose"
+  },
+  {
+    "category": "name-guard",
+    "context": "la",
+    "typed": "pierr",
+    "intended": "pierre"
+  },
+  {
+    "category": "name-guard",
+    "typed": "Pierr",
+    "intended": "pierre"
+  },
+  {
+    "category": "name-guard",
+    "context": "un",
+    "typed": "martin",
+    "intended": "martinet"
+  },
+  {
+    "category": "name-guard",
+    "context": "il",
+    "typed": "aim",
+    "intended": "aime"
+  },
+  {
+    "category": "name-guard",
+    "typed": "Aim",
+    "intended": "aime"
+  },
+  {
+    "category": "name-guard",
+    "context": "un",
+    "typed": "an",
+    "intended": "an"
+  },
+  {
+    "category": "name-guard",
+    "typed": "An",
+    "intended": "an"
+  },
+  {
+    "category": "name-guard",
+    "context": "la",
+    "typed": "rein",
+    "intended": "reine"
+  },
+  {
+    "category": "name-guard",
+    "typed": "Rein",
+    "intended": "reine"
+  },
+  {
+    "category": "name-guard",
+    "context": "une",
+    "typed": "virg",
+    "intended": "virgule"
+  },
+  {
+    "category": "name-guard",
+    "typed": "Virg",
+    "intended": "virgule"
+  },
+  {
+    "category": "name-guard",
+    "context": "la",
+    "typed": "mais",
+    "intended": "maison"
+  },
+  {
+    "category": "name-limit",
+    "typed": "Marti",
+    "intended": "Martine"
+  },
+  {
+    "category": "name-limit",
+    "typed": "Franç",
+    "intended": "Françoise"
+  },
+  {
+    "category": "name-limit",
+    "context": "avec",
+    "typed": "martine",
+    "intended": "Martine"
+  }
+]

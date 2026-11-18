@@ -48,6 +48,14 @@ internal static class KeyboardPolicy
         return sentenceStart ? char.ToUpperInvariant(word[0]) + word[1..] : word;
     }
 
+    /// <summary>The engine's words as the bar shows and inserts them: elisions with their apostrophe in the document's
+    /// style (0.10.2: <c>j’</c> after a text that writes ’), noise dropped (<see cref="Elision.Apply"/>), then cased
+    /// (<see cref="CasedDistinct"/>).</summary>
+    public static System.Collections.Generic.List<Suggestion> Shown(System.Collections.Generic.IReadOnlyList<Suggestion> ranked, bool afterHyphen,
+                                                                    char apostrophe, string typed, bool sentenceStart, int max) =>
+        CasedDistinct(Elision.Apply(ranked, afterHyphen).Select(s => s with { Word = Elision.Styled(s.Word, apostrophe) }),
+                      typed, sentenceStart, max);
+
     /// <summary>
     /// The bar's words after <see cref="Cased"/> (plan 10A, Q13): « Pi » makes the lexicon's « pierre » into « Pierre »,
     /// the same text as a pupil's « Pierre »: one tile, at the first one's place, marked as a name when either is one (a
@@ -67,6 +75,13 @@ internal static class KeyboardPolicy
         }
         return o;
     }
+
+    /// <summary>0.10.2 (glued words plan, owner Q2): the words before the finished word the ≈ list is about — the tracker's
+    /// context ends with that word once a separator finished it (case kept), so it is left out; a context that does not end
+    /// with it (a sentence end cleared it) is given as it is.</summary>
+    public static System.Collections.Generic.IReadOnlyList<string> WordsBefore(System.Collections.Generic.IReadOnlyList<string> context, string finished) =>
+        context.Count > 0 && string.Equals(context[^1], finished, StringComparison.OrdinalIgnoreCase)
+            ? context.Take(context.Count - 1).ToArray() : context;
 
     /// <summary>U+202F NARROW NO-BREAK SPACE: French typography before <c>; : ! ?</c>.</summary>
     public const char NarrowNbsp = (char)0x202F;

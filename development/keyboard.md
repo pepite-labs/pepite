@@ -1,6 +1,6 @@
 # The keyboard predictor (`Predict.Keyboard`)
 
-A Windows-native (C# / WPF, .NET 6) app that predicts words **in any application** while you type, using
+A Windows-native (C# / WPF, .NET 10) app that predicts words **in any application** while you type, using
 `Predict.Core`. Its visible name is **Pépite** (« Pépite — prédiction de mots », owner 2026-11-14) and its executable
 `Pepite.exe` (0.6.1; `PredictKeyboard.exe` up to 0.6.0); the code keeps the `Predict.*` names. It is the first usable end-user piece of the freeware: install-free (self-contained).
 

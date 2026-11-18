@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """French release notes of a GitHub pre-release (plan 13, A5). Stdlib only; run with ``python -I``.
 
-    python -I installer/release_notes.py --version 0.10.1 --sums <SHA256SUMS.txt> --repo pepite-labs/pepite
+    python -I installer/release_notes.py --version 0.10.2 --sums <SHA256SUMS.txt> --repo pepite-labs/pepite
                                          --out <notes.md> [--notes installer/notes/<version>.txt] [--signed]
 
 Writes the body of the release (Markdown, French): the test-version banner, what is new (``installer/notes/<ver>.txt``),
@@ -106,7 +106,8 @@ def body(version, sums, repo, notes, signed=False, espeak_archive=None, data=Non
         "code de l'étiquette `%s` de ce dépôt), avec l'outil `gh` de GitHub, après `gh auth login` :" % tag,
         "",
         "```text",
-        "gh attestation verify %s --repo %s --signer-workflow %s/.github/workflows/app.yml" % (exe, repo, repo),
+        "gh attestation verify %s --repo %s --signer-workflow %s/.github/workflows/app.yml --source-ref refs/tags/%s"
+        % (exe, repo, repo, tag),
         "```",
         "",
         "## Code source (GPL-3.0-or-later)",

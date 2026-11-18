@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
@@ -10,9 +10,8 @@
     <!-- the visible name is « Pépite » (owner 2026-11-14); project and namespaces stay Predict.* -->
     <AssemblyName>Pepite</AssemblyName>
     <RootNamespace>Predict.Keyboard</RootNamespace>
-    <RollForward>LatestMajor</RollForward>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>0.10.1</Version>
+    <Version>0.10.2</Version>
     <Product>Pépite</Product>
     <!-- FileDescription: the name Windows shows in Task Manager and on notifications -->
     <AssemblyTitle>Pépite</AssemblyTitle>
@@ -23,7 +22,10 @@
     <!-- plan 12: French only (D14) — no satellite resource folders (de, es, ja, …) in the publish / the installer -->
     <SatelliteResourceLanguages>fr</SatelliteResourceLanguages>
     <!-- one place for the System.Speech version: the PackageReference and the path of its licence files -->
-    <PepiteSystemSpeechVersion>6.0.0</PepiteSystemSpeechVersion>
+    <PepiteSystemSpeechVersion>10.0.15</PepiteSystemSpeechVersion>
+    <!-- the NuGet package folder with exactly one trailing separator: NUGET_PACKAGES set without one gave
+         "...nugetmicrosoft.ml.onnxruntime" (MSB3030) -->
+    <PepitePackageRoot>$([MSBuild]::EnsureTrailingSlash('$(NuGetPackageRoot)'))</PepitePackageRoot>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Predict.Core\Predict.Core.csproj" />
@@ -87,17 +89,18 @@
   <ItemGroup>
     <None Include="..\..\COPYING" Link="COPYING" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="$(NuGetPackageRoot)microsoft.ml.onnxruntime\1.31.1\LICENSE" Link="licenses\onnxruntime\LICENSE" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="$(NuGetPackageRoot)microsoft.ml.onnxruntime\1.31.1\ThirdPartyNotices.txt" Link="licenses\onnxruntime\ThirdPartyNotices.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(PepitePackageRoot)microsoft.ml.onnxruntime\1.31.1\LICENSE" Link="licenses\onnxruntime\LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(PepitePackageRoot)microsoft.ml.onnxruntime\1.31.1\ThirdPartyNotices.txt" Link="licenses\onnxruntime\ThirdPartyNotices.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\licenses\naudio\license.txt" Link="licenses\naudio\license.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <!-- publication cleanup (S6): the licences of what a self-contained publish ships — the .NET and Windows Desktop runtime
        packs (MIT + their third-party notices), System.Speech (MIT) and the Apache-2.0 text for SQLitePCLRaw; the versions
-       follow THIRD-PARTY-NOTICES.txt (release_lint.py checks them against Pepite.deps.json). System.Speech and Apache-2.0
-       ship with every build; the runtime-pack licences are added by PepiteRuntimePackLicenses below -->
+       follow THIRD-PARTY-NOTICES.txt (release_lint.py checks them against Pepite.deps.json). The System.Speech notices and
+       Apache-2.0 ship with every build; the runtime-pack licences are added by PepiteRuntimePackLicenses below. Since
+       .NET 10 the System.Speech package no longer carries LICENSE.TXT: it is the dotnet/runtime MIT licence, so the
+       target below takes it from the resolved .NETCore runtime pack (same text) -->
   <ItemGroup>
-    <None Include="$(NuGetPackageRoot)system.speech\$(PepiteSystemSpeechVersion)\LICENSE.TXT" Link="licenses\system-speech\LICENSE.TXT" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="$(NuGetPackageRoot)system.speech\$(PepiteSystemSpeechVersion)\THIRD-PARTY-NOTICES.TXT" Link="licenses\system-speech\THIRD-PARTY-NOTICES.TXT" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(PepitePackageRoot)system.speech\$(PepiteSystemSpeechVersion)\THIRD-PARTY-NOTICES.TXT" Link="licenses\system-speech\THIRD-PARTY-NOTICES.TXT" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\licenses\apache-2.0\LICENSE.txt" Link="licenses\apache-2.0\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <!-- plan 13 (first CI installer run): the runtime-pack licences come from the packs the SDK actually resolved
@@ -120,6 +123,7 @@
       <_PepiteRuntimeLicense Include="$(_PepiteNetCorePackDir)\LICENSE.TXT" Link="licenses\dotnet\LICENSE.TXT" />
       <_PepiteRuntimeLicense Include="$(_PepiteNetCorePackDir)\THIRD-PARTY-NOTICES.TXT" Link="licenses\dotnet\THIRD-PARTY-NOTICES.TXT" />
       <_PepiteRuntimeLicense Include="$(_PepiteDesktopPackDir)\LICENSE" Link="licenses\windowsdesktop\LICENSE" />
+      <_PepiteRuntimeLicense Include="$(_PepiteNetCorePackDir)\LICENSE.TXT" Link="licenses\system-speech\LICENSE.TXT" />
     </ItemGroup>
     <Error Condition="!Exists('%(_PepiteRuntimeLicense.Identity)')"
            Text="Pépite: licence file missing from the resolved runtime pack: %(_PepiteRuntimeLicense.Identity) (needed as %(_PepiteRuntimeLicense.Link) in a self-contained publish)." />

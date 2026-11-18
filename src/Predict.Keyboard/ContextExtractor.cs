@@ -12,8 +12,11 @@ namespace Predict.Keyboard;
 /// <param name="Separators">when Prefix is empty: separator chars between the caret and the previous word.</param>
 /// <param name="AtSentenceStart">the sentence starts right before the first context word (or the prefix): start of
 /// the text, or a sentence end (<c>. ! ? …</c>, line break) — D22 capitalisation.</param>
+/// <param name="Apostrophe">0.10.2: the last apostrophe (<c>'</c> or <c>’</c>) in the text read before the caret, '\0' = none:
+/// the bar writes its elisions the same way (owner Q2: follow the document).</param>
 internal readonly record struct TextContext(bool Valid, string Prefix, string Suffix, char NextChar,
-                                            IReadOnlyList<string> Context, int Separators, bool AtSentenceStart = false)
+                                            IReadOnlyList<string> Context, int Separators, bool AtSentenceStart = false,
+                                            char Apostrophe = '\0')
 {
     public static readonly TextContext Invalid = new(false, "", "", '\0', System.Array.Empty<string>(), 0);
 }
@@ -106,6 +109,10 @@ internal static class ContextExtractor
         // word, a digit or a combining mark)
         bool start = !cut && (i == 0 ? !truncatedAtStart : IsSentenceEnd(text[i - 1]));
 
-        return new TextContext(true, prefix, suffix, next, ctx, prefix.Length > 0 ? 0 : seps, start);
+        // 0.10.2: the document's apostrophe, the last one before the caret (the window is enough: a style is not mixed)
+        char apostrophe = '\0';
+        for (int k = caret - 1; k >= 0; k--) if (Predict.Core.Elision.IsApostrophe(text[k])) { apostrophe = text[k]; break; }
+
+        return new TextContext(true, prefix, suffix, next, ctx, prefix.Length > 0 ? 0 : seps, start, apostrophe);
     }
 }

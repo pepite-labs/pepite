@@ -169,8 +169,10 @@ public partial class SuggestionWindow : Window
         {
             Bar.Children.Add(MakeButton(i, s[i], out var slot));
             if (slot is not { } sl) continue;
-            // plan 10C: the teacher's picture for this exact form, or the pack's flag of a name (same slot, Q18)
-            if (WordPictures?.For(s[i].Word, s[i].Name) is { } file)
+            // plan 10C: the teacher's picture for this exact form, or the pack's flag of a name (same slot, Q18); 0.10.2 (glued
+            // words, owner Q6): a joined tile (« l'école ») is looked up by its main word (« école »), as PictureStore.KeyFor
+            var form = PictureStore.PictureForm(s[i]);   // a name keeps its full form (« N'Diaye »)
+            if (WordPictures?.For(form, s[i].Name) is { } file)
             {
                 if (WordPictures.Get(file) is { } own) { SetPicture(sl.Slot, sl.Img, own); named++; }
                 continue;

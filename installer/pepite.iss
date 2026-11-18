@@ -1,7 +1,7 @@
 ﻿; Pépite — installer script (plan 12, D6, D11, D13, D27 amended, D28). Inno Setup 7.1.1 (innosetup.lock.json).
 ; GPL-3.0-or-later like the rest of Pépite: an installation script is part of the Corresponding Source (GPL-3 § 1).
 ; Built by build_installer.ps1, which passes the defines below; do not compile it by hand without them:
-;   /DVersion=0.10.0 /DStageDir=<stage> /DOutDir=<release> /DTouchDate=YYYY-MM-DD /DTouchTime=HH:MM:SS
+;   /DVersion=0.10.2 /DStageDir=<stage> /DOutDir=<release> /DTouchDate=YYYY-MM-DD /DTouchTime=HH:MM:SS
 ;   [/DPrivate]  (private test build: « -test » suffix, keeps any "public": false voice pack, D28)
 ;   [/DSIGN]     (code signing, prepared, off: Q4 — SignPath later)
 ; No network: no download of any kind; the URLs below are only shown as text.
@@ -127,10 +127,11 @@ Name: "bureau"; Description: "Créer une icône sur le Bureau"; Flags: unchecked
 
 [Files]
 ; the fixed part: the exe, the self-contained .NET runtime, prediction.sqlite + prediction-SOURCES.txt, grammar.sqlite + notices, fonts\, noms\,
-; espeak-ng, licenses\, COPYING, THIRD-PARTY-NOTICES.txt, LISEZ-MOI.txt (PDBs are in symbols-<ver>.zip, never installed)
-Source: "{#StageDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,\pictos.sqlite,\ARASAAC-LICENCE.txt,\voices"; Flags: ignoreversion recursesubdirs createallsubdirs touch; Components: app
+; espeak-ng, licenses\, COPYING, THIRD-PARTY-NOTICES.txt, LISEZ-MOI.txt (PDBs are in symbols-<ver>.zip, never installed);
+; ARASAAC-LICENCE.txt too (0.10.2): the help's screenshots show ARASAAC pictograms even when the images component is off,
+; so their licence is always installed (an upgrade from 0.10.1 with images off adds it)
+Source: "{#StageDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,\pictos.sqlite,\voices"; Flags: ignoreversion recursesubdirs createallsubdirs touch; Components: app
 Source: "{#StageDir}\pictos.sqlite"; DestDir: "{app}"; Flags: ignoreversion touch; Components: images
-Source: "{#StageDir}\ARASAAC-LICENCE.txt"; DestDir: "{app}"; Flags: ignoreversion touch; Components: images
 Source: "{#StageDir}\voices\siwis\*"; DestDir: "{app}\voices\siwis"; Flags: ignoreversion recursesubdirs createallsubdirs touch; Components: voix\siwis
 #ifdef HasPierre
 Source: "{#StageDir}\voices\pierre\*"; DestDir: "{app}\voices\pierre"; Flags: ignoreversion recursesubdirs createallsubdirs touch; Components: voix\pierre
@@ -141,7 +142,6 @@ Source: "{#StageDir}\voices\pierre\*"; DestDir: "{app}\voices\pierre"; Flags: ig
 Type: filesandordirs; Name: "{app}\aide"
 ; a component unticked at an upgrade loses its files
 Type: files; Name: "{app}\pictos.sqlite"; Components: not images
-Type: files; Name: "{app}\ARASAAC-LICENCE.txt"; Components: not images
 Type: filesandordirs; Name: "{app}\voices\siwis"; Components: not voix\siwis
 #ifdef HasPierre
 Type: filesandordirs; Name: "{app}\voices\pierre"; Components: not voix\pierre
@@ -164,6 +164,55 @@ Type: filesandordirs; Name: "{app}\ru"
 Type: filesandordirs; Name: "{app}\tr"
 Type: filesandordirs; Name: "{app}\zh-Hans"
 Type: filesandordirs; Name: "{app}\zh-Hant"
+; 0.10.2: the .NET 6 runtime files that the .NET 10 self-contained publish no longer ships (45, from the file lists
+; of stage-0.10.1 and stage-0.10.2). Left in {app}, the app-local ucrtbase.dll and api-ms-win-*.dll forwarders of
+; .NET 6 would sit next to the .NET 10 runtime. At the next runtime update, add the old
+; mscordaccore_amd64_amd64_<version>.dll here too (its name carries the runtime build number).
+Type: files; Name: "{app}\api-ms-win-core-console-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-console-l1-2-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-datetime-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-debug-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-errorhandling-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-fibers-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-file-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-file-l1-2-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-file-l2-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-handle-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-heap-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-interlocked-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-libraryloader-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-localization-l1-2-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-memory-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-namedpipe-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-processenvironment-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-processthreads-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-processthreads-l1-1-1.dll"
+Type: files; Name: "{app}\api-ms-win-core-profile-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-rtlsupport-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-string-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-synch-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-synch-l1-2-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-sysinfo-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-timezone-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-core-util-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-conio-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-convert-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-environment-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-filesystem-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-heap-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-locale-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-math-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-multibyte-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-private-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-process-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-runtime-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-stdio-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-string-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-time-l1-1-0.dll"
+Type: files; Name: "{app}\api-ms-win-crt-utility-l1-1-0.dll"
+Type: files; Name: "{app}\dbgshim.dll"
+Type: files; Name: "{app}\mscordaccore_amd64_amd64_6.0.3224.31407.dll"
+Type: files; Name: "{app}\ucrtbase.dll"
 
 [Registry]
 ; start with Windows (D13, Q2): HKA = HKCU for a per-user install, HKLM for all users. The contract of the app

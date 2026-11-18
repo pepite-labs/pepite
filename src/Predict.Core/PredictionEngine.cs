@@ -5,6 +5,10 @@ namespace Predict.Core;
 
 public enum MatchKind { Prefix, Phonetic, Edit }
 
+/// <summary>0.10.2 (plan exact-typed-word): how the word typed in full and spelled right is placed in the bar
+/// (<see cref="PredictionEngine.ExactTyped"/>).</summary>
+public enum ExactTypedMode { Off, Present, First }
+
 /// <param name="Name">a personal word stored with a capital (plan 10 Q13: a proper name, « Pierre »): kept as it is,
 /// never shown with the picture of its lowercase homograph.</param>
 public readonly record struct Suggestion(string Word, double Score, MatchKind Kind, bool Name = false);
@@ -108,6 +112,14 @@ public sealed class PredictionEngine : IDisposable
     /// <summary>Plan 10C: without a capital typed inside a sentence, a pack name needs this many typed letters (« C » at a
     /// sentence start never brings a name).</summary>
     public int NamesFrom = 2;
+    /// <summary>0.10.2 (owner 2026-11-17): with no capital to tell a name (typed in lowercase, or at a sentence start), the
+    /// « recognised » tier is searched too from this many typed letters (« rodol », « Rodol » → Rodolphe); 99 = the 0.10.1
+    /// behaviour (that tier after a capital inside a sentence only).</summary>
+    public int NamesRecognisedFrom = 4;
+    /// <summary>0.10.2: in that search a recognised name needs at least this rang (frequency ≥ pack cap × floor; 0.02 ≈ 300
+    /// bearers or more): the very rare ones still need a capital, so they never push the corrections out of the bar.
+    /// Restricted figures are never offered without a capital (D30).</summary>
+    public double NamesRecognisedFloor = 0.02;
     /// <summary>Plan 10C: a pack name whose lowercase homograph in the lexicon is rarer than this (per million: « belgique »
     /// 0.27, « japon » 0.2) takes that homograph's place in the bar, with its capital.</summary>
     public double NameMergeBelow = 1.0;
@@ -121,7 +133,7 @@ public sealed class PredictionEngine : IDisposable
     private static readonly Regex Tok = new("[a-zà-ÿœ]+", RegexOptions.Compiled);
 
     private PredictionEngine(Entry[] entries, int[] phon, List<(string key, int idx)> folds, SqliteConnection con,
-                             string? spellingPath)
+                             string? spellingPath, Func<List<BareCounts>> bareCounts)
     {
         _e = entries; _phon = phon; _con = con;
         _bare = new bool[entries.Length];
@@ -154,6 +166,183 @@ public sealed class PredictionEngine : IDisposable
         folds.Sort((a, b) => string.CompareOrdinal(a.key, b.key));
         _fKeys = folds.Select(f => f.key).ToArray();
         _fIdx = folds.Select(f => f.idx).ToArray();
+
+        // 0.10.2: last, so that the counts read meanwhile on a second connection are there by now (see Load)
+        var counts = bareCounts();
+        _bareEst = BareEstimates(counts, calibratedOnly: true);
+        ApplyElisionUnigram();
+        (_bareNext, _bareIdx, _bareAposIdx) = BareSuccessors(counts);
+    }
+
+    // ---- 0.10.2: the context-free prior of the elided forms (plan « elided forms from the first letter »)
+    /// <summary>One bare form's calibration: its entries, its Lexique frequency (per million), the estimate, and the
+    /// entries' unigrams as loaded (restored exactly when the estimate does not apply).</summary>
+    private readonly record struct BareEst(string Bare, string Full, int[] Entries, double Lex, double Est, double[] Uni0, bool Calibrated);
+    private readonly BareEst[] _bareEst;
+    private double _elisionUni = 1.0;
+
+    /// <summary>
+    /// 0.10.2: Lexique has apostrophe rows only for <c>l' d' n' s' t'</c>; the other bare forms (<c>j m c qu jusqu lorsqu
+    /// puisqu</c>) are letter names or rare rows, so « j » at a sentence start never offered « j' ». At load, for each bare
+    /// form without an apostrophe row, its elided frequency is estimated as <c>lexFreq(full form) × Σ c(bare → vowel /
+    /// mute-h word) / Σ c(full form → ·)</c> (the share of the full form's uses the corpus writes elided; checked against
+    /// Lexique's own l' d' n' s' rows), and its unigram becomes <c>(max(lex, ElisionUnigram × est) + 1) / Z</c>. The entry's
+    /// <c>Freq</c> (prefix gate, spelling order) and <c>Z</c> stay as loaded; <see cref="PredictNext"/> is unaffected: its
+    /// candidates come from the n-gram maps, so its language model never falls back to the unigram. 0 = the 0.10.1 behaviour exactly; tuned with <c>Predict.Eval --elision-uni</c>.
+    /// </summary>
+    public double ElisionUnigram
+    {
+        get => _elisionUni;
+        set { _elisionUni = double.IsFinite(value) && value > 0 ? value : 0; ApplyElisionUnigram(); }
+    }
+
+    private void ApplyElisionUnigram()
+    {
+        foreach (var b in _bareEst)
+        {
+            double v = _elisionUni * b.Est;
+            for (int k = 0; k < b.Entries.Length; k++) _uni[b.Entries[k]] = v > b.Lex ? (v + 1) / _z : b.Uni0[k];
+        }
+    }
+
+    /// <summary>One line of <see cref="GetElisionEstimates"/>: <paramref name="Lexique"/> is the per-million frequency of the
+    /// apostrophe row when Lexique has one (then <paramref name="Calibrated"/> is false: the engine keeps Lexique's value),
+    /// else of the bare row.</summary>
+    public readonly record struct ElisionEstimate(string Bare, string Full, double Lexique, double Estimate, bool Calibrated);
+
+    /// <summary>0.10.2 (Predict.Cli --probe): the estimate of every bare form that has a full form in the
+    /// lexicon, including those Lexique has an apostrophe row for (computed here on demand, not at load: a check of the
+    /// estimate against Lexique).</summary>
+    public IReadOnlyList<ElisionEstimate> GetElisionEstimates() =>
+        BareEstimates(ReadBareCounts(_con, all: true), calibratedOnly: false)
+            .Select(b => new ElisionEstimate(b.Bare, b.Full, b.Lex, b.Est, b.Calibrated)).ToArray();
+
+    /// <summary>The corpus counts of one bare form: its bigram successors and the total count of its full form's successors.
+    /// <paramref name="ApostropheRow"/>: the database has the form with its apostrophe (« l' »).</summary>
+    private sealed record BareCounts(string Bare, string Full, bool ApostropheRow, List<(string Word, long C)> Next, long FullTotal);
+
+    /// <summary>The counts the calibration needs (<paramref name="all"/> false: the full form's total only for the forms
+    /// without an apostrophe row) and, 0.10.2 (glued words), the bigram successors of all 12 bare forms (the split pass's
+    /// attested filter and language model). About 20 000 bigram rows read through the <c>prev</c> index: <see cref="Load"/>
+    /// reads them on a second connection while the engine builds its indexes, so the load does not grow by that much.</summary>
+    private static List<BareCounts> ReadBareCounts(SqliteConnection con, bool all)
+    {
+        var o = new List<BareCounts>();
+        if (!TableExists(con, "bigrams")) return o;
+        foreach (var (bare, full) in Elision.FullForm)
+        {
+            bool apostropheRow;
+            using (var cmd = con.CreateCommand())
+            {
+                cmd.CommandText = "SELECT 1 FROM words WHERE ortho=$o LIMIT 1";
+                cmd.Parameters.AddWithValue("$o", bare + "'");
+                apostropheRow = cmd.ExecuteScalar() is not null;
+            }
+            var next = new List<(string, long)>();
+            long total = 0;
+            using (var cmd = con.CreateCommand())
+            {
+                cmd.CommandText = "SELECT word, c FROM bigrams WHERE prev=$p";
+                cmd.Parameters.AddWithValue("$p", bare);
+                using var r = cmd.ExecuteReader();
+                while (r.Read()) if (!r.IsDBNull(0) && !r.IsDBNull(1)) next.Add((r.GetString(0), r.GetInt64(1)));
+            }
+            if (all || !apostropheRow)
+                using (var cmd = con.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT SUM(c) FROM bigrams WHERE prev=$p";
+                    cmd.Parameters.AddWithValue("$p", full);
+                    if (cmd.ExecuteScalar() is long t) total = t;
+                }
+            o.Add(new BareCounts(bare, full, apostropheRow, next, total));
+        }
+        return o;
+    }
+
+    private static List<BareCounts> ReadBareCounts(string dbPath, Func<string, SqliteConnection>? openSecond)
+    {
+        using var con = openSecond?.Invoke(dbPath) ?? new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly;Pooling=False");
+        if (con.State != System.Data.ConnectionState.Open) con.Open();
+        return ReadBareCounts(con, all: false);
+    }
+
+    // ---- 0.10.2: glued words (plan glued-words.md), the bare forms' successors kept from the load
+    /// <summary>Per form of <see cref="Elision.SplitForms"/>: its bigram successors that are lexicon forms taking an elision
+    /// (keys: the lexicon's own lowercase strings), and the count of all its successors (the bigram level of the split's
+    /// language model, and the attested filter: a glued word splits only into a pair the corpus wrote).</summary>
+    private readonly Ngram[] _bareNext;
+    /// <summary>Per split form: the lexicon entries of the bare form and of its apostrophe row (−1 = none).</summary>
+    private readonly int[] _bareIdx, _bareAposIdx;
+
+    private (Ngram[] Next, int[] Idx, int[] Apos) BareSuccessors(List<BareCounts> counts)
+    {
+        var forms = Elision.SplitForms;
+        var next = new Ngram[forms.Count];
+        var idx = new int[forms.Count];
+        var apos = new int[forms.Count];
+        for (int b = 0; b < forms.Count; b++)
+        {
+            idx[b] = _idxOf.TryGetValue(forms[b], out var i) ? i : -1;
+            apos[b] = _idxOf.TryGetValue(forms[b] + "'", out var a) ? a : -1;
+            next[b] = new Ngram(new Dictionary<string, int>(0, StringComparer.Ordinal), 0);
+        }
+        foreach (var c in counts)
+        {
+            int b = 0;
+            while (b < forms.Count && !string.Equals(forms[b], c.Bare, StringComparison.Ordinal)) b++;
+            if (b == forms.Count) continue;
+            var map = new Dictionary<string, int>(StringComparer.Ordinal);
+            long total = 0;
+            foreach (var (w, n) in c.Next)
+            {
+                total += n;
+                if (_idxOf.TryGetValue(w, out var i) && _e[i].Elides && string.Equals(_e[i].OrthoLower, w, StringComparison.Ordinal))
+                    map[_e[i].OrthoLower] = (int)Math.Min(int.MaxValue, n);
+            }
+            map.TrimExcess();
+            next[b] = new Ngram(map, total);
+        }
+        return (next, idx, apos);
+    }
+
+    /// <summary>The context-free unigram probability of split form <paramref name="b"/>: its bare row or its apostrophe row,
+    /// whichever is higher (the calibrated estimate for j' m' c' qu'…, Lexique's l' d' n' s' t').</summary>
+    private double BareUni(int b)
+    {
+        double u = 0;
+        if (_bareIdx[b] >= 0) u = _uni[_bareIdx[b]];
+        if (_bareAposIdx[b] >= 0) u = Math.Max(u, _uni[_bareAposIdx[b]]);
+        return u;
+    }
+
+    /// <summary>0.10.2 (Predict.Cli --probe): per split form, the number of successors kept and their total count.</summary>
+    public IReadOnlyList<(string Bare, int Successors, long Total, double PerMillion)> GetBareSuccessors()
+    {
+        var o = new List<(string, int, long, double)>(_bareNext.Length);
+        for (int b = 0; b < _bareNext.Length; b++)
+            o.Add((Elision.SplitForms[b], _bareNext[b].Map?.Count ?? 0, _bareNext[b].Total, BareUni(b) * _z - 1));
+        return o;
+    }
+
+    private BareEst[] BareEstimates(List<BareCounts> counts, bool calibratedOnly)
+    {
+        var o = new List<BareEst>();
+        foreach (var c in counts)
+        {
+            if (!_idxOf.TryGetValue(c.Full, out var fi)) continue;
+            bool apostropheRow = c.ApostropheRow || _idxOf.ContainsKey(c.Bare + "'");
+            if (calibratedOnly && apostropheRow) continue;
+            // the lexicon forms are unique in lowercase: one entry at most
+            int[] entries = _idxOf.TryGetValue(c.Bare, out var bi) ? new[] { bi } : Array.Empty<int>();
+            if (entries.Length == 0 && !apostropheRow) continue;
+            long elided = 0;
+            foreach (var (w, n) in c.Next) if (_elides.Contains(w)) elided += n;   // before a vowel / mute-h word: an elision
+            double est = c.FullTotal > 0 ? (Math.Pow(10, _e[fi].Freq) - 1) * elided / c.FullTotal : 0;
+            double lex = apostropheRow && _idxOf.TryGetValue(c.Bare + "'", out var ai) ? Math.Pow(10, _e[ai].Freq) - 1
+                       : entries.Length == 0 ? 0 : Math.Pow(10, _e[entries[0]].Freq) - 1;
+            o.Add(new BareEst(c.Bare, c.Full, entries, lex, est, entries.Select(i => _uni[i]).ToArray(), !apostropheRow));
+        }
+        return o.ToArray();
     }
 
     /// <summary>The spelling reference file looked for next to a database (publication cleanup, 2026-11-16).</summary>
@@ -162,7 +351,10 @@ public sealed class PredictionEngine : IDisposable
     /// <param name="dbPath">prediction.sqlite.</param>
     /// <param name="spellingPath">the spelling reference; null = <see cref="SpellingFileName"/> next to
     /// <paramref name="dbPath"/> when it exists, else the tables of the database itself.</param>
-    public static PredictionEngine Load(string dbPath, string? spellingPath = null)
+    public static PredictionEngine Load(string dbPath, string? spellingPath = null) => Load(dbPath, spellingPath, null);
+
+    /// <param name="openSecond">tests: opens the second connection of the elided forms' counts (null = read-only, no pool).</param>
+    internal static PredictionEngine Load(string dbPath, string? spellingPath, Func<string, SqliteConnection>? openSecond)
     {
         var con = new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly");
         con.Open();
@@ -194,7 +386,15 @@ public sealed class PredictionEngine : IDisposable
             var sibling = dir is null ? null : Path.Combine(dir, SpellingFileName);
             if (sibling is not null && File.Exists(sibling)) spellingPath = sibling;
         }
-        return new PredictionEngine(entries.ToArray(), phons.ToArray(), folds, con, spellingPath);
+        // 0.10.2: the elided forms' counts on a second connection while the engine builds its indexes (see ReadBareCounts)
+        var countsTask = Task.Run(() => ReadBareCounts(dbPath, openSecond));
+        List<BareCounts> Counts()
+        {
+            try { return countsTask.GetAwaiter().GetResult(); }
+            catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
+            { return ReadBareCounts(con, all: false); }   // the second connection failed: the same counts on the first one
+        }
+        return new PredictionEngine(entries.ToArray(), phons.ToArray(), folds, con, spellingPath, Counts);
     }
 
     /// <summary>FNV-1a of a pronunciation (0 for none; a collision only changes the colour of an added form).</summary>
@@ -351,17 +551,22 @@ public sealed class PredictionEngine : IDisposable
 
     /// <summary>The agreement term for this context, or off (default) when there is no grammar, no rule applies, or the
     /// weights are 0. The <see cref="Expect"/> of the last context is cached (one entry).</summary>
-    private GTerm GrammarTerm(string? p1, string? p2, string? p3)
+    private GTerm GrammarTerm(string? p1, string? p2, string? p3) => GrammarTerm(p1, p2, p3, ref _expect);
+
+    /// <param name="cache">the one-entry cache to use (0.10.2: the split pass has its own, so that the query's context stays
+    /// cached for the next keystroke).</param>
+    private GTerm GrammarTerm(string? p1, string? p2, string? p3,
+                              ref (GrammarLexicon? G, string? P3, string? P2, string? P1, bool Par, bool Wide, Expect Ex) cache)
     {
         var g = _grammar;
         if (!GrammarOn || g.IsEmpty || WNominal == 0 && WVerbal == 0 || p1 is null) return default;
-        var c = _expect;
+        var c = cache;
         Expect ex;
         if (ReferenceEquals(c.G, g) && c.Par == ParInfinitive && c.Wide == WideDisfavour && c.P1 == p1 && c.P2 == p2 && c.P3 == p3) ex = c.Ex;
         else
         {
             ex = AgreementContext.From(p3, p2, p1, w => g.BitsOf(IndexOf(w)), ParInfinitive, WideDisfavour);
-            _expect = (g, p3, p2, p1, ParInfinitive, WideDisfavour, ex);
+            cache = (g, p3, p2, p1, ParInfinitive, WideDisfavour, ex);
         }
         return ex.IsEmpty ? default : new GTerm(ex, g, WNominal, WVerbal, WNounSubj, AgreeBonus, _bare);
     }
@@ -436,6 +641,8 @@ public sealed class PredictionEngine : IDisposable
                 AddRanked(ref found, hits, max);
             }
             for (int p = LowerBound(u.FoldKeys, fold); p < u.FoldKeys.Length && u.FoldKeys[p] == fold; p++) AddFound(ref found, u.Entries[u.FoldIdx[p]].Form, max);
+            // 0.10.2 (glued words): « lécole » → l'école, « jai » → j'ai (a pack name is judged by its sound only)
+            if (Splits && !packOnly) CheckSplits(ref found, w, fold, max, fx < u.FixKeys.Length && u.FixKeys[fx] == strip);
         }
         if (packOnly) return found is { Count: > 0 } ? new SpellingCheck(SpellingStatus.SoundsLike, found, WeakName: true) : SpellingCheck.Known;
         return found is { Count: > 0 } ? new SpellingCheck(SpellingStatus.SoundsLike, found) : SpellingCheck.Unknown;
@@ -446,6 +653,149 @@ public sealed class PredictionEngine : IDisposable
     private bool Offerable(int i, string typed) =>
         !Elision.IsNoise(_e[i].Ortho) && !(_unlisted.Count > 0 && _unlisted.Contains(_e[i].OrthoLower)) &&
         !string.Equals(_e[i].OrthoLower, typed, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 0.10.2 (glued words plan, owner Q2): the ≈ list of a finished word ordered by the words before it, when it opens
+    /// (click or F9). Each lexicon candidate scores <c>Lm(ctx, word) + grammar(ctx, word)</c> (and the elision boost after
+    /// l' d' qu'…, as in <see cref="Predict"/>); a joined one (« t'aime ») the chain of <see cref="SplitPass"/> without its
+    /// penalty (all are corrections here): <c>Lm(ctx, bare) + Lm(ctx ⊕ bare, word) + grammar(ctx ⊕ bare, word)</c>. After a
+    /// pronoun a verb comes first, after a determiner a noun (« je tème » → t'aime, « le tème » → thème). The other candidates
+    /// — a personal word, a name, and the pupil's own « Mes fautes » target for <paramref name="typed"/> — keep their places,
+    /// the ranked ones fill the others, best first (stable). No context: the list as it is (<see cref="Check"/>'s order by
+    /// estimated frequency). For all ≈ lists, splits on or off.
+    /// </summary>
+    public IReadOnlyList<string> RankCorrections(IReadOnlyList<string> candidates, IReadOnlyList<string>? context, string? typed = null)
+    {
+        if (candidates is null || candidates.Count < 2) return candidates ?? Array.Empty<string>();
+        var (c1, c2, c3) = PrevWords(context);
+        if (c1 is null) return candidates;
+        var ctx = ContextMaps(c1, c2, c3);
+        double eb = ElisionBonus(c1);
+        var gt = GrammarTerm(c1, c2, c3);
+        double lift = ChainLift(c1, c2);
+        var u = _user;
+        string? fix = null;
+        if (typed is { Length: > 0 } && u.FixKeys.Length > 0)
+        {
+            var strip = PhoneticKey.StripLower(typed);
+            int fx = LowerBound(u.FixKeys, strip);
+            if (fx < u.FixKeys.Length && u.FixKeys[fx] == strip) fix = u.FixTargets[fx];
+        }
+        var slots = new List<int>(candidates.Count);
+        var ranked = new List<(double Score, int Order)>(candidates.Count);
+        for (int k = 0; k < candidates.Count; k++)
+        {
+            var c = candidates[k];
+            if (fix is not null && string.Equals(c, fix, StringComparison.Ordinal)) continue;
+            double? sc = null;
+            int i = LexEntry(c);
+            if (i >= 0 && !u.Contains(c)) sc = Lm(ctx, _e[i].OrthoLower, _uni[i]) + (_e[i].Elides ? eb : 0) + (gt.On ? gt.Of(i) : 0);
+            else if (Elision.IsJoined(c, out var bare, out var main) && LexEntry(main) is var mi && mi >= 0)
+            {
+                int b = 0;
+                while (b < Elision.SplitForms.Count && !string.Equals(Elision.SplitForms[b], bare, StringComparison.OrdinalIgnoreCase)) b++;
+                if (b < _bareNext.Length)
+                {
+                    var bl = Elision.SplitForms[b];
+                    var after = new Ctx(_bareNext[b], Successors2(c1, bl), !UseFourgrams || c2 is null ? default : Successors3(c2, c1, bl));
+                    var g2 = GrammarTerm(bl, c1, c2, ref _splitExpect);
+                    sc = Lm(ctx, bl, BareUni(b)) + Lm(after, _e[mi].OrthoLower, _uni[mi]) + lift + (g2.On ? g2.Of(mi) : 0);
+                }
+            }
+            if (sc is { } s) { slots.Add(k); ranked.Add((s, k)); }
+        }
+        if (ranked.Count < 2) return candidates;
+        ranked.Sort((a, b) => a.Score != b.Score ? b.Score.CompareTo(a.Score) : a.Order.CompareTo(b.Order));
+        var o = new string[candidates.Count];
+        for (int k = 0; k < candidates.Count; k++) o[k] = candidates[k];
+        for (int j = 0; j < slots.Count; j++) o[slots[j]] = candidates[ranked[j].Order];
+        return o;
+    }
+
+    /// <summary>0.10.2 (glued words): the ≈ list may hold at most this many joined forms.</summary>
+    public int CheckSplitMax = 3;
+
+    /// <summary>
+    /// 0.10.2 (glued words, plan step 4): the joined forms of an unknown finished word (« lécole » → l'école), context-free
+    /// as the rest of <see cref="Check"/>: its fold splits into a bare form's sound and a rest whose <b>whole</b> key is a word
+    /// that takes an elision, may be offered, and follows that bare form in the corpus. Each gets an estimated frequency
+    /// (<c>log10(f(bare) × c(bare, word) / c(bare, ·) + 1)</c>, f per million: the scale of the lexicon's <c>Freq</c>); the
+    /// best <see cref="CheckSplitMax"/> are merged into the list by that frequency, after a « Mes fautes » target, and the list
+    /// is cut at <paramref name="max"/>. No SQL, no LINQ: a few binary searches and dictionary lookups.
+    /// </summary>
+    private void CheckSplits(ref List<string>? found, string w, string fold, int max, bool fixFirst)
+    {
+        if (fold.Length < 2 || CheckSplitMax <= 0 || _bareNext.Length == 0) return;
+        foreach (var ch in w) if (ch is '\'' or '’' or '-') return;
+        Span<int> forms = stackalloc int[Elision.MaxSplits];
+        int nf = Elision.SplitsOf(fold, forms);
+        if (nf == 0) return;
+        int keepN = Math.Min(CheckSplitMax, 8);
+        Span<int> kb = stackalloc int[keepN], ki = stackalloc int[keepN];
+        Span<double> kf = stackalloc double[keepN];
+        int n = 0;
+        for (int s = 0; s < nf; s++)
+        {
+            int b = forms[s];
+            var next = _bareNext[b];
+            if (next.Map is not { Count: > 0 } map || next.Total <= 0) continue;
+            int at = Elision.SoundLength(b);
+            int restLen = fold.Length - at;
+            double perMillion = Math.Max(0, BareUni(b) * _z - 1);
+            for (int p = LowerBound(_fKeys, fold, at); p < _fKeys.Length; p++)
+            {
+                var key = _fKeys[p];
+                if (key.Length != restLen || string.CompareOrdinal(key, 0, fold, at, restLen) != 0) break;
+                int i = _fIdx[p];
+                if (!_e[i].Elides || !Injectable(i) || !map.TryGetValue(_e[i].OrthoLower, out var c) || !SplitPair(b, i, c)) continue;
+                double f = Math.Log10(perMillion * c / next.Total + 1);
+                bool dup = false;
+                for (int j = 0; j < n; j++) if (kb[j] == b && ki[j] == i) { dup = true; break; }
+                if (dup || n == keepN && f <= kf[n - 1]) continue;
+                int q = n < keepN ? n++ : n - 1;
+                while (q > 0 && kf[q - 1] < f) { kb[q] = kb[q - 1]; ki[q] = ki[q - 1]; kf[q] = kf[q - 1]; q--; }
+                kb[q] = b; ki[q] = i; kf[q] = f;
+            }
+        }
+        if (n == 0) return;
+        found ??= new List<string>(max);
+        int from = fixFirst && found.Count > 0 ? 1 : 0;   // the pupil's own « Mes fautes » target stays first
+        for (int j = 0; j < n; j++)
+        {
+            var joined = Elision.Join(Elision.SplitForms[kb[j]], _e[ki[j]].Ortho);
+            // the list is not sorted by frequency (each stage is): the joined form goes before the first place from which every
+            // remaining entry is rarer than it (a personal word, a name: never passed), so « sai » keeps « sais » ahead
+            bool dupe = false;
+            foreach (var f in found) if (string.Equals(f, joined, StringComparison.Ordinal)) { dupe = true; break; }
+            if (dupe) continue;
+            int pos = found.Count;
+            double rest = double.NegativeInfinity;   // the highest frequency of found[q..]
+            for (int q = found.Count - 1; q >= from; q--)
+            {
+                int ix = LexEntry(found[q]);
+                rest = Math.Max(rest, ix >= 0 ? _e[ix].Freq : double.PositiveInfinity);
+                if (rest < kf[j]) pos = q; else break;
+            }
+            if (pos >= max) continue;
+            found.Insert(pos, joined);
+            from = pos + 1;   // the next (rarer) joined form after this one
+            if (found.Count > max) found.RemoveAt(found.Count - 1);
+        }
+    }
+
+    /// <summary><see cref="LowerBound(string[], string)"/> of the key <c>s[from..]</c>, without the substring.</summary>
+    private static int LowerBound(string[] keys, string s, int from)
+    {
+        int len = s.Length - from;
+        int lo = 0, hi = keys.Length;
+        while (lo < hi)
+        {
+            int m = (lo + hi) >> 1;
+            int c = string.CompareOrdinal(keys[m], 0, s, from, Math.Max(keys[m].Length, len));
+            if (c < 0) lo = m + 1; else hi = m;
+        }
+        return lo;
+    }
 
     private Comparison<int>? _byFreq;   // most frequent first, then by form (stable order)
 
@@ -472,7 +822,12 @@ public sealed class PredictionEngine : IDisposable
 
     /// <param name="sentenceStart">the word starts a sentence: a capital typed there says nothing about a name (plan 10A:
     /// only a capital typed inside a sentence lifts the personal names).</param>
-    public IReadOnlyList<Suggestion> Predict(string typed, IReadOnlyList<string>? context = null, int k = 8, bool sentenceStart = false)
+    /// <param name="exactMark">0.10.2: the ✓ while typing as the caller computed it (the keyboard:
+    /// <see cref="SpellingIndicator.Typing"/> with the tracker's own sentence start, whether the marker is shown or not), so the
+    /// exact typed word rule (<see cref="ExactTyped"/>) follows it exactly; null = the engine judges the letters itself
+    /// (<see cref="KnowsForMark"/> with <paramref name="sentenceStart"/>: Predict.Eval, the tests).</param>
+    public IReadOnlyList<Suggestion> Predict(string typed, IReadOnlyList<string>? context = null, int k = 8, bool sentenceStart = false,
+                                             bool? exactMark = null)
     {
         typed = (typed ?? "").Trim();
         if (typed.Length == 0) return Array.Empty<Suggestion>();
@@ -537,31 +892,320 @@ public sealed class PredictionEngine : IDisposable
                         Consider(best, _e[i].Ortho, sc, MatchKind.Edit);
                     }
 
+        if (Splits) SplitPass(best, typed, f, ctx, c1, c2, sentenceStart, exactMark);
         if (user) UserPass(u, best, typed, f, edits, ctx, eb, share, sentenceStart, lazy ? default : gt);
         var nm = _names;
         if (!nm.IsEmpty) NamesPass(nm, best, typed, eb, sentenceStart, k);
         if (gt.On) Inject(best, typed, gt, top!, lazy);
 
         bool capital = !sentenceStart && char.IsUpper(typed[0]);
+        bool Name(string key) => key.Length > 0 && char.IsUpper(key[0]) && (user && (u.Contains(key) || u.IsFixTarget(key)) ||
+                                                                            nm.ContainsForm(key) && !(sentenceStart && IsCommonWord(key)));
+        // 0.10.2 (plan exact-typed-word): the word typed in full and spelled right is always in the bar. First ranks the
+        // whole bar (so that Predict(k) stays the prefix of Predict(n) whatever k); Present only acts on a full bar of two
+        // words or more (in a one-word bar the last slot is the first: the « first » variant the owner rejected)
+        var mode = ExactTyped;
+        bool exact = mode != ExactTypedMode.Off && exactMark != false
+                     && (mode == ExactTypedMode.First || k >= ExactBar && ExactBar >= 2)
+                     && ExactEligible(typed, sentenceStart, exactMark == true);
+        int n = exact && mode == ExactTypedMode.First ? Math.Max(k, ExactBar) : k;
+        bool capped = capital && typed.Length < NamesCapUntil;
+        Suggestion[] res;
+        Func<string, double, double>? adj = null;
         if (lazy)
         {
-            bool Name(string key) => key.Length > 0 && char.IsUpper(key[0]) && (user && (u.Contains(key) || u.IsFixTarget(key)) ||
-                                                                                nm.ContainsForm(key) && !(sentenceStart && IsCommonWord(key)));
             // the term of a lexicon form (its key is the lexicon spelling; a capitalised name is not judged)
             double Adj(string key, double score) =>
                 _idxOf.TryGetValue(key, out var ix) && string.Equals(_e[ix].Ortho, key, StringComparison.Ordinal) ? score + gt.Of(ix) : score;
-            bool capped = capital && typed.Length < NamesCapUntil;
+            adj = Adj;
             var all = new List<(string, double, MatchKind)>(best.Count);
             foreach (var (key, v) in best) all.Add((key, v.score, v.kind));
-            var rk = LazyTop(all, capped ? int.MaxValue : k, Adj, byLength: true).Select(x => new Suggestion(x.Key, x.Score, x.Kind, Name(x.Key)));
-            return capped ? CapNames(rk, k) : rk.Take(k).ToArray();
+            var rk = LazyTop(all, capped ? int.MaxValue : n, adj, byLength: true).Select(x => new Suggestion(x.Key, x.Score, x.Kind, Name(x.Key)));
+            res = capped ? CapNames(rk, n) : rk.Take(n).ToArray();
         }
-        var ranked = best.Select(kv => new Suggestion(kv.Key, kv.Value.score, kv.Value.kind,
-                                                kv.Key.Length > 0 && char.IsUpper(kv.Key[0]) &&
-                                                (user && (u.Contains(kv.Key) || u.IsFixTarget(kv.Key)) ||
-                                                 nm.ContainsForm(kv.Key) && !(sentenceStart && IsCommonWord(kv.Key)))))
-                   .OrderByDescending(s => s.Score).ThenBy(s => s.Word.Length);
-        return capital && typed.Length < NamesCapUntil ? CapNames(ranked, k) : ranked.Take(k).ToArray();
+        else
+        {
+            var ranked = best.Select(kv => new Suggestion(kv.Key, kv.Value.score, kv.Value.kind, Name(kv.Key)))
+                       .OrderByDescending(s => s.Score).ThenBy(s => s.Word.Length);
+            res = capped ? CapNames(ranked, n) : ranked.Take(n).ToArray();
+        }
+        if (!exact) return res;
+        return PlaceExact(res, best, typed, k, sentenceStart, mode, adj, Name, u, nm);
+    }
+
+    // ---- 0.10.2: the « exact typed word » rule (plan exact-typed-word.md, owner 2026-11-17)
+    /// <summary>0.10.2: the word being typed, spelled right (the ✓ while typing), is guaranteed a tile.
+    /// <see cref="ExactTypedMode.Present"/>: today's ranking, the word put in the last slot of the bar when it is not in it.
+    /// <see cref="ExactTypedMode.First"/>: the word comes first, after the words that sound like it and rank higher (« il et »
+    /// → est, et; « ils mange » → mangent, mange). Default Present (owner 2026-11-17): First and First with a margin of 1.0
+    /// cost 1.8–2.9 and 0.2–0.4 KSS points on the held-out sets (development/evaluation.md § Exact typed word).</summary>
+    public ExactTypedMode ExactTyped = ExactTypedMode.Present;
+    /// <summary>0.10.2: the number of tiles the bar shows (the keyboard sets its word count; it asks the engine for spares).</summary>
+    public int ExactBar = 8;
+    /// <summary>0.10.2 (First): a word that is not a homophone still stays ahead of the typed word when it scores more than
+    /// this above it (log10 scale; +∞ = only homophones go ahead, owner Q4).</summary>
+    public double ExactMargin = double.PositiveInfinity;
+
+    /// <summary>0.10.2: may the rule apply to <paramref name="typed"/>? Two letters at least, not all capitals (an acronym),
+    /// not a bare elision form (« qu »), and ✓ while typing: the caller's (<paramref name="ticked"/>), else
+    /// <see cref="KnowsForMark"/>.</summary>
+    private bool ExactEligible(string typed, bool sentenceStart, bool ticked)
+    {
+        if (typed.Length < 2 || Elision.IsBare(typed)) return false;
+        bool lower = false;
+        foreach (var ch in typed) if (char.IsLower(ch)) { lower = true; break; }
+        return lower && (ticked || KnowsForMark(typed, sentenceStart));
+    }
+
+    /// <summary>0.10.2: the lexicon entry whose stored form is exactly <paramref name="key"/>, else −1 (a name, a personal
+    /// form with a capital).</summary>
+    private int LexEntry(string key) =>
+        _idxOf.TryGetValue(key, out var i) && string.Equals(_e[i].Ortho, key, StringComparison.Ordinal) ? i : -1;
+
+    /// <summary>0.10.2: do two candidates sound alike? Two lexicon forms: the same Lexique pronunciation or the same homophone
+    /// family (« et » / « est »); otherwise (a name, a personal word, 0.10.2 a joined word: « m'a » / « ma ») the same grapheme
+    /// fold, apostrophes left out.</summary>
+    private bool Homophone(string a, string x)
+    {
+        int ia = LexEntry(a), ix = LexEntry(x);
+        if (ia >= 0 && ix >= 0)
+        {
+            if (_phon[ia] != 0 && _phon[ia] == _phon[ix]) return true;
+            return HomophoneFamilies.Of(_e[ia].OrthoLower) is { } fam && fam.Contains(_e[ix].OrthoLower);
+        }
+        return string.Equals(PhoneticKey.Fold(NoApostrophe(a)), PhoneticKey.Fold(NoApostrophe(x)), StringComparison.Ordinal);
+
+        static string NoApostrophe(string w) => w.IndexOf('\'') < 0 && w.IndexOf('’') < 0 ? w : w.Replace("'", "").Replace("’", "");
+    }
+
+    /// <summary>
+    /// 0.10.2: put the exact typed word X in the ranked window <paramref name="res"/> (after <see cref="CapNames"/>), then keep
+    /// <paramref name="k"/>. X is the result equal to the typed letters ignoring case, else the candidate of the typed form, the
+    /// lexicon form (first at a sentence start), a personal or a pack form of the same letters, scored as the ranking scores
+    /// it; a pack or personal form no pass kept gets the window's lowest score − 0.001. Present: X outside the bar goes to its last slot. First: the
+    /// candidates ranked above X that sound like it (or beat it by more than <see cref="ExactMargin"/>) keep their order ahead
+    /// of it, X follows (at the bar's last slot at worst), then the rest in order.
+    /// </summary>
+    private Suggestion[] PlaceExact(Suggestion[] res, Dictionary<string, (double score, MatchKind kind)> best, string typed, int k,
+                                    bool sentenceStart, ExactTypedMode mode, Func<string, double, double>? adj, Func<string, bool> name,
+                                    UserLexicon u, NamesLexicon nm)
+    {
+        int bar = Math.Max(1, ExactBar);
+        int at = -1;
+        for (int i = 0; i < res.Length; i++)
+            if (string.Equals(res[i].Word, typed, StringComparison.OrdinalIgnoreCase)) { at = i; break; }
+        Suggestion x;
+        if (at >= 0)
+        {
+            if (mode == ExactTypedMode.Present && at < bar) return Trim(res, k);
+            x = res[at];
+        }
+        else
+        {
+            string? key = null, fallback = null;
+            var lower = typed.ToLowerInvariant();
+            // at a sentence start the capital says nothing: « Mai » is the month (the bar writes its capital), not a name Mai
+            string? lex = _idxOf.TryGetValue(lower, out var li) && best.ContainsKey(_e[li].Ortho) ? _e[li].Ortho : null;
+            if (sentenceStart && lex is not null) key = lex;
+            else if (best.ContainsKey(typed)) key = typed;
+            else if (lex is not null) key = lex;
+            else
+            {
+                for (int p = LowerBound(u.LowerKeys, lower); key is null && p < u.LowerKeys.Length && u.LowerKeys[p] == lower; p++)
+                {
+                    var f = u.Entries[u.LowerIdx[p]].Form;
+                    if (best.ContainsKey(f)) key = f; else fallback ??= f;
+                }
+                // a restricted figure only where the names pass offers it: a capital inside a sentence, 3 letters (D30)
+                bool restrictedOk = !sentenceStart && char.IsUpper(typed[0]) && typed.Length >= 3;
+                void Pack(string[] keys, int[] idx)
+                {
+                    for (int p = LowerBound(keys, lower); key is null && p < keys.Length && keys[p] == lower; p++)
+                    {
+                        if (nm.Entries[idx[p]].Restricted && !restrictedOk) continue;
+                        var f = nm.Entries[idx[p]].Form;
+                        if (best.ContainsKey(f)) key = f; else if (fallback is null && f == typed) fallback = f;
+                    }
+                }
+                if (!nm.IsEmpty) { Pack(nm.Keys1, nm.Idx1); Pack(nm.Keys2, nm.Idx2); }
+            }
+            if (key is not null)
+            {
+                var (sc, kind) = best[key];
+                x = new Suggestion(key, adj is null ? sc : adj(key, sc), kind, name(key));
+            }
+            else if (fallback is not null)
+                x = new Suggestion(fallback, res.Length == 0 ? -20 : res[^1].Score - 0.001, MatchKind.Prefix, name(fallback));
+            else return Trim(res, k);
+        }
+
+        var list = new List<Suggestion>(res.Length + 4);
+        if (mode == ExactTypedMode.Present)
+        {
+            foreach (var s in res) if (!string.Equals(s.Word, x.Word, StringComparison.Ordinal)) list.Add(s);
+            list.Insert(Math.Min(bar - 1, list.Count), x);
+            return Trim(list, k);
+        }
+
+        // First: who stays ahead of X
+        bool Above(in Suggestion s) => s.Score > x.Score || s.Score == x.Score && s.Word.Length < x.Word.Length;
+        var lead = new List<Suggestion>();
+        var rest = new List<Suggestion>(res.Length);
+        for (int i = 0; i < res.Length; i++)
+        {
+            var s = res[i];
+            if (string.Equals(s.Word, x.Word, StringComparison.Ordinal)) continue;
+            bool above = at >= 0 ? i < at : true;   // X outside the window: every word in it ranks higher
+            if (above && (s.Score - x.Score > ExactMargin || Homophone(s.Word, x.Word))) lead.Add(s);
+            else rest.Add(s);
+        }
+        if (at < 0)
+        {
+            // a homophone ranked above X but outside the window (« mais » far down while « mai » was typed) still goes first
+            foreach (var (key, v) in best)
+            {
+                if (v.score <= x.Score && !(v.score == x.Score && key.Length < x.Word.Length)) continue;   // the term is never positive
+                if (string.Equals(key, x.Word, StringComparison.Ordinal) || !Homophone(key, x.Word)) continue;
+                bool inWindow = false;
+                foreach (var s in res) if (string.Equals(s.Word, key, StringComparison.Ordinal)) { inWindow = true; break; }
+                if (inWindow) continue;
+                var c = new Suggestion(key, adj is null ? v.score : adj(key, v.score), v.kind, name(key));
+                if (Above(c)) lead.Add(c);
+            }
+            lead.Sort((a, b) => b.Score != a.Score ? b.Score.CompareTo(a.Score)
+                              : a.Word.Length != b.Word.Length ? a.Word.Length.CompareTo(b.Word.Length) : string.CompareOrdinal(a.Word, b.Word));
+        }
+        list.AddRange(lead);
+        list.AddRange(rest);
+        list.Insert(Math.Min(Math.Min(lead.Count, bar - 1), list.Count), x);
+        return Trim(list, k);
+
+        static Suggestion[] Trim(IReadOnlyList<Suggestion> l, int k)
+        {
+            var o = new Suggestion[Math.Min(k, l.Count)];
+            for (int i = 0; i < o.Length; i++) o[i] = l[i];
+            return o;
+        }
+    }
+
+    // ---- 0.10.2: glued words (plan glued-words.md, owner 2026-11-17: « je tème » → « t'aime »)
+    /// <summary>0.10.2: the split pass (and the joined forms of <see cref="Check"/>) on and off; on by default (owner
+    /// 2026-11-18). Off: the results are those without it, byte for byte.</summary>
+    public bool Splits = true;
+    /// <summary>0.10.2: the penalty (log10 scale, like the LM) of a joined candidate: its score is
+    /// <c>Lm(ctx, bare) + Lm(ctx ⊕ bare, word) + grammar(ctx ⊕ bare, word) − WSplit</c>. Chosen by the gates of the plan
+    /// (development/evaluation.md § Glued words: 0 met every gate with the best glued top-1; <see cref="ChainLift"/> already puts
+    /// a chain and a single word on one scale).</summary>
+    public double WSplit = 0;
+    /// <summary>0.10.2: at most this many joined candidates per query (the best).</summary>
+    public int SplitMax = 2;
+    /// <summary>0.10.2: the split pass needs this many typed letters.</summary>
+    public int SplitFrom = 2;
+    /// <summary>0.10.2 (owner Q3): splits are offered when the typed word is itself a word (✓) too (« il ma » → m'a), ranked
+    /// by the context; false = only when it is not (the plan's fallback).</summary>
+    public bool SplitKnown = true;
+    /// <summary>0.10.2 (review): a pair needs at least this many bigram counts (« bare word ») to split: below it the corpus
+    /// pairs are mostly tokenisation noise (« s e » 47, « j o » 23, « t i » 13, « j ou » 6), the rarest wanted pair of the
+    /// curated sets is « m aime » (241).</summary>
+    public int SplitMinCount = 50;
+
+    /// <summary>0.10.2 (review): may the bare form <paramref name="b"/> (an index into <see cref="Elision.SplitForms"/>) join
+    /// the entry <paramref name="i"/>, seen <paramref name="count"/> times after it? A count of <see cref="SplitMinCount"/> at
+    /// least; a one-letter word only « a », « à », « y » (never « s'e », « j'o », « t'i »); « au » / « aux » only after
+    /// qu' jusqu' lorsqu' puisqu' (« qu'au », never « d'au », « l'au », « m'au »).</summary>
+    private bool SplitPair(int b, int i, int count)
+    {
+        if (count < SplitMinCount) return false;
+        var w = _e[i].OrthoLower;
+        if (w.Length == 1) return w is "a" or "à" or "y";
+        if (w is "au" or "aux") return Elision.SplitForms[b].EndsWith("qu", StringComparison.Ordinal);
+        return true;
+    }
+    private (GrammarLexicon? G, string? P3, string? P2, string? P1, bool Par, bool Wide, Expect Ex) _splitExpect;
+
+    /// <summary>
+    /// 0.10.2: the joined candidates of a typed word that sounds like an elided word glued to the next one (« tème » →
+    /// « t'aime », « jai » → « j'ai », « lécole » → « l'école »). The fold of the typed letters splits into a bare form's sound
+    /// and a rest that starts with a vowel sound (<see cref="Elision.SplitsOf"/>); the rest is looked up in the sound index (its
+    /// exact key for one letter, a prefix range from two); a word is kept only if it takes an elision, may be offered, and the
+    /// corpus wrote it after that bare form (the successors kept at load). Score: <c>Lm(ctx, bare) + Lm(ctx ⊕ bare, word) +
+    /// grammar(ctx ⊕ bare, word) − WSplit</c> (the grammar term is in the score: the ranking finds no entry for the joined
+    /// form). The best <see cref="SplitMax"/> go in as one « sounds like » tile each.
+    /// </summary>
+    private void SplitPass(Dictionary<string, (double, MatchKind)> best, string typed, string fold, Ctx ctx, string? c1, string? c2,
+                           bool sentenceStart, bool? exactMark)
+    {
+        if (typed.Length < SplitFrom || fold.Length < 2 || SplitMax <= 0 || _bareNext.Length == 0) return;
+        foreach (var ch in typed) if (ch is '\'' or '’' or '-') return;
+        if (!sentenceStart && char.IsUpper(typed[0])) return;   // a capital inside a sentence asks for a name
+        if (!SplitKnown && (exactMark ?? KnowsForMark(typed, sentenceStart))) return;
+        Span<int> forms = stackalloc int[Elision.MaxSplits];
+        int nf = Elision.SplitsOf(fold, forms);
+        if (nf == 0) return;
+        double lift = ChainLift(c1, c2);
+        List<(double Score, int B, int I)>? keep = null;
+        for (int s = 0; s < nf; s++)
+        {
+            int b = forms[s];
+            var next = _bareNext[b];
+            if (next.Map is not { Count: > 0 } map) continue;
+            string rest = fold[Elision.SoundLength(b)..];
+            bool exact = rest.Length == 1;
+            bool ready = false;
+            double lmBare = 0;
+            Ctx after = default;
+            GTerm gt = default;
+            for (int p = LowerBound(_fKeys, rest); p < _fKeys.Length; p++)
+            {
+                var key = _fKeys[p];
+                if (exact ? key.Length != 1 || key[0] != rest[0] : !key.StartsWith(rest, StringComparison.Ordinal)) break;
+                int i = _fIdx[p];
+                if (!_e[i].Elides || !map.TryGetValue(_e[i].OrthoLower, out var pc) || !SplitPair(b, i, pc) || !Injectable(i)) continue;
+                if (!ready)
+                {
+                    // the bare form in the context, and the context with the bare form at its end (the trigram / 4-gram
+                    // successors are read as any context's, cached)
+                    var bare = Elision.SplitForms[b];
+                    lmBare = Lm(ctx, bare, BareUni(b));
+                    after = new Ctx(next, c1 is null ? default : Successors2(c1, bare),
+                                    !UseFourgrams || c1 is null || c2 is null ? default : Successors3(c2, c1, bare));
+                    gt = GrammarTerm(bare, c1, c2, ref _splitExpect);
+                    ready = true;
+                }
+                double sc = lmBare + Lm(after, _e[i].OrthoLower, _uni[i]) + lift + (gt.On ? gt.Of(i) : 0) - WSplit;
+                Offer(ref keep, sc, b, i);
+            }
+        }
+        if (keep is null) return;
+        foreach (var (sc, b, i) in keep) Consider(best, Elision.Join(Elision.SplitForms[b], _e[i].Ortho), sc, MatchKind.Phonetic);
+
+        void Offer(ref List<(double Score, int B, int I)>? k, double sc, int b, int i)
+        {
+            k ??= new List<(double, int, int)>(SplitMax + 1);
+            for (int j = 0; j < k.Count; j++) if (k[j].B == b && k[j].I == i) return;   // a word may have both keys in the range
+            if (k.Count == SplitMax && sc <= k[^1].Score) return;
+            int at = k.Count;
+            while (at > 0 && k[at - 1].Score < sc) at--;
+            k.Insert(at, (sc, b, i));
+            if (k.Count > SplitMax) k.RemoveAt(k.Count - 1);
+        }
+    }
+
+    /// <summary>
+    /// 0.10.2: the second word of a chain (« aime » after « je t ») is scored by <see cref="Lm"/> with the context and the
+    /// bare form, whose levels are discounted from the 4-gram down. With fewer than three words of context the top levels
+    /// cannot exist at all, and every candidate of the query carries that missing-level discount once — the chain would carry
+    /// it twice (« jai » at a sentence start: α³ for « j », then α² for « ai » after it). This gives back, for the chain's
+    /// second word only, the levels its context cannot reach (<c>WLm × m × log10(1 / Alpha)</c>, m = the levels above the
+    /// longest context it has, or the tables have), so that a chain and a single word compare as probabilities with the same
+    /// offset (a deviation from the plan's literal formula, see development/evaluation.md § Glued words).
+    /// </summary>
+    private double ChainLift(string? c1, string? c2)
+    {
+        int reach = UseFourgrams && _hasFour ? 3 : _hasTri ? 2 : _hasBi ? 1 : 0;   // the context words a level of the tables can use
+        int have = c1 is null ? 1 : c2 is null ? 2 : 3;                           // the context with the bare form at its end
+        int missing = 3 - Math.Min(have, reach);                                  // Lm's scale: 4-gram 1, trigram α, bigram α², unigram α³
+        return missing <= 0 || Alpha <= 0 ? 0 : WLm * missing * -Math.Log10(Alpha);
     }
 
     /// <summary>0.8.3 (10C review): with a capital typed inside a sentence and fewer than this many letters, names take at
@@ -601,7 +1245,8 @@ public sealed class PredictionEngine : IDisposable
     /// the pack's ranking, which follows recent births — owner Q11); typed in lowercase inside a sentence it keeps
     /// <see cref="NameLowercaseShare"/> of that, at a sentence start all of it (the capital says nothing there), and a
     /// capital typed inside a sentence multiplies it by <see cref="NameCapitalLift"/> and opens the « recognised » tier (the
-    /// ≈ 24 000 rarer first names, a key array of their own that other queries never walk). Without that capital a name
+    /// ≈ 24 000 rarer first names, a key array of their own that other queries walk only from
+    /// <see cref="NamesRecognisedFrom"/> letters, above <see cref="NamesRecognisedFloor"/>, 0.10.2). Without that capital a name
     /// needs <see cref="NamesFrom"/> letters. A vowel-initial name takes the elision boost after « d' », « l' » (D22). A
     /// variant (« Ieper ») brings itself and the name it stands for (« Ypres »). A name whose lowercase homograph is a rare
     /// lexicon form (<see cref="NameMergeBelow"/>: « belgique ») replaces it. As the score only depends on the frequency
@@ -613,17 +1258,20 @@ public sealed class PredictionEngine : IDisposable
         bool capital = !sentenceStart && char.IsUpper(typed[0]);
         if (!capital && typed.Length < NamesFrom) return;
         double mult = capital ? NameCapitalLift : sentenceStart ? 1.0 : NameLowercaseShare;
+        // 0.10.2: no capital that tells a name, enough letters → the recognised tier above its floor, no restricted figure
+        float floor = (float)(n.FreqCap * NamesRecognisedFloor);
         int keep = k + 4;
         var top = new List<(float Freq, int Idx)>(keep + 1);
         var lo = typed.ToLowerInvariant();
-        void Walk(string[] keys, int[] idx)
+        void Walk(string[] keys, int[] idx, bool rare)
         {
             for (int pos = LowerBound(keys, lo); pos < keys.Length && keys[pos].StartsWith(lo, StringComparison.Ordinal); pos++)
             {
                 int i = idx[pos];
                 ref readonly var e0 = ref n.Entries[i];
-                if (e0.Restricted && typed.Length < 3) continue;   // owner 2026-11-15: a capital and 3 letters at least
+                if (e0.Restricted && (rare || typed.Length < 3)) continue;   // owner 2026-11-15: a capital and 3 letters at least
                 float f = e0.Freq;
+                if (rare && f < floor) continue;
                 if (top.Count == keep && f <= top[^1].Freq) continue;
                 int at = top.Count;
                 while (at > 0 && top[at - 1].Freq < f) at--;
@@ -631,8 +1279,9 @@ public sealed class PredictionEngine : IDisposable
                 if (top.Count > keep) top.RemoveAt(top.Count - 1);
             }
         }
-        Walk(n.Keys1, n.Idx1);
-        if (capital) Walk(n.Keys2, n.Idx2);
+        Walk(n.Keys1, n.Idx1, false);
+        if (capital) Walk(n.Keys2, n.Idx2, false);
+        else if (typed.Length >= NamesRecognisedFrom) Walk(n.Keys2, n.Idx2, true);
         foreach (var (_, i) in top)
         {
             var e = n.Entries[i];

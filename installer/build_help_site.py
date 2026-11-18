@@ -106,10 +106,18 @@ def lisez_moi(src):
     with open(os.path.join(src, "src", "Data.Build", "voices.json"), encoding="utf-8") as f:
         pierre = json.load(f)["voices"].get("pierre", {}).get("public", False)
     t = read("installer", "LISEZ-MOI.txt.in")
+    if "{ATTESTATION}" in t:                                 # 0.10.2+: the gh attestation check of a public build
+        t = t.replace("{ATTESTATION}", read("installer", "notes", "attestation.txt").rstrip() + "\n")
     t = (t.replace("{VERSION}", version).replace("{SUFFIXE}", "").replace("{PRIVE}", " - VERSION DE TEST")
          .replace("{NOTES}", read("installer", "notes", version + ".txt").rstrip()))
     credit = read("installer", "notes", "credit-pierre.txt").rstrip() + "\n" if pierre else ""
     t = t.replace("{CREDIT_PIERRE}", credit)
+    if "{DONNEES}" in t:                                     # 0.10.2+: the data release of that tree (the credits' link)
+        with open(os.path.join(src, "src", "Data.Build", "data-release.lock.json"), encoding="utf-8") as f:
+            tag = json.load(f).get("tag")
+        if not isinstance(tag, str) or not re.fullmatch(r"data-\d{4}\.\d{2}(\.\d+)?", tag):   # as build_installer.ps1
+            raise SiteError("%s: data-release.lock.json tag %r is not data-YYYY.MM[.n]" % (src, tag))
+        t = t.replace("{DONNEES}", tag)
     return t.replace("\r\n", "\n").replace("\n", "\r\n")
 
 

@@ -24,7 +24,8 @@ python -I -m unittest discover -s src\Data.Build\pepite-noms\tests
 python -I -m unittest discover -s installer\tests
 ```
 
-Sur un PC qui n'a qu'un runtime .NET plus récent que le SDK de `global.json`, définissez `DOTNET_ROLL_FORWARD=Major`.
+Le SDK .NET doit être exactement celui de `global.json` (10.0.115) ; un SDK portable décompressé dans un dossier convient
+(mettez ce dossier en tête du `PATH` pour la session).
 Détails : [development/BUILD.md](development/BUILD.md).
 
 ## Changer la prédiction

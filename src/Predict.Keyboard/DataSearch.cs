@@ -15,7 +15,7 @@ internal static class DataSearch
 {
     /// <summary>The walk-up is allowed only when the exe runs from a build output: a <c>bin\Debug\</c> or
     /// <c>bin\Release\</c> segment whose parent folder holds a <c>*.csproj</c> (<c>src\Predict.Keyboard\bin\Release\…</c>,
-    /// the test project's <c>bin\Release\net6.0\</c>). A folder merely named like that at install time does not qualify
+    /// the test project's <c>bin\Release\net10.0\</c>). A folder merely named like that at install time does not qualify
     /// without a project file; an all-users install folder is protected by the installer anyway (plan 12).
     /// <paramref name="isProjectDir"/> is injected for tests (default: the folder holds a <c>*.csproj</c>).</summary>
     public static bool MayWalkUp(string baseDir, Func<string, bool>? isProjectDir = null)

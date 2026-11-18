@@ -1,3 +1,6 @@
+// xUnit1031: blocking on a task (Wait / Result) is deliberate here: the test checks, synchronously, the state that the
+// app's background write, load or worker leaves behind (no xUnit sync context, so no deadlock)
+#pragma warning disable xUnit1031
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -185,10 +188,15 @@ public sealed class PictureStoreTests : IDisposable
         int delivered = 0;
         store.Request(1, new[] { "chat" }, (_, _, _) => Interlocked.Increment(ref delivered));
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var disposing = System.Threading.Tasks.Task.Run(store.Dispose);
+        // a dedicated thread, not Task.Run: a busy thread pool (the parallel test run) could start Dispose after the gate
+        // opens, and the test would no longer check « Dispose during a decode »
+        var disposeStarted = new ManualResetEventSlim(false);
+        var disposing = new Thread(() => { disposeStarted.Set(); store.Dispose(); }) { IsBackground = true };
+        disposing.Start();
+        Assert.True(disposeStarted.Wait(5000));
         Thread.Sleep(50);
         gate.Set();                                               // the decode in progress finishes
-        Assert.True(disposing.Wait(3000));
+        Assert.True(disposing.Join(3000));
         Assert.True(sw.ElapsedMilliseconds < 2000);
         Thread.Sleep(200);
         Assert.Equal(0, delivered);                               // queued request abandoned

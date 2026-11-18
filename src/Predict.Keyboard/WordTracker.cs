@@ -125,12 +125,25 @@ internal sealed class WordTracker
     /// A seeded word (a read gave its start) and a word after a digit (its own rule) are not concerned.</summary>
     private bool StartUnknown => !_afterDigit && _seeded == 0 && _text.Length - _buf.Length == 1 && _text[0] == '0';
 
+    /// <summary>0.10.2 (owner Q2: follow the document): the apostrophe the bar writes its elisions with (<c>j'</c> or
+    /// <c>j’</c>). <c>'</c> by default; the last apostrophe a read found before the caret (<see cref="Seed"/>) or the user
+    /// typed sets it; a jump (<see cref="Reset"/>, a window change) brings back <c>'</c> until a read or a key says
+    /// otherwise. A digit or a Backspace the tracker cannot follow keep it: the document has not changed.</summary>
+    public char ApostropheStyle { get; private set; } = '\'';
+
     /// <summary>Incremented on every mutation.</summary>
     public long Version { get; private set; }
     /// <summary>Where the state came from: "keys", or the reader source ("win32", "uia").</summary>
     public string Origin { get; private set; } = "keys";
 
     public void Reset()
+    {
+        Clear();
+        ApostropheStyle = '\'';
+    }
+
+    /// <summary><see cref="Reset"/> without forgetting <see cref="ApostropheStyle"/> (no jump: same document).</summary>
+    private void Clear()
     {
         _buf.Clear(); _ctx.Clear(); _sep = 0; _sentence = false; LastSeparator = '\0'; ClearRight(); Origin = "keys"; ResetText('0');
         _afterDigit = false; Finished = null; Version++;
@@ -140,7 +153,8 @@ internal sealed class WordTracker
     {
         Version++;
         if (ContextExtractor.IsWordChar(c)) { if (_buf.Length == 0) { _sep = 0; Finished = null; } _buf.Append(c); AppendText(c); return; }
-        if (char.IsDigit(c)) { Reset(); _afterDigit = true; return; }
+        if (char.IsDigit(c)) { Clear(); _afterDigit = true; return; }
+        if (Predict.Core.Elision.IsApostrophe(c)) ApostropheStyle = c;
         bool unknownStart = _buf.Length > 0 && StartUnknown;   // before the separator joins the kept text
         AppendText(c);
         // plan 10B: the word this separator finishes, as typed (the caret inside a word, or an unknown start: not the whole
@@ -165,7 +179,7 @@ internal sealed class WordTracker
         Version++;
         Finished = null;   // plan 10B: the word is being changed
         if (_buf.Length > 1) { _buf.Length--; DropText(); return BackspaceEffect.InWord; }
-        if (_text.Length <= 1) { Reset(); return BackspaceEffect.Lost; }   // nothing known before the caret
+        if (_text.Length <= 1) { Clear(); return BackspaceEffect.Lost; }   // nothing known before the caret
         if (_buf.Length == 1)   // the last letter: the caret is now after the separators (the suffix is still there)
         {
             DropText();
@@ -174,7 +188,7 @@ internal sealed class WordTracker
         // the char this Backspace deletes is a separator; the state behind it is trusted only if that char is exactly
         // what the document holds
         int at = _text.Length - 1;
-        if (at < _seeded || IsBarrier(_text[at], Origin == "keys")) { Reset(); return BackspaceEffect.Lost; }
+        if (at < _seeded || IsBarrier(_text[at], Origin == "keys")) { Clear(); return BackspaceEffect.Lost; }
         DropText();
         return Derive(keepRight: false) ? BackspaceEffect.Crossed : BackspaceEffect.Lost;
     }
@@ -211,9 +225,11 @@ internal sealed class WordTracker
     }
 
     /// <summary>State from a read of the text at the caret (see <see cref="ContextExtractor"/>).</summary>
+    /// <param name="apostrophe">0.10.2: the last apostrophe the read found before the caret ('\0' = none: the style stays).</param>
     public void Seed(string current, IReadOnlyList<string> context, int separators, string suffix, char nextChar, string origin,
-                     bool atSentenceStart = false)
+                     bool atSentenceStart = false, char apostrophe = '\0')
     {
+        if (Predict.Core.Elision.IsApostrophe(apostrophe)) ApostropheStyle = apostrophe;
         _sentence = atSentenceStart && context.Count <= 3;
         LastSeparator = '\0';   // not given by a read
         Finished = null; _afterDigit = false;
@@ -240,7 +256,7 @@ internal sealed class WordTracker
     private bool Derive(bool keepRight)
     {
         var c = ContextExtractor.Extract(_text.ToString(), _text.Length, false, false);
-        if (!c.Valid) { Reset(); return false; }
+        if (!c.Valid) { Clear(); return false; }
         _buf.Clear(); _buf.Append(c.Prefix);
         _ctx.Clear(); foreach (var w in c.Context) _ctx.Add(w);
         _sep = c.Prefix.Length > 0 ? 0 : c.Separators;

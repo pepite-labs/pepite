@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Pure parts of Predict.Keyboard, compiled from linked sources (no reference to the WPF project). -->
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <RollForward>Major</RollForward>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <IsPackable>false</IsPackable>
@@ -80,6 +79,7 @@
     <!-- plan 12: installer hooks in the app (pure parts) -->
     <Compile Include="..\Predict.Keyboard\DataSearch.cs" Link="DataSearch.cs" />
     <Compile Include="..\Predict.Keyboard\CommandLine.cs" Link="CommandLine.cs" />
+    <Compile Include="..\Predict.Keyboard\SpeechBenchSentences.cs" Link="SpeechBenchSentences.cs" />
     <Compile Include="..\Predict.Keyboard\OpenRequest.cs" Link="OpenRequest.cs" />
     <Compile Include="..\Predict.Keyboard\InstallInfo.cs" Link="InstallInfo.cs" />
     <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
@@ -99,11 +99,11 @@
     <ProjectReference Include="..\Predict.Core\Predict.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
-    <PackageReference Include="xunit" Version="2.4.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.25" />
-    <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.15" />
     <PackageReference Include="NAudio.Core" Version="2.2.1" />
     <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
     <!-- the engine's model type (0.7.2 tests run a fake model; same package and version as the app) -->

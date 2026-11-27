@@ -1,0 +1,6 @@
+# Reviewed exceptions of scan_dumps.py --text (plan offensive-words): a listed form that appears in one of our own files
+# as another word with the same letters. id<TAB>file (path from the repository root)<TAB>reason. Ids only, never the word.
+F00042	design/predict-core-design.md	the English word in technical prose, not a French proposal (reviewer 2026-11-27)
+F00042	development/evaluation.md	the English word in technical prose, not a French proposal (reviewer 2026-11-27)
+F00042	design/keyboard-design.md	the English word in technical prose, not a French proposal (reviewer 2026-11-27)
+F00020	design/keyboard-design.md	the English word in technical prose, not a French proposal (reviewer 2026-11-27)

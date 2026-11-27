@@ -377,7 +377,105 @@ public class ReadingTests
         Assert.False(SelectionPolicy.MayUseClipboard(true, true, false, ReadStatus.Ok));             // the app said: no selection
         Assert.False(SelectionPolicy.MayUseClipboard(true, true, false, ReadStatus.Selection));      // read directly
         Assert.True(new AppSettings().Reading.Enabled);
-        Assert.False(new AppSettings().Reading.ClipboardFallback);
+        Assert.Null(new AppSettings().Reading.ClipboardFallback);   // 0.11.0: not set = the host's default
+    }
+
+    /// <summary>Owner 2026-11-27: the module of a LibreOffice window from its (untranslated) title suffix.</summary>
+    [Theory]
+    [InlineData("soffice.bin", "Sans nom 1 — LibreOffice Writer", (int)LibreOfficeModule.Writer)]
+    [InlineData("soffice.bin", "Untitled 1 — LibreOffice Writer", (int)LibreOfficeModule.Writer)]
+    [InlineData("soffice.bin", "rapport de stage.odt — LibreOffice Writer", (int)LibreOfficeModule.Writer)]
+    [InlineData("soffice.bin", "lettre.docx - LibreOffice Writer ", (int)LibreOfficeModule.Writer)]      // older « - », trailing space
+    [InlineData("SOFFICE.BIN", "Sans nom 1 — LibreOffice Calc", (int)LibreOfficeModule.Calc)]
+    [InlineData("soffice.bin", "Untitled 1 — LibreOffice Calc", (int)LibreOfficeModule.Calc)]
+    [InlineData("soffice.bin", "notes de Writer.ods — LibreOffice Calc", (int)LibreOfficeModule.Calc)]   // only the suffix counts
+    [InlineData("soffice.bin", "Sans nom 1 — LibreOfficeDev Calc", (int)LibreOfficeModule.Calc)]
+    [InlineData("soffice.bin", "budget.ods - OpenOffice Calc", (int)LibreOfficeModule.Calc)]
+    [InlineData("soffice.bin", "budget.ods — Collabora Office Calc", (int)LibreOfficeModule.Calc)]
+    [InlineData("soffice.bin", "Calc — LibreOffice Writer", (int)LibreOfficeModule.Writer)]           // a Writer document named « Calc »
+    [InlineData("soffice.bin", "Sans nom 1 — LibreOffice Impress", (int)LibreOfficeModule.Impress)]
+    [InlineData("soffice.bin", "Sans nom 1 — LibreOffice Draw", (int)LibreOfficeModule.Draw)]
+    [InlineData("soffice.bin", "Rechercher et remplacer", (int)LibreOfficeModule.Other)]               // a dialog in front
+    [InlineData("soffice.bin", "", (int)LibreOfficeModule.Other)]
+    [InlineData("soffice.bin", null, (int)LibreOfficeModule.Other)]
+    [InlineData("swriter", "", (int)LibreOfficeModule.Writer)] [InlineData("scalc", "x", (int)LibreOfficeModule.Calc)]
+    [InlineData("notepad", "Sans titre - LibreOffice Writer", (int)LibreOfficeModule.None)]            // not LibreOffice's process
+    [InlineData(null, "Sans nom 1 — LibreOffice Writer", (int)LibreOfficeModule.None)]
+    public void LibreOffice_Module_From_The_Title(string? process, string? title, int expected) =>
+        Assert.Equal((LibreOfficeModule)expected, HostApps.ModuleOf(process, title));
+
+    [Theory]
+    [InlineData(null, (int)LibreOfficeModule.Writer, (int)ClipboardFallback.Allowed)]     // the default: Writer only
+    [InlineData(null, (int)LibreOfficeModule.Impress, (int)ClipboardFallback.Off)]
+    [InlineData(null, (int)LibreOfficeModule.Draw, (int)ClipboardFallback.Off)]
+    [InlineData(null, (int)LibreOfficeModule.Other, (int)ClipboardFallback.Off)]
+    [InlineData(null, (int)LibreOfficeModule.None, (int)ClipboardFallback.Off)]
+    [InlineData(null, (int)LibreOfficeModule.Calc, (int)ClipboardFallback.RefusedCalc)]
+    [InlineData(true, (int)LibreOfficeModule.None, (int)ClipboardFallback.Allowed)]       // « Partout »
+    [InlineData(true, (int)LibreOfficeModule.Impress, (int)ClipboardFallback.Allowed)]
+    [InlineData(true, (int)LibreOfficeModule.Writer, (int)ClipboardFallback.Allowed)]
+    [InlineData(true, (int)LibreOfficeModule.Calc, (int)ClipboardFallback.RefusedCalc)]   // never in Calc, even « Partout »
+    [InlineData(false, (int)LibreOfficeModule.Writer, (int)ClipboardFallback.Off)]        // « Jamais »
+    [InlineData(false, (int)LibreOfficeModule.None, (int)ClipboardFallback.Off)]
+    [InlineData(false, (int)LibreOfficeModule.Calc, (int)ClipboardFallback.RefusedCalc)]
+    public void Clipboard_Fallback_Per_Window(bool? setting, int module, int expected)
+    {
+        var m = (LibreOfficeModule)module;
+        Assert.Equal((ClipboardFallback)expected, SelectionPolicy.Fallback(setting, m));
+        bool allowed = (ClipboardFallback)expected == ClipboardFallback.Allowed;
+        Assert.Equal(allowed, SelectionPolicy.MayUseClipboard(setting, m, true, false, ReadStatus.Unavailable));
+        Assert.False(SelectionPolicy.MayUseClipboard(setting, m, false, false, ReadStatus.Unavailable));   // no gesture
+        Assert.False(SelectionPolicy.MayUseClipboard(setting, m, true, true, ReadStatus.Unavailable));     // password
+        Assert.False(SelectionPolicy.MayUseClipboard(setting, m, true, false, ReadStatus.Ok));
+    }
+
+    [Fact]
+    public void Clipboard_Setting_Three_Positions_Layering_Lock_And_Old_Files()
+    {
+        JsonObject? J(string s) => JsonNode.Parse(s) as JsonObject;
+        // older settings files: the key absent → not set (Writer only); true / false kept as they are
+        Assert.Null(AppSettings.FromJson(J(@"{""reading"":{""enabled"":true}}")).Reading.ClipboardFallback);
+        Assert.Null(AppSettings.FromJson(J(@"{}")).Reading.ClipboardFallback);
+        Assert.Null(AppSettings.FromJson(J(@"{""reading"":{""clipboardFallback"":null}}")).Reading.ClipboardFallback);
+        Assert.False(AppSettings.FromJson(J(@"{""reading"":{""clipboardFallback"":false}}")).Reading.ClipboardFallback);
+        Assert.True(AppSettings.FromJson(J(@"{""reading"":{""clipboardFallback"":true}}")).Reading.ClipboardFallback);
+        // round trip of the three positions
+        foreach (var v in new bool?[] { null, true, false })
+        {
+            var s = new AppSettings() with { Reading = new ReadingSettings(ClipboardFallback: v) };
+            Assert.Equal(v, AppSettings.FromJson(s.ToJson()).Reading.ClipboardFallback);
+        }
+        // layers: machine default < « Classe » < profile < machine lock
+        var off = J(@"{""reading"":{""clipboardFallback"":false}}");
+        var on = J(@"{""reading"":{""clipboardFallback"":true}}");
+        var unset = J(@"{""reading"":{""clipboardFallback"":null}}");
+        Assert.Null(SettingsLayering.Merge((JsonObject?)null, null, null).Effective.Reading.ClipboardFallback);
+        Assert.False(SettingsLayering.Merge(off, null, null).Effective.Reading.ClipboardFallback);                 // admin: « Jamais »
+        Assert.True(SettingsLayering.Merge(off, on, null).Effective.Reading.ClipboardFallback);                    // the user's choice
+        Assert.False(SettingsLayering.Merge(MachineLayer.None, off, null).Effective.Reading.ClipboardFallback);    // « Classe »: « Jamais »
+        Assert.Null(SettingsLayering.Merge(MachineLayer.None, off, unset).Effective.Reading.ClipboardFallback);    // a pupil's explicit Writer only
+        var (eff, locked) = SettingsLayering.Merge((JsonObject?)null, on, off);
+        Assert.False(eff.Reading.ClipboardFallback);                                                               // the lock wins
+        Assert.Contains("reading.clipboardFallback", locked);
+        // Réglages: each position is an explicit choice. Over a machine default « Jamais », « Writer only » is written as
+        // a JSON null (not dropped); back to « Jamais » removes the key (equal to the baseline, never frozen)
+        var machine = new MachineLayer(off, null);
+        var noLocks = new HashSet<string>();
+        var cur = SettingsLayering.Merge(machine, null).Effective;
+        var u1 = SettingsLayering.NewUserLayer(new JsonObject(), cur, cur with { Reading = cur.Reading with { ClipboardFallback = null } }, machine, noLocks);
+        var g = Json.Get(u1, "reading.clipboardFallback");
+        Assert.True(g.Found);
+        Assert.Null(g.Node);
+        Assert.Null(SettingsLayering.Merge(machine, u1).Effective.Reading.ClipboardFallback);
+        var cur1 = SettingsLayering.Merge(machine, u1).Effective;
+        var u2 = SettingsLayering.NewUserLayer(u1, cur1, cur1 with { Reading = cur1.Reading with { ClipboardFallback = false } }, machine, noLocks);
+        Assert.False(Json.Get(u2, "reading.clipboardFallback").Found);
+        Assert.False(SettingsLayering.Merge(machine, u2).Effective.Reading.ClipboardFallback);
+        // a locked value is never written by the window
+        var lockedMachine = new MachineLayer(null, off);
+        var (lcur, lpaths) = SettingsLayering.Merge(lockedMachine, null);
+        var u3 = SettingsLayering.NewUserLayer(new JsonObject(), lcur, lcur with { Reading = lcur.Reading with { ClipboardFallback = true } }, lockedMachine, lpaths);
+        Assert.False(Json.Get(u3, "reading.clipboardFallback").Found);
     }
 
     private sealed class FakeClipboard : IClipboardOps
@@ -495,6 +593,28 @@ public class ReadingTests
         Assert.Contains("late copy", outcome);
         var never = new FakeClipboard { LateCopyAt = ClipboardCopy.WaitMs + ClipboardCopy.LateWatchMs + 500 };
         Assert.Contains("untouched", ClipboardCopy.Run(never, () => ProbeStatus.NotPassword).Outcome);
+    }
+
+    /// <summary>0.11.0 VM run: Writer answered a double click's Ctrl+C after 650 ms. In LibreOffice the copy is waited
+    /// for 800 ms (and read); elsewhere 300 ms as before (a late copy is undone, not read).</summary>
+    [Fact]
+    public void Clipboard_Waits_Longer_In_LibreOffice()
+    {
+        Assert.Equal(800, ClipboardCopy.WaitFor("soffice.bin"));
+        Assert.Equal(ClipboardCopy.WaitMs, ClipboardCopy.WaitFor("notepad"));
+        Assert.Equal(ClipboardCopy.WaitMs, ClipboardCopy.WaitFor(null));
+        var lo = new FakeClipboard { LateCopyAt = 650 };
+        var before = Snap(lo);
+        var (text, outcome) = ClipboardCopy.Run(lo, () => ProbeStatus.NotPassword, ClipboardCopy.WaitFor("soffice.bin"));
+        Assert.Equal("le texte choisi", text);
+        Assert.Contains("copied in", outcome);
+        Assert.Equal(before, Snap(lo));                                   // restored
+        var np = new FakeClipboard { LateCopyAt = 650 };
+        var r = ClipboardCopy.Run(np, () => ProbeStatus.NotPassword, ClipboardCopy.WaitFor("notepad"));
+        Assert.Null(r.Text);
+        Assert.Contains("late copy", r.Outcome);
+        // the worst Run (the selection worker's « stuck » limit) covers the longer wait
+        Assert.True(ClipboardCopy.WorstMs >= ClipboardCopy.ModifierWaitMs + ClipboardCopy.LibreOfficeWaitMs + ClipboardCopy.LateWatchMs);
     }
 
     [Fact]
@@ -822,7 +942,7 @@ public class ReadingTests
         Assert.True(back.ReadingPictures);
         Assert.Equal((10, 20, 800, 600), (back.Reading.WinX, back.Reading.WinY, back.Reading.WinW, back.Reading.WinH));
         var j = AppSettings.FromJson(JsonNode.Parse(@"{""reading"":{""clipboardFallback"":""yes"",""window"":{""x"":1,""y"":2,""w"":50,""h"":600}}}") as JsonObject);
-        Assert.False(j.Reading.ClipboardFallback);   // tolerant parse: a wrong type keeps the default
+        Assert.Null(j.Reading.ClipboardFallback);    // tolerant parse: a wrong type keeps the default (not set)
         Assert.False(j.Reading.HasWindow);            // too small: dropped
         Assert.True(j.Reading.Enabled);
         Assert.Null(j.Reading.Pictures);

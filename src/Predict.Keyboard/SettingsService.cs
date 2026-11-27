@@ -87,5 +87,5 @@ internal sealed class SettingsService
         $" punctuation {AppSettings.PunctuationNames[s.Punctuation]}" +
         $" speech inserted={s.Speech.SpeakInserted} words={s.Speech.SpeakWords} sentences={s.Speech.SpeakSentences} reread={s.Speech.RereadEdits} " +
         $"voice={s.Speech.Voice ?? "(default)"} rate={s.Speech.Rate} volume={s.Speech.Volume}" +
-        $" reading={s.Reading.Enabled} clipboard={s.Reading.ClipboardFallback} reading-pictures={(s.Reading.Pictures is bool p ? p.ToString() : "follow")} welcome={s.Welcome}";
+        $" reading={s.Reading.Enabled} clipboard={(s.Reading.ClipboardFallback is bool cf ? cf.ToString() : "per-app")} reading-pictures={(s.Reading.Pictures is bool p ? p.ToString() : "follow")} welcome={s.Welcome}";
 }

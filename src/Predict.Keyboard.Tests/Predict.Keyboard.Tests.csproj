@@ -11,8 +11,11 @@
     <Compile Include="..\Predict.Keyboard\ContextExtractor.cs" Link="ContextExtractor.cs" />
     <Compile Include="..\Predict.Keyboard\WordTracker.cs" Link="WordTracker.cs" />
     <Compile Include="..\Predict.Keyboard\KeyboardPolicy.cs" Link="KeyboardPolicy.cs" />
+    <!-- 2026-11-25 owner: listen before inserting (pure state of the pending tile) -->
+    <Compile Include="..\Predict.Keyboard\ListenFirst.cs" Link="ListenFirst.cs" />
     <Compile Include="..\Predict.Keyboard\Inserter.cs" Link="Inserter.cs" />
     <Compile Include="..\Predict.Keyboard\SoundAlikeCorrection.cs" Link="SoundAlikeCorrection.cs" />
+    <Compile Include="..\Predict.Keyboard\HostApps.cs" Link="HostApps.cs" />
     <Compile Include="..\Predict.Keyboard\Native.cs" Link="Native.cs" />
     <Compile Include="..\Predict.Keyboard\ReadQueue.cs" Link="ReadQueue.cs" />
     <Compile Include="..\Predict.Keyboard\PictureStore.cs" Link="PictureStore.cs" />

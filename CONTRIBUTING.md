@@ -20,6 +20,7 @@ dotnet build Pepite.sln -c Release
 dotnet test Pepite.sln -c Release
 python -I -m unittest discover -s src\Data.Build -p "test_*.py"
 python -I -m unittest discover -s src\Data.Build\corpus\tests
+python -I -m unittest discover -s src\Data.Build\exclusions\tests -p "test*.py"
 python -I -m unittest discover -s src\Data.Build\pepite-noms\tests
 python -I -m unittest discover -s installer\tests
 ```

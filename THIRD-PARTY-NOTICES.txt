@@ -210,6 +210,23 @@ grammar.sqlite — morphology table derived from Grammalecte « Lexique simplifi
     Pinned for later steps, not used nor shipped yet: gc_lang/fr/rules.grx and gc_lang/fr/data/phonet_simil.txt of the same
     commit (GPL-3.0-or-later), lexicons/French.tagset.txt (documentation of the tags). See src/Data.Build/grammar.lock.json.
 
+exclusions/fr.txt — « mots exclus », the words Pépite never offers (plan offensive-words, from 0.11.0) — CC BY-SA 4.0
+    A separate data file built by src/Data.Build/exclusions/ (GPL-3.0-or-later scripts): the candidates were selected by
+    the usage labels of the French Wiktionnaire (fr.wiktionary.org, its contributors; CC BY-SA 4.0 and GFDL), read from
+    the kaikki.org / wiktextract extraction of the 2026-10-01 dump (extracted 2026-11-02; T. Ylonen, « Wiktextract:
+    Wiktionary as Machine-Readable Structured Data », LREC 2022), SHA-256
+    33c7b73bc11d2533c9c0e0be6484ded76bd9ff29337065f2070b4f1b7d2e4f3c, with LDNOOBW « List of Dirty, Naughty, Obscene,
+    and Otherwise Bad Words » by Shutterstock and contributors (fr file, commit 5faf2ba42d7b1c0977169ec3611df25a3c08eb13,
+    CC BY 4.0) as a cross-check; every proposed exclusion was reviewed by the maintainer (2026-11-27). The reviewed
+    lemmas were expanded to their word forms with Lexique 3.83 only (CC BY-SA 4.0, see below); no form comes from
+    Grammalecte's French.lex (MPL-2.0): grammar.sqlite only takes part in the homograph check at build time, and Pépite
+    adds the inflections of the excluded lemmas from grammar.sqlite when it loads the list. CC BY-SA 4.0 is one-way
+    compatible with GPLv3 (Creative Commons declaration of 2015-10-08). One form per line, base64 of its UTF-8
+    spelling: this only keeps the list out of sight of a child browsing the install folder, it is not a secret; the plain
+    list and every decision with its reason are src/Data.Build/exclusions/forms.tsv and lemmas.tsv in the source
+    repository. Distributed with exclusions/SOURCE.txt (sources, review date, SHA-256 of forms.tsv, counts). Pins:
+    src/Data.Build/exclusions/exclusions.lock.json.
+
 Pictures of a teacher's names database: any licence, at the teacher's responsibility; the licence is required, stored with
 each picture and shown in Espace enseignant → Mots (plan 10C). They stay on the PC and are never part of a shared pack.
 
@@ -270,7 +287,10 @@ ARASAAC pictograms — CC BY-NC-SA 4.0 (pictos.sqlite, a separate non-commercial
   The help (aide\, CC BY-SA 4.0) shows ARASAAC pictograms inside four real screenshots (aide\img\capture-qui-es-tu.png,
   capture-espace-enseignant.png, capture-barre-images.png, capture-barre-lecture.png; 0.10.2), each captioned « Pictogrammes : Sergio Palao,
   ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0 »: those pictograms stay under CC BY-NC-SA 4.0, outside the help's
-  CC BY-SA 4.0 licence.
+  CC BY-SA 4.0 licence. The same holds for the announcement pages of the web site (site\nouveautes\, CC BY-SA 4.0;
+  0.11.0): five real screenshots show ARASAAC pictograms, each with the same caption —
+  ecouter-avant-d-inserer\img\barre-la-mai.png, cadre-blanc-f1.png, bouton-haut-parleur.png and
+  sons-confondus\img\jardin-en-vert.png, liste-environ-jardin.png.
 
 Fonts — SIL Open Font License 1.1, shipped unmodified in fonts\<family>\ with their OFL.txt
   - OpenDyslexic v0.91.12 (Abbie Gonzalez, Reserved Font Name OpenDyslexic), https://github.com/antijingoist/opendyslexic

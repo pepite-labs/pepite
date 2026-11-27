@@ -29,6 +29,8 @@ internal sealed class WordEditor : DockPanel
     private readonly ListBox _fautes = new() { Height = 120, Width = 300 };
     private readonly ListBox? _lists;
     private readonly Button? _hide;
+    private readonly ListBox? _exclus;        // « Classe » only: « Mots à ne jamais proposer »
+    private readonly Button? _exclusRemove;
     private readonly TextBlock _status, _ownCount;
     private bool _refreshing;
 
@@ -89,6 +91,27 @@ internal sealed class WordEditor : DockPanel
             _hide.HorizontalAlignment = HorizontalAlignment.Left;
             _class.SelectionChanged += (_, _) => UpdateHide();
             left.Children.Add(_hide);
+        }
+        else if (WordLayering.ShowsExclus(IsClass, teacher, c.SettingsProtected?.Invoke() ?? false))
+        {
+            // 0.11.0 (plan offensive-words B3, D35): « Classe » only — behind the PIN like the rest of its words; a pupil's
+            // editor has no such section, so a pupil can neither see nor change the list
+            var h = Ui.Heading(Strings.ExclusHeading, "ExclusHeading", 15);
+            h.Margin = new Thickness(0, 14, 0, 0);
+            left.Children.Add(h);
+            var xh = Ui.Text(Strings.ExclusHelp, "ExclusHelp", 12.5);
+            xh.Opacity = 0.75; xh.MaxWidth = 300; xh.HorizontalAlignment = HorizontalAlignment.Left;
+            left.Children.Add(xh);
+            _exclus = new ListBox { Height = 110, Width = 300, Margin = new Thickness(0, 4, 0, 0) };
+            AutomationProperties.SetAutomationId(_exclus, "ExclusWords");
+            AutomationProperties.SetName(_exclus, Strings.ExclusHeading);
+            left.Children.Add(_exclus);
+            var xb = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            xb.Children.Add(Ui.Button(Strings.WordAddDots, "ExclusAdd", (_, _) => AddExclu(), 100));
+            _exclusRemove = Ui.Button(Strings.ExclusRemove, "ExclusRemove", (_, _) => RemoveExclu(), 100);
+            xb.Children.Add(_exclusRemove);
+            left.Children.Add(xb);
+            _exclus.SelectionChanged += (_, _) => UpdateExclusRemove();
         }
 
         // « Mes fautes »
@@ -176,8 +199,10 @@ internal sealed class WordEditor : DockPanel
             var keepOwn = (_own.SelectedItem as ListBoxItem)?.Tag as string;
             _own.Items.Clear();
             var own = b.Default?.Words ?? Array.Empty<WordEntry>();
+            // « Classe » ∪ machine banned words: marked in « Classe »'s own list, left out of a pupil's view of it
+            var banned = _c.Words.BannedWords();
             foreach (var e in own.Where(e => q.Length == 0 || e.W.Contains(q, StringComparison.OrdinalIgnoreCase)))
-                _own.Items.Add(Item(e.W, e.W, "Own-"));
+                _own.Items.Add(Item(IsClass && banned.Contains(e.W) ? string.Format(Strings.WordBannedMark, e.W) : e.W, e.W, "Own-"));
             Select(_own, keepOwn);
             _ownCount.Text = Strings.WordsCount(own.Count, b.WordCount, WordBook.MaxWords(IsClass));
 
@@ -189,10 +214,31 @@ internal sealed class WordEditor : DockPanel
                 var hidden = new HashSet<string>(b.Masques, StringComparer.Ordinal);
                 if (cls != null)
                     foreach (var w in WordLayering.ActiveForms(cls).Distinct(StringComparer.Ordinal).Where(w => q.Length == 0 || w.Contains(q, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        if (banned.Contains(w)) continue;   // never offered: not shown to a pupil either (reviewer 2026-11-27)
                         _class.Items.Add(Item(hidden.Contains(w) ? string.Format(Strings.WordHiddenMark, w) : w, w, "Class-"));
+                    }
                 _class.IsEnabled = cls != null;
                 Select(_class, keep);
                 UpdateHide();
+            }
+
+            if (_exclus != null)
+            {
+                var keepX = (_exclus.SelectedItem as ListBoxItem)?.Tag as string;
+                _exclus.Items.Clear();
+                foreach (var w in b.Exclus.Where(w => q.Length == 0 || w.Contains(q, StringComparison.OrdinalIgnoreCase)))
+                    _exclus.Items.Add(Item(w, w, "Exclu-"));
+                // the machine file's words: shown, not removable here (a tag of their own, so a selection survives a refresh)
+                foreach (var w in _c.Words.MachineExclus.Where(w => q.Length == 0 || w.Contains(q, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var it = Item(string.Format(Strings.ExclusMachineMark, w), MachineTag + w, "ExcluMachine-");
+                    AutomationProperties.SetAutomationId(it, "ExcluMachine-" + w);
+                    it.Foreground = System.Windows.SystemColors.GrayTextBrush;
+                    _exclus.Items.Add(it);
+                }
+                Select(_exclus, keepX);
+                UpdateExclusRemove();
             }
 
             var keepF = (_fautes.SelectedItem as ListBoxItem)?.Tag as string;
@@ -290,6 +336,32 @@ internal sealed class WordEditor : DockPanel
         bool hide = !Book.Masques.Contains(w);
         Apply(b => (b.SetHidden(w, hide), null), hide ? "class word hidden" : "class word shown");
         Say(hide ? Strings.WordHiddenDone : Strings.WordShownDone);
+    }
+
+    /// <summary>The tag prefix of a machine row (never a word: words hold letters only).</summary>
+    private const string MachineTag = "\u0001machine:";
+
+    private void UpdateExclusRemove()
+    {
+        if (_exclusRemove is null || _exclus is null) return;
+        _exclusRemove.IsEnabled = (_exclus.SelectedItem as ListBoxItem)?.Tag is string { Length: > 0 } t && !t.StartsWith(MachineTag, StringComparison.Ordinal);
+    }
+
+    private void AddExclu()
+    {
+        WordDialog.AskWord(Owner, Strings.ExclusAddTitle, _search.Text.Trim(), _c.Speaker, w =>
+        {
+            var why = Apply(b => { var r = b.AddExclu(w, IsClass, out var p); return (r, p); }, "banned word added");
+            if (why is null) Say(Strings.ExclusAdded);
+            return why;
+        });
+    }
+
+    private void RemoveExclu()
+    {
+        if ((_exclus?.SelectedItem as ListBoxItem)?.Tag is not string { Length: > 0 } w || w.StartsWith(MachineTag, StringComparison.Ordinal)) return;
+        Apply(b => (b.RemoveExclu(w), null), "banned word removed");
+        Say(Strings.ExclusRemoved);
     }
 
     private void AddFaute()

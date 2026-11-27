@@ -180,6 +180,71 @@ python -I -m unittest discover -s src\Data.Build -p test_build_grammar_sets.py
 A re-fetch gives other text (the articles keep changing): keep `<work>\grammar-sets\raw\` to reproduce the SHA-256s of
 `manifest.json`.
 
+### 1b4. The « mots exclus » list (plan offensive-words, Phase 0)
+
+Words Pépite never offers (slurs, obscene words, insults, drug words; a pupil who types one writes it normally). The
+candidates come from the usage labels of the French Wiktionnaire (kaikki.org raw wiktextract extraction, CC BY-SA 4.0 +
+GFDL), with LDNOOBW `fr` (CC BY 4.0) as a cross-check seed; both are pinned in
+`src\Data.Build\exclusions\exclusions.lock.json` (downloads under `<work>\data\`, never committed). **No script prints a
+word**: consoles show counts and row ids (`C…` lemma rows, `F…` form rows) only.
+
+```
+python -I src\Data.Build\exclusions\find_candidates.py probe --wikt <work>\data\wiktionnaire\raw-wiktextract-data.jsonl.gz
+python -I src\Data.Build\exclusions\find_candidates.py candidates --wikt <…jsonl.gz> --ldnoobw <work>\data\ldnoobw\fr.txt ^
+    --db src\Data.Build\out\prediction.sqlite --out <work>\exclusions\candidates.tsv     # proposed decision + reason
+python -I src\Data.Build\exclusions\make_review.py --candidates <work>\exclusions\candidates.tsv --out <work>\exclusions\review.html
+#   (--batches <work>\exclusions\review-batches: text files of 50 rows for a phone review)
+#   the owner reviews the static page (no network) and exports exclusions-decisions-<date>.json, or answers the text
+#   batches with the ids to change:
+python -I src\Data.Build\exclusions\build_exclusions.py decisions-from-text --candidates <work>\exclusions\candidates.tsv ^
+    --text "garder: C0055, C0089 ; exclure: C1234" --out <export.json> --reviewed <date>
+python -I src\Data.Build\exclusions\build_exclusions.py decisions --candidates <work>\exclusions\candidates.tsv ^
+    --decisions <export.json> --reviewed <date>                                             # -> exclusions\lemmas.tsv
+python -I src\Data.Build\exclusions\build_exclusions.py forms --db src\Data.Build\out\prediction.sqlite ^
+    --grammar src\Data.Build\out\grammar.sqlite                                            # -> exclusions\forms.tsv
+python -I src\Data.Build\exclusions\build_exclusions.py questions --db src\Data.Build\out\prediction.sqlite ^
+    --grammar src\Data.Build\out\grammar.sqlite --candidates <work>\exclusions\candidates.tsv ^
+    --out <work>\exclusions\owner-answers\questions-forms.txt                                # words: work folder only
+python -I src\Data.Build\exclusions\build_exclusions.py form-answers --questions <…questions-forms.txt> ^
+    --answers <owner answers « Q03 exclure la forme »> --reviewed <date>     # -> form+ / form- / keep rows, lemmas.tsv
+#   then run « forms » again
+python -I src\Data.Build\exclusions\build_exclusions.py ship --out-dir src\Data.Build\out\exclusions --reviewed <date> ^
+    --db src\Data.Build\out\prediction.sqlite --grammar src\Data.Build\out\grammar.sqlite    # SHA-256 pins in SOURCE.txt
+python -I -m unittest discover -s src\Data.Build\exclusions\tests -p "test*.py"
+#   Phase A checks (ids and counts only; exit 1 on a hit / a failure):
+python -I src\Data.Build\exclusions\scan_dumps.py --grammar src\Data.Build\out\grammar.sqlite --db src\Data.Build\out\prediction.sqlite <Eval .log / .dump files>
+python -I src\Data.Build\exclusions\scan_dumps.py --text <docs, logs, commit message files>
+Predict.Eval src\Data.Build\out\prediction.sqlite x --probe-exclusions --grammar src\Data.Build\out\grammar.sqlite --names <pack> [--edits]
+```
+
+Policy (owner, 2026-11-26 and 2026-11-27): R (ethnic / racial / religious), H (homophobic / transphobic) and S
+(sexist) slurs are excluded when the slur is the dominant sense, every sense is flagged, or LDNOOBW lists the word —
+a sense counts for R / H / S only with an insult or slur label, never « péjoratif » alone;
+V (vulgar, not sexual: swear words, scatology) is always kept;
+D (disability), X (sexual / obscene), I (insult) and G (drugs) only when the flagged sense dominates (first sense, or at
+least half the senses); a « péjoratif » label alone is proposed « keep ».
+
+`forms` expands each excluded lemma to its forms and writes only those of `prediction.sqlite` (Lexique 3.83, CC BY-SA
+4.0); a form found only in `grammar.sqlite` (French.lex, MPL-2.0) is not written — the engine adds it at load time from
+the excluded lemmas. Homograph guard: a form is excluded only when every lemma it has in both databases is excluded; an
+excluded headword whose own spelling is also another word's stays offered unless `lemmas.tsv` has a `form+` row for it.
+Fold twins (accents, case, « œ ») of an excluded form are added only when every lemma they have is excluded or their only
+lemma folds like the excluded lemma; a reviewed « keep » word is never a twin (`--no-twins` turns twins off). `form+` /
+`form-` rows add or remove one form. The console lists by id: (a) excluded lemmas left with no form, (b) « keep » rows
+whose spelling is excluded, (c) guarded own spellings, each split into open rows and rows the owner already answered
+(an answer row `Qnn` names the row it answers for, « (row C0123) ») — `questions` writes the open ones, with the words,
+for the owner. A question of kind (t) (a reviewed « keep » spelling that is the fold twin of an excluded form) is not
+generated: it is added by hand to the questions file, and `form-answers` turns « exclure la forme » into a `form+` row.
+`ship` writes `out\exclusions\fr.txt` (a header line, a `#categories` line with the forms per category, one base64-encoded form per line, then `#lemmas` and the excluded
+lemmas: out of a child's sight, not a secret) and `out\exclusions\SOURCE.txt` (credits, review date, SHA-256 of
+`forms.tsv`, `prediction.sqlite` and `grammar.sqlite`).
+The review date and the SHA-256 of the two databases `forms.tsv` was expanded from are pinned in
+`exclusions.lock.json` (`forms_inputs`): `ship` without `--reviewed` takes the date from there and refuses other databases
+(`--other-inputs` overrides), so every build writes the same `fr.txt` and `SOURCE.txt`. `out/exclusions/` is not fetched:
+after `fetch_data_release.py`, run `ship` (the CI test and installer jobs do; `build_installer.ps1` stops early without the
+two files, `release_lint.py` fails a stage without them). With `PEPITE_REQUIRE_DATA=1` (set in the CI test job) the xUnit
+tests on the real data and list fail when a file is missing instead of being skipped.
+
 ### 1c. Build the picture pack (`pictos.sqlite`, optional)
 
 ARASAAC pictograms (CC BY-NC-SA 4.0) for the bar. Needs **Pillow** (build time only:

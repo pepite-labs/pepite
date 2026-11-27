@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Nouveau dans Pépite 0.11.0 : un élève qui confond les sons « ch » et « j » (« chardin », « jien ») se voit quand même proposer le bon mot.">
+<title>Pépite — les sons confondus ch et j</title>
+<link rel="stylesheet" href="{LATEST}/aide/style.css">
+<link rel="stylesheet" href="../nouveautes.css">
+<script src="{LATEST}/aide/prefs.js" defer></script>
+</head>
+<body>
+<!-- Page « Nouveautés » du site GitHub Pages (installer/build_help_site.py --pages), en ligne avec la version 0.11.0.
+     LATEST entre accolades = le dossier de la dernière version de l'aide. Les images sont de vraies captures de Pépite,
+     sans données d'élève. Quand le réglage « Sons que l'élève confond » sortira, mettre à jour la partie « Bientôt ».
+     Licence : CC BY-SA 4.0, sauf les pictogrammes ARASAAC visibles dans les captures (Sergio Palao, ARASAAC,
+     Gouvernement d'Aragon, CC BY-NC-SA 4.0). -->
+<!-- Date : la ligne « Page publiée le … » sous le chapeau garde la date de la première publication. Si la page
+     change ensuite, ajouter dans le même paragraphe « , mise à jour le <time datetime="AAAA-MM-JJ">…</time> ». -->
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="../index.html"><img src="{LATEST}/aide/img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>prédiction de mots</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Parties de la page">
+  <ul>
+      <li><a href="#change">Ce qui change</a></li>
+      <li><a href="#pourquoi">Pourquoi</a></li>
+      <li><a href="#regler">Rien à régler</a></li>
+      <li><a href="#bientot">Bientôt</a></li>
+      <li><a href="#limites">Les limites</a></li>
+      <li><a href="../index.html">Toutes les nouveautés</a></li>
+      <li><a href="{LATEST}/aide/index.html">L'aide</a></li>
+  </ul>
+</nav>
+<main id="contenu">
+<h1>Pépite comprend mieux les sons confondus (ch / j)</h1>
+<p class="chapeau">Nouveau dans Pépite 0.11.0&#8239;: un élève qui écrit «&#8239;ch&#8239;» à la place de «&#8239;j&#8239;», ou l'inverse, se voit quand même proposer le mot qu'il voulait écrire. <q>chardin</q> → <b>jardin</b>, <q>jien</q> → <b>chien</b>, <q>mancher</q> → <b>manger</b>.</p>
+<p class="petit">Page publiée le <time datetime="2026-11-27">27 novembre 2026</time>.</p>
+
+<h2 id="change">Ce qui change</h2>
+<h3 id="en-tapant">Pendant que l'élève tape</h3>
+<p>Pépite propose déjà les mots qui ont <b>le même son</b> que ce qui est tapé, en vert&#8239;: <q>orizon</q> → <span class="mot vert">horizon</span>. Désormais, il propose aussi les mots où «&#8239;ch&#8239;» et «&#8239;j&#8239;» (ou «&#8239;g&#8239;», «&#8239;ge&#8239;») sont échangés. Ils sont eux aussi en vert et viennent, en général, après les mots qui se prononcent exactement pareil&#8239;; dans la liste ≈, toujours après.</p>
+<figure class="capture"><img src="img/jardin-en-vert.png" width="523" height="168" alt="Le Bloc-notes avec le texte « le chard » et la barre de Pépite : jardin est le premier mot, dans une case verte, avec son image ; viennent ensuite chardonneret, char et chaud."><figcaption>L'élève a tapé «&#8239;le chard&#8239;»&#8239;: Pépite propose «&#8239;jardin&#8239;», en vert.<br>Pictogrammes&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
+<h3 id="mot-fini">Quand le mot est fini</h3>
+<p>À gauche des mots, un petit rond indique si Pépite connaît le mot écrit. Quand l'élève finit <q>chardin</q> (une espace, une virgule…), le rond devient <b>≈</b>, «&#8239;s'écrit peut-être autrement&#8239;», au lieu de <b>?</b>, «&#8239;mot inconnu&#8239;». Un clic sur le rond, ou la touche <kbd>F9</kbd>, montre la liste des mots qui se prononcent pareil ou presque&#8239;: <b>jardin</b> y est en premier. L'élève le choisit, et Pépite remplace <q>chardin</q> par <q>jardin</q> (dans les programmes où Pépite peut lire le texte&#8239;; ailleurs, il l'insère au curseur).</p>
+<figure class="capture"><img src="img/liste-environ-jardin.png" width="360" height="168" alt="Après « le chardin », le rond bleu ≈ sur la touche F9, puis les mots proposés à la place : jardin sur la touche F1, jardins sur la touche F2."><figcaption>Le rond ≈ et la liste&#8239;: «&#8239;jardin&#8239;» en premier.<br>Pictogrammes&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
+<p class="petit">Le rond d'orthographe est expliqué dans l'aide&#8239;: <a href="{LATEST}/aide/orthographe.html#peut-etre">≈ bleu&#8239;: s'écrit peut-être autrement</a>.</p>
+
+<h2 id="pourquoi">Pourquoi</h2>
+<p>Les sons «&#8239;ch&#8239;» et «&#8239;j&#8239;» se forment de la même façon dans la bouche. La seule différence&#8239;: pour «&#8239;j&#8239;», la voix vibre&#8239;; pour «&#8239;ch&#8239;», elle ne vibre pas. C'est le cas d'autres paires&#8239;: f et v, k et g, t et d, p et b, s et z. Les orthophonistes et les logopèdes parlent de confusions «&#8239;sourde / sonore&#8239;».</p>
+<p>Ces confusions sont fréquentes et durables chez les enfants dyslexiques ou dysorthographiques. Elles sont aussi difficiles à corriger pour un outil habituel&#8239;: <q>chardin</q> ne ressemble pas assez à <q>jardin</q>, ni à l'écrit, ni au son, pour qu'il le retrouve. Pépite cherche maintenant le mot en échangeant ces deux sons.</p>
+<p>Nous avons commencé par «&#8239;ch&#8239;» et «&#8239;j&#8239;»&#8239;: c'est une paire très souvent citée, et celle où l'échange se trompe le moins souvent de mot. Deux sources publiques, en français&#8239;:</p>
+<ul class="sources">
+  <li>J. Hourcq et N. Adron, <cite>Fais ta valise&#8239;! Création d'un jeu pour les dyslexiques phonologiques visant à la remédiation des confusions auditives de type sourde-sonore</cite>, mémoire d'orthophonie, Université Lille 2, 2011 (dépôt des mémoires de l'Université de Lille)&#8239;: «&#8239;Les confusions sourde-sonore sont fréquentes et persistantes chez les enfants dyslexiques-dysorthographiques présentant une altération phonologique.&#8239;» Le mémoire rappelle aussi que chaque enfant confond ses propres paires.</li>
+  <li>Ministère de l'Éducation nationale, <cite>Évaluations nationales de début de CE2, français&#8239;: fiche «&#8239;Écrire des mots dictés&#8239;»</cite>, 2026 (site eduscol.education.gouv.fr)&#8239;: parmi les exemples d'erreurs d'un élève qui ne maîtrise pas encore les correspondances entre les sons et les lettres, <q>visache</q> pour <q>visage</q>.</li>
+</ul>
+
+<h2 id="regler">Rien à régler</h2>
+<p>C'est en marche dès l'installation de Pépite 0.11.0, pour tous les profils. Quand l'élève tape un mot correctement, Pépite le propose à la même place qu'avant.</p>
+
+<h2 id="bientot">Bientôt&#8239;: les autres paires de sons</h2>
+<p>Chaque élève a ses propres confusions&#8239;: l'un mélange f et v, un autre t et d. Un réglage <b>«&#8239;Sons que l'élève confond&#8239;»</b> est prévu dans le profil de chaque élève&#8239;: l'enseignant ou l'orthophoniste pourra y cocher les paires f / v, k / g, t / d et p / b. Il sera protégé par le code enseignant. Nous l'annoncerons ici quand il sera prêt.</p>
+
+<h2 id="limites">Les limites</h2>
+<ul>
+  <li>Sur un début de mot très court, comme <q>cho…</q>, Pépite ne cherche pas encore l'autre son&#8239;: il lui faut une ou deux lettres de plus.</li>
+  <li>Un vrai mot reste tel quel. Si l'élève écrit <q>bouche</q> alors qu'il pensait à <q>bouge</q>, Pépite ne peut pas le deviner&#8239;: le rond reste ✓ et rien n'est proposé à la place. Relire avec l'élève reste utile.</li>
+</ul>
+</main>
+<footer class="bas">
+  <p>© 2026 Les auteurs de Pépite · logiciel libre, licence GPL-3.0-or-later · <a href="https://github.com/pepite-labs/pepite">github.com/pepite-labs/pepite</a> · Développé avec l'aide de Claude (Anthropic). Cette page est hébergée par GitHub Pages, qui enregistre les visites dans ses journaux&#8239;; nous n'y ajoutons ni mesure d'audience ni cookie.</p>
+</footer>
+</body>
+</html>

@@ -1,8 +1,10 @@
 # The online help of Pépite on GitHub Pages (plan 13, A10): https://pepite-labs.github.io/pepite/
 # One folder per minor version (<x.y>/aide/...), "/" redirects to the latest one. The help pages are those of aide/,
 # with a banner « Aide en ligne de Pépite <x.y> » and a privacy line (installer/build_help_site.py); help_lint runs on
-# the built site. site/ adds the site's own pages (/beta/: the testers page), checked too. Independent of the installer build, so it can go live right after the first public push.
-#   workflow_dispatch (branch main): builds the "minor" folder from main (it must be the csproj's minor version);
+# the built site. site/ adds the site's own pages (/beta/: the testers page; /nouveautes/: what is new, per feature), checked too. Independent of the installer build, so it can go live right after the first public push.
+#   workflow_dispatch (branch main): "minor" must be the csproj's minor version. Its help folder comes from the latest
+#   release tag of that minor (input help = release, the default: the online help stays the released one while main
+#   moves on; the site/ pages still come from main), or from main itself (help = main, or no release of that minor yet);
 #   a v<x.y.z> tag: builds that tag's minor folder.
 # Every other minor folder is rebuilt from the latest published release tag of that minor (Pages deployments replace
 # the whole site). The fonts come from the data release. Environment "github-pages": the owner approves each run.
@@ -18,6 +20,11 @@ on:
         description: 'Minor version folder built from this branch (x.y, the csproj Version)'
         type: string
         default: '0.10'
+      help:
+        description: 'Help folder of that minor: from its latest release tag (release) or from this branch (main)'
+        type: choice
+        options: [release, main]
+        default: release
 
 permissions:
   contents: read
@@ -49,6 +56,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           MINOR_INPUT: ${{ inputs.minor }}
+          HELP_INPUT: ${{ inputs.help }}
         run: |
           set -euo pipefail
           version=$(grep -oE '<Version>[0-9]+\.[0-9]+\.[0-9]+</Version>' src/Predict.Keyboard/Predict.Keyboard.csproj \
@@ -63,12 +71,19 @@ jobs:
           fonts=$(jq -r '.assets[].name | select(startswith("fonts-"))' src/Data.Build/data-release.lock.json)
           python -I src/Data.Build/fetch_data_release.py --cache "$RUNNER_TEMP/data-cache" --out "$RUNNER_TEMP/data-out" \
             --only "$fonts"
-          args=(--version "$current=$GITHUB_WORKSPACE")
-          minors=("$current")
           gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 200 --json tagName --jq '.[].tagName' \
             | { grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sort -V > "$RUNNER_TEMP/tags.txt"
+          args=()
+          minors=()
+          # The current minor's help comes from the checkout on a tag, with help = main, or before its first release;
+          # otherwise (dispatch with help = release) the loop takes it from its latest release tag, like the others.
+          if [ "$GITHUB_REF_TYPE" = tag ] || [ "${HELP_INPUT:-release}" = main ] \
+             || ! grep -qE "^v${current//./\\.}\." "$RUNNER_TEMP/tags.txt"; then
+            args+=(--version "$current=$GITHUB_WORKSPACE")
+            minors+=("$current")
+          fi
           for minor in $(sed -E 's/^v([0-9]+\.[0-9]+)\..*/\1/' "$RUNNER_TEMP/tags.txt" | sort -uV); do
-            [ "$minor" = "$current" ] && continue
+            printf '%s\n' "${minors[@]}" | grep -qxF "$minor" && continue
             tag=$(grep -E "^v${minor//./\\.}\." "$RUNNER_TEMP/tags.txt" | tail -n 1)
             dir="$RUNNER_TEMP/help-src/$minor"
             mkdir -p "$dir"

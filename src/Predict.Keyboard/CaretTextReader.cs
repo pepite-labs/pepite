@@ -100,6 +100,8 @@ internal sealed class CaretTextReader : IDisposable
     {
         uint tid = Native.GetWindowThreadProcessId(fg, out uint pid);
         if (pid == (uint)Environment.ProcessId) return Fail(ReadStatus.Unavailable, "own");   // tray menu / À propos
+        // 0.11.0: LibreOffice gives UIA nothing; asking cost ≈ 110 ms and raised its CPU per key 4–8× (phase 0 probe)
+        if (HostApps.UiaTextUnavailable(fg)) return Fail(ReadStatus.Unavailable, "skip");
         var gi = new Native.GUITHREADINFO { cbSize = Marshal.SizeOf<Native.GUITHREADINFO>() };
         IntPtr focus = Native.GetGUIThreadInfo(tid, ref gi) ? gi.hwndFocus : IntPtr.Zero;
 

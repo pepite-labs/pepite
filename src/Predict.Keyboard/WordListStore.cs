@@ -82,6 +82,8 @@ internal sealed class WordListStore
     /// <summary>Replace the words of <paramref name="id"/> and write them (background).</summary>
     public void Set(string id, WordBook book)
     {
+        // « Mots à ne jamais proposer » belong to « Classe » only: never written into another profile's file
+        if (id != Profile.ClassId && book.Exclus.Count > 0) book = book with { Exclus = Array.Empty<string>() };
         JsonFileStore file;
         Entry(id);   // loaded first (outside the lock), so the file store exists
         lock (_open)

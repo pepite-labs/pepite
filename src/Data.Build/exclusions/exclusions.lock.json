@@ -1,0 +1,43 @@
+{
+  "comment": "Plan offensive-words, Phase 0: the pinned inputs read by find_candidates.py to propose the « mots exclus » candidates. Files live under <work>/data/<file> (never in the repository). kaikki.org replaces its extraction about once a week at the same URL, so a later download may not match the SHA-256: the review is tied to the extraction recorded here. LDNOOBW is a cross-check seed only.",
+  "inputs": [
+    {
+      "id": "wiktionnaire-kaikki-2026-11-02",
+      "file": "wiktionnaire/raw-wiktextract-data.jsonl.gz",
+      "url": "https://kaikki.org/frwiktionary/raw-wiktextract-data.jsonl.gz",
+      "page": "https://kaikki.org/frwiktionary/rawdata.html",
+      "version": "frwiktionary dump 2026-10-01, extracted 2026-11-02 with wiktextract 19f9a3006a405fb7bfb40193dca41c7117a009a5 and wikitextprocessor 6f96ddf5f3466707f1869fe6618390fd77dfd109",
+      "date": "2026-11-26",
+      "last_modified": "Mon, 02 Nov 2026 00:48:26 GMT",
+      "sha256": "33c7b73bc11d2533c9c0e0be6484ded76bd9ff29337065f2070b4f1b7d2e4f3c",
+      "bytes": 736596796,
+      "licence": "CC BY-SA 4.0 and GFDL (Wiktionary's licences)",
+      "credit": "Wiktionnaire (fr.wiktionary.org), contributors; machine-readable extraction by kaikki.org / wiktextract (T. Ylonen, LREC 2022) — CC BY-SA 4.0",
+      "use": "candidates"
+    },
+    {
+      "id": "ldnoobw-fr",
+      "file": "ldnoobw/fr.txt",
+      "url": "https://raw.githubusercontent.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/5faf2ba42d7b1c0977169ec3611df25a3c08eb13/fr",
+      "page": "https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words",
+      "version": "commit 5faf2ba42d7b1c0977169ec3611df25a3c08eb13 (2020-07-13)",
+      "date": "2026-11-26",
+      "sha256": "79763a705e08256b393952852bb63aa903f4485e0ef02f70735f5e50efff213c",
+      "bytes": 793,
+      "licence": "CC BY 4.0",
+      "licence_file": {
+        "file": "ldnoobw/LICENSE.txt",
+        "sha256": "55bfbc1759943f7d19acfc68e35644b7fbe10cd8d39ab3551ce5ecff5dda9979"
+      },
+      "credit": "List of Dirty, Naughty, Obscene, and Otherwise Bad Words (LDNOOBW), Shutterstock and contributors — CC BY 4.0",
+      "use": "cross-check"
+    }
+  ],
+  "forms_inputs": {
+    "comment": "The lexicon databases forms.tsv was expanded from (data pack, see data-pack.lock.json); recorded again in out/exclusions/SOURCE.txt.",
+    "prediction.sqlite": "1ea686f124fbc9b13de52b5b454af750a884a335f16cc52ea0d773a510f42992",
+    "grammar.sqlite": "d0c4122a093b98e2280984e83703b6f6be3f2e59b55ad076a209e8af63488301",
+    "date": "2026-11-27",
+    "reviewed": "2026-11-27"
+  }
+}

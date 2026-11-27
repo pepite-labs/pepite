@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Predict.Core;
 
 namespace Predict.Keyboard;
@@ -96,7 +98,7 @@ internal sealed class WordListService
 
     public EffectiveWords EffectiveOf(string id) => WordLayering.Of(Store.Get(id), ClassBookFor(id));
 
-    private sealed record Built(string Id, EffectiveWords Eff, UserLexicon Lex, bool Reused, double Ms);
+    private sealed record Built(string Id, EffectiveWords Eff, UserLexicon Lex, bool Reused, double Ms, IReadOnlyList<string> ClassExclus);
 
     /// <summary>Read the books (from the files the first time) and build — or reuse — the snapshot. Any thread.</summary>
     private Built Compute(string id, bool hasClass)
@@ -123,7 +125,9 @@ internal sealed class WordListService
                 if (_recent.Count > 2) _recent.RemoveAt(2);
             }
         }
-        return new Built(id, eff, lex, reused, sw.Elapsed.TotalMilliseconds);
+        // « Classe »'s banned words, whatever the active profile and the « Classe » profile's state (reviewer 2026-11-27)
+        var exclus = id == Profile.ClassId ? own.Exclus : Store.Get(Profile.ClassId).Exclus;
+        return new Built(id, eff, lex, reused, sw.Elapsed.TotalMilliseconds, exclus);
     }
 
     /// <summary>The cached snapshot of <paramref name="id"/> when its books are loaded and unchanged, else null.</summary>
@@ -144,6 +148,10 @@ internal sealed class WordListService
         var id = _profiles.ActiveId;
         bool hasClass = HasClass(id);
         int gen = ++_gen;
+        // the banned words first, from what is known now (the machine's at least): a slow or failed snapshot never delays
+        // or drops them; Finish completes them with « Classe »'s list read from its file
+        if (Store.TryGetLoaded(Profile.ClassId, out var cb)) _classExclus = cb.Exclus;
+        ApplyExclus(reason, always: false);
         if (_post is null || Cached(id, hasClass) != null) { Finish(Compute(id, hasClass), gen, reason, false); return; }
         if (_appliedId != id) { _apply(UserLexicon.Empty); Current = UserLexicon.Empty; _appliedId = id; }
         var post = _post;
@@ -167,7 +175,62 @@ internal sealed class WordListService
         var e = b.Eff;
         _log?.Invoke(FormattableString.Invariant(
             $"words: profile {b.Id} {e.Own} own + {e.Class} classe ({e.Hidden} hidden) + {e.Fixes.Count} fautes -> {b.Lex.Count} forms, {(b.Reused ? "reused" : "built")} in {b.Ms:0.0} ms{(background ? " on a worker" : "")} ({reason})"));
+        _classExclus = b.ClassExclus;
+        ApplyExclus(reason, always: false);
         Applied?.Invoke();
+    }
+
+    // ------------------------------------------------------------------ « Mots à ne jamais proposer » (plan offensive-words B3)
+    /// <summary>The machine file's <c>locked.motsExclus</c> (set once at start; shown read-only, « Réglé par
+    /// l'administrateur »).</summary>
+    public IReadOnlyList<string> MachineExclus { get; init; } = Array.Empty<string>();
+
+    /// <summary>Hands the teacher's words (« Classe » ∪ machine) to the engine — in the app <see cref="EngineExclusions"/>;
+    /// null = not wired (tests of the lists alone).</summary>
+    public Action<IReadOnlyList<string>>? ApplyExcluded { get; init; }
+
+    /// <summary>The words last handed to <see cref="ApplyExcluded"/> (tests).</summary>
+    public IReadOnlyList<string> AppliedExclus { get; private set; } = Array.Empty<string>();
+
+    private IReadOnlyList<string> _classExclus = Array.Empty<string>();   // UI thread: « Classe »'s list, as last read
+    private bool _exclusApplied;
+
+    /// <summary>UI thread: the teacher part of the engine's exclusions = « Classe »'s list ∪ the machine's, rebuilt when it
+    /// changed (or <paramref name="always"/>: after the grammar load, so that each word gets its lemma's forms).</summary>
+    private void ApplyExclus(string reason, bool always)
+    {
+        if (ApplyExcluded is null) return;
+        var all = _classExclus.Concat(MachineExclus).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (!always && _exclusApplied && all.SequenceEqual(AppliedExclus, StringComparer.Ordinal)) return;
+        ApplyExcluded(all);
+        AppliedExclus = all;
+        _exclusApplied = true;
+        _log?.Invoke($"exclusions: teacher list {_classExclus.Count} classe + {MachineExclus.Count} machine words applied ({reason})");
+    }
+
+    /// <summary>UI thread: rebuild the teacher part once the grammar pack is in (<c>App</c> posts it after
+    /// <see cref="GrammarPack.LoadAsync"/>). Every rebuild runs on the UI thread and reads the grammar then, and every change
+    /// goes through <see cref="PredictionEngine.UpdateExcluded"/>, so the grammar forms and the teacher part never undo each
+    /// other.</summary>
+    public void RefreshExcluded(string reason) => ApplyExclus(reason, always: true);
+
+    /// <summary>The app's <see cref="ApplyExcluded"/>: the words, expanded by <see cref="ExcludedWords.TeacherForms"/>
+    /// (their lemma's forms once the grammar is in), replace the engine's teacher part (the file's and the grammar parts
+    /// kept). Counts only in the log.</summary>
+    public static Action<IReadOnlyList<string>> EngineExclusions(PredictionEngine engine, Action<string>? log) => words =>
+    {
+        var forms = ExcludedWords.TeacherForms(words, engine);
+        var x = engine.UpdateExcluded(c => c.WithExtra(forms, engine));
+        log?.Invoke($"exclusions: {words.Count} teacher words -> {forms.Count} forms (+{x.ExtraCount} new), {x.Count} in all");
+    };
+
+    /// <summary>« Classe » ∪ machine banned words (ignoring case), for the editors: marked in « Classe »'s own list, left out
+    /// of a pupil's view of « Mots de la classe » (reviewer 2026-11-27).</summary>
+    public ISet<string> BannedWords()
+    {
+        var s = new HashSet<string>(Store.Get(Profile.ClassId).Exclus, StringComparer.OrdinalIgnoreCase);
+        s.UnionWith(MachineExclus);
+        return s;
     }
 
     /// <summary>A snapshot was handed to the engine (tests).</summary>
@@ -217,6 +280,7 @@ internal sealed class WordListService
     public void OnDuplicated(string from, string to)
     {
         var b = Store.Get(from);
+        if (to != Profile.ClassId) b = b with { Exclus = Array.Empty<string>() };   // « Classe » only (a copy is a pupil)
         if (!b.IsEmpty) Store.Set(to, b);
     }
 

@@ -8,7 +8,10 @@ public enum SpellingStatus { Known, SoundsLike, Unknown }
 /// otherwise.</param>
 /// <param name="WeakName">plan 10C (owner 2026-11-15): SoundsLike given for a word that is also a very rare first name of the
 /// pack (« Pome », « Kan »): ≈ at a sentence start, ✓ inside a sentence.</param>
-public readonly record struct SpellingCheck(SpellingStatus Status, IReadOnlyList<string> Candidates, bool WeakName = false)
+/// <param name="Tolerant">0.11.0 (plan dys-sound-tolerance, owner Q5): the last <c>Tolerant</c> candidates come from the
+/// pupil's confused sounds (« chardin » ≈ jardin with ch/j): a second tier, after every exact sound-alike, ordered among
+/// themselves only (<see cref="PredictionEngine.RankCorrections"/>). 0 = every candidate is an exact one.</param>
+public readonly record struct SpellingCheck(SpellingStatus Status, IReadOnlyList<string> Candidates, bool WeakName = false, int Tolerant = 0)
 {
     public static readonly SpellingCheck Known = new(SpellingStatus.Known, Array.Empty<string>());
     public static readonly SpellingCheck Unknown = new(SpellingStatus.Unknown, Array.Empty<string>());

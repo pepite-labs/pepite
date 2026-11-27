@@ -15,7 +15,7 @@ internal static class CommandLine
 
     public static readonly string[] ValueOptions =
     {
-        "--exit-after", "--pictos", "--render-bar", "--dpi", "--size", "--font", "--spacing", "--mark",
+        "--exit-after", "--pictos", "--render-bar", "--dpi", "--size", "--font", "--spacing", "--mark", "--listening",
         "--speech-bench", "--profile", "--audio", "--voices", "--sentences", "--volume", "--word-reps", "--sentence-reps", "--ort-spinning", "--long-text", "--max-run",
         "--voice", "--wav", "--items", "--keys-only-replace", "--variant", "--word", "--word-cache", "--word-items", "--word-suffix", "--carrier", "--phoneme-fix",
         "--names", "--grammar", Import, CheckConfig,

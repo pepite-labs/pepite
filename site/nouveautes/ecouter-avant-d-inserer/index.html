@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Nouveau dans Pépite 0.11.0 : l'élève peut écouter un mot de la barre avant de l'insérer dans son texte. Pourquoi, comment, et les réglages.">
+<title>Pépite — écouter un mot avant de l'insérer</title>
+<link rel="stylesheet" href="{LATEST}/aide/style.css">
+<link rel="stylesheet" href="../nouveautes.css">
+<script src="{LATEST}/aide/prefs.js" defer></script>
+</head>
+<body>
+<!-- Page « Nouveautés » du site GitHub Pages (installer/build_help_site.py --pages), en ligne avec la version 0.11.0.
+     LATEST entre accolades = le dossier de la dernière version de l'aide (feuille de style, polices, logo, cases
+     d'affichage). Les images sont de vraies captures de Pépite, sans données d'élève. Licence : CC BY-SA 4.0, sauf les
+     pictogrammes ARASAAC visibles dans les captures (Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0). -->
+<!-- Date : la ligne « Page publiée le … » sous le chapeau garde la date de la première publication. Si la page
+     change ensuite, ajouter dans le même paragraphe « , mise à jour le <time datetime="AAAA-MM-JJ">…</time> ». -->
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="../index.html"><img src="{LATEST}/aide/img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>prédiction de mots</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Parties de la page">
+  <ul>
+      <li><a href="#pourquoi">Pourquoi</a></li>
+      <li><a href="#comment">Comment</a></li>
+      <li><a href="#reglages">Les réglages</a></li>
+      <li><a href="#narrateur">Narrateur et Accès vocal</a></li>
+      <li><a href="#ecole">À l'école</a></li>
+      <li><a href="#resume">En résumé</a></li>
+      <li><a href="../index.html">Toutes les nouveautés</a></li>
+      <li><a href="{LATEST}/aide/index.html">L'aide</a></li>
+  </ul>
+</nav>
+<main id="contenu">
+<h1>Écouter un mot avant de l'insérer</h1>
+<p class="chapeau">Nouveau dans Pépite 0.11.0&#8239;: dans la barre de mots, l'élève peut d'abord <b>entendre</b> un mot, puis décider de l'écrire. Il vérifie à l'oreille que c'est bien le mot qu'il cherche, avant qu'il n'arrive dans son texte.</p>
+<p class="petit">Page publiée le <time datetime="2026-11-27">27 novembre 2026</time>.</p>
+
+<h2 id="pourquoi">Pourquoi</h2>
+<p>Pendant que l'élève tape, Pépite propose des mots dans une barre. Pour un élève qui lit encore difficilement, souvent un élève dys, plusieurs mots se ressemblent à l'écrit&#8239;: <q>maison</q>, <q>main</q>, <q>mairie</q>… L'image au-dessus du mot aide, mais l'entendre aide encore plus.</p>
+<p>Jusqu'ici, un clic écrivait le mot tout de suite. Écouter demandait un clic droit, un geste que peu d'élèves trouvent seuls. Maintenant, <b>écouter est le premier geste</b>, et écrire le second. L'élève choisit en connaissant le mot, au lieu d'insérer puis d'effacer.</p>
+<div class="attention"><p>Deux mots qui se prononcent pareil (<q>vert</q> et <q>verre</q>) sonnent pareil. Pour ceux-là, il faut aussi regarder les lettres et l'image.</p></div>
+
+<h2 id="comment">Comment ça marche, au départ</h2>
+<p>Rien à régler&#8239;: c'est le fonctionnement de Pépite 0.11.0 dès l'installation, pour tous les profils.</p>
+<h3 id="souris">À la souris</h3>
+<ul>
+  <li><b>Un clic</b> sur un mot&#8239;: Pépite le dit, sans l'écrire.</li>
+  <li><b>Un double-clic</b> ou <b>un clic droit</b>&#8239;: Pépite l'écrit dans le texte. Si la voix parle encore, elle finit le mot, elle ne le redit pas.</li>
+</ul>
+<p>C'est le geste habituel d'autres outils de prédiction de mots&#8239;: un clic pour écouter, un double-clic pour écrire. Sur un écran tactile, un toucher compte comme un clic, et un appui long comme un clic droit.</p>
+<figure class="capture"><img src="img/barre-la-mai.png" width="892" height="168" alt="Le Bloc-notes avec le texte « la mai » et, juste en dessous, la barre de Pépite : maison, main, mais, même, mairie, mer, mère et mai, la plupart avec une image, chacun sur sa touche F1 à F8."><figcaption>L'élève a tapé «&#8239;la mai&#8239;». Un clic sur «&#8239;maison&#8239;» le fait entendre.<br>Pictogrammes&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
+<h3 id="touches">Au clavier, avec F1 à F8</h3>
+<ol class="etapes">
+  <li><p>L'élève appuie sur <kbd>F1</kbd>&#8239;: Pépite dit le premier mot, et un <b>cadre blanc</b> l'entoure. Rien n'est écrit.</p></li>
+  <li><p>C'est le bon mot&#8239;? Il appuie encore sur <kbd>F1</kbd>&#8239;: Pépite l'écrit, sans le redire.</p></li>
+  <li><p>Ce n'est pas le bon&#8239;? Il appuie sur une autre touche (<kbd>F2</kbd> pour écouter le deuxième mot), ou il continue à taper&#8239;: le cadre disparaît.</p></li>
+</ol>
+<figure class="capture"><img src="img/cadre-blanc-f1.png" width="892" height="168" alt="La barre de Pépite après un appui sur F1 : le mot maison, sur la touche F1, est entouré d'un cadre blanc. Pépite vient de le dire."><figcaption>Après un premier appui sur <kbd>F1</kbd>&#8239;: le cadre blanc montre le mot entendu.<br>Pictogrammes&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
+
+<h2 id="reglages">Les réglages</h2>
+<p>Chaque élève est différent. Un adulte peut changer ces choix dans <b>Réglages</b> → onglet <b>«&#8239;Barre et voix&#8239;»</b> (un clic sur le biscuit de Pépite, près de l'horloge, puis <b>Réglages…</b>). Les choix valent pour le profil de l'élève&#8239;; si un code enseignant protège les réglages, Pépite le demande.</p>
+<figure class="capture"><img src="img/reglages-barre-et-voix.png" width="928" height="515" alt="La fenêtre Réglages de Pépite, onglet Barre et voix, partie Mots : la liste Clic sur un mot réglée sur « Clic : écouter ; double-clic ou clic droit : insérer », la liste Touches F1–F8 réglée sur « 1er appui : écouter, 2e : insérer », et les cases Maj + F1…F8 : écouter le mot et Bouton haut-parleur sous chaque mot, décochées."><figcaption>Réglages → «&#8239;Barre et voix&#8239;».</figcaption></figure>
+<dl class="reglages">
+  <dt>Clic sur un mot</dt>
+  <dd>Trois choix&#8239;:
+    <ul>
+      <li><b>Clic : écouter ; double-clic ou clic droit : insérer</b> (au départ)&#8239;;</li>
+      <li><b>1er clic : écouter, 2e clic : insérer</b>&#8239;: comme avec les touches, un premier clic fait entendre le mot et l'entoure du cadre blanc, un second clic sur le même mot l'écrit. Utile pour un élève qui a du mal à faire un double-clic&#8239;;</li>
+      <li><b>Insérer tout de suite (clic droit : écouter)</b>&#8239;: un clic écrit le mot, comme avant&#8239;; le clic droit le fait entendre.</li>
+    </ul>
+  </dd>
+  <dt>Touches F1–F8</dt>
+  <dd>Deux choix&#8239;: <b>1er appui : écouter, 2e : insérer</b> (au départ), ou <b>Insérer tout de suite</b> (comme avant). Ce choix ne change pas le clic, et le clic ne change pas les touches.</dd>
+  <dt>Maj + F1…F8 : écouter le mot</dt>
+  <dd>Décochée au départ. Cochée, <kbd>Maj</kbd> + <kbd>F3</kbd> dit le troisième mot, sans l'écrire. Quand la barre est affichée, ces touches ne vont plus au programme dans lequel l'élève écrit.</dd>
+  <dt>Bouton haut-parleur sous chaque mot</dt>
+  <dd>Décochée au départ. Cochée, une bande avec un haut-parleur apparaît sous chaque mot&#8239;: un clic sur la bande fait entendre le mot, un clic sur le mot l'écrit tout de suite. Chaque geste a sa place, ce qui est plus simple pour certains élèves. La barre devient un peu plus haute, et la liste «&#8239;Clic sur un mot&#8239;» est alors grisée.</dd>
+</dl>
+<figure class="capture"><img src="img/bouton-haut-parleur.png" width="892" height="194" alt="La barre de Pépite avec, sous chaque mot, une bande portant un haut-parleur : un clic sur la bande fait entendre le mot."><figcaption>Le bouton haut-parleur sous chaque mot.<br>Pictogrammes&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
+<div class="astuce"><p><b>Retrouver l'ancien fonctionnement</b> (le mot s'écrit tout de suite)&#8239;: choisissez <b>Insérer tout de suite (clic droit : écouter)</b> pour «&#8239;Clic sur un mot&#8239;» et <b>Insérer tout de suite</b> pour «&#8239;Touches F1–F8&#8239;».</p></div>
+
+<h2 id="narrateur">Avec le Narrateur, l'Accès vocal ou un contacteur</h2>
+<p>Un élève peut choisir un mot sans souris ni clavier&#8239;: avec le Narrateur de Windows, avec l'Accès vocal (<q>cliquer maison</q>) ou avec un logiciel de contacteur. Pépite suit alors le choix <b>«&#8239;Touches F1–F8&#8239;»</b>&#8239;: au départ, activer un mot le fait entendre, l'activer une seconde fois l'écrit. Avec <b>Insérer tout de suite</b>, il s'écrit dès la première fois. Dans les deux cas, la fenêtre où l'élève écrit reste au premier plan.</p>
+<p>Nous l'avons vérifié par un essai automatique qui agit comme ces outils. Avec le Narrateur, l'Accès vocal et les contacteurs, cela devrait donc fonctionner de la même façon&#8239;: dites-nous si ce n'est pas le cas.</p>
+
+<h2 id="ecole">À l'école&#8239;: un réglage pour tout l'ordinateur</h2>
+<p>Le service informatique peut imposer ces deux choix sur tous les ordinateurs de l'établissement, dans la configuration de l'établissement. Dans les réglages, les deux listes sont alors grisées, avec la mention <q>Réglé par l'administrateur</q>&#8239;: ni l'élève ni l'enseignant ne peuvent les changer sur ce poste.</p>
+<figure class="capture"><img src="img/regle-par-administrateur.png" width="664" height="120" alt="Dans l'onglet Barre et voix, les listes Clic sur un mot et Touches F1–F8 sont grisées, chacune suivie de la mention Réglé par l'administrateur."><figcaption>Un choix imposé par l'établissement.</figcaption></figure>
+<p>Pour l'informaticien&#8239;: <a href="{LATEST}/aide/installation.html#ecole">Installer dans une école</a>, dans l'aide, et le fichier <a href="{LATEST}/DEPLOIEMENT.txt">DEPLOIEMENT.txt</a>.</p>
+
+<h2 id="resume">En résumé</h2>
+<table class="resume">
+  <thead><tr><th scope="col">Geste</th><th scope="col">Au départ</th><th scope="col">Avec «&#8239;Insérer tout de suite&#8239;»</th></tr></thead>
+  <tbody>
+    <tr><td>Un clic sur un mot</td><td>Pépite dit le mot</td><td>Pépite écrit le mot</td></tr>
+    <tr><td>Double-clic ou clic droit</td><td>Pépite écrit le mot</td><td>Clic droit&#8239;: Pépite dit le mot</td></tr>
+    <tr><td><kbd>F1</kbd> à <kbd>F8</kbd>, une fois</td><td>Pépite dit le mot (cadre blanc)</td><td>Pépite écrit le mot</td></tr>
+    <tr><td>La même touche, une seconde fois</td><td>Pépite écrit le mot</td><td>—</td></tr>
+    <tr><td>Narrateur, Accès vocal ou contacteur (normalement)</td><td>1re fois&#8239;: dit&#8239;; 2e fois&#8239;: écrit</td><td>Écrit tout de suite</td></tr>
+  </tbody>
+</table>
+<!-- À la sortie de la 0.11.0 (aide en ligne 0.11), remettre ici : « Plus de détails dans l'aide : « Écouter avant d'écrire » ({LATEST}/aide/comment-ca-marche.html, ancre ecouter) et les réglages ({LATEST}/aide/reglages.html, ancre mots) ». Retiré le 2026-11-27 (propriétaire) : l'aide 0.10.2 en ligne ne contient pas ces détails. -->
+</main>
+<footer class="bas">
+  <p>© 2026 Les auteurs de Pépite · logiciel libre, licence GPL-3.0-or-later · <a href="https://github.com/pepite-labs/pepite">github.com/pepite-labs/pepite</a> · Développé avec l'aide de Claude (Anthropic). Cette page est hébergée par GitHub Pages, qui enregistre les visites dans ses journaux&#8239;; nous n'y ajoutons ni mesure d'audience ni cookie.</p>
+</footer>
+</body>
+</html>

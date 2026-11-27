@@ -34,6 +34,8 @@ $renders = [ordered]@{
     'barre-polices-lexend'         = @('--font', 'lexend', 'maison')
     'barre-polices-andika'         = @('--font', 'andika', 'maison')
     'barre-espacement-tres-large'  = @('--font', 'opendyslexic', '--spacing', 'widest', 'maison')
+    # 2026-11-25, listen before inserting: the white ring of a word just heard (« Écouter avant d'écrire »)
+    'barre-ecoute'                 = @('--listening', '1', 'maison')
 }
 foreach ($name in $renders.Keys) {
     $png = Join-Path $Out "$name.png"

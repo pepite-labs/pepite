@@ -133,7 +133,8 @@ Windows 11 64 bits (x64) seulement.
   Un fichier JSON propose (« defaults ») ou impose (« locked ») des
   réglages à tous les comptes du poste. Exemple complet :
   exemple-etablissement.json (taille L, police OpenDyslexic,
-  indicateur d'orthographe imposé, pas de fenêtre de bienvenue).
+  indicateur d'orthographe imposé, pas de fenêtre de bienvenue,
+  deux mots à ne jamais proposer — à remplacer par les vôtres).
 
     {
       "schema": 1,
@@ -146,12 +147,38 @@ Windows 11 64 bits (x64) seulement.
     words.keys (F1-F8, off), words.font (segoe-ui, opendyslexic,
     lexend, andika), words.spacing (normal, wider, widest),
     words.spellingIndicator, words.namePictures,
+    words.clickMode (clic sur un mot : insert = insérer tout de suite,
+      listenFirst = 1er clic écouter / 2e clic insérer, listenDouble =
+      clic écouter / double-clic ou clic droit insérer ; par défaut
+      listenDouble),
+    words.keysListenFirst (touches F1 à F8 : true = 1er appui écouter /
+      2e insérer, par défaut ; false = insérer tout de suite),
+    words.listenShiftKeys (Maj + F1 à F8 : écouter le mot),
+    words.listenButton (bouton haut-parleur sous chaque mot),
     bar.position (caret, top, bottom, free),
     text.punctuationSpace (french, french-nbsp, none),
     speech.speakInserted, speech.speakWords,
     speech.speakSentences, speech.voice, speech.rate, speech.volume,
-    speech.rereadEdits, reading.enabled, reading.clipboardFallback,
+    speech.rereadEdits, reading.enabled,
+    reading.clipboardFallback (copie de la sélection par Ctrl+C ;
+      absent ou null = dans LibreOffice Writer seulement, par
+      défaut ; true = partout ; false = jamais ; jamais dans
+      LibreOffice Calc, quelle que soit la valeur),
     reading.pictures, start.welcome.
+
+  Mots à ne jamais proposer (dans « locked » seulement) :
+    "locked": { "motsExclus": [ "abcde", "fghij" ] }
+  Une liste de mots (500 au plus, 40 lettres au plus chacun ;
+  lettres, trait d'union ou apostrophe au milieu) que Pépite ne
+  propose jamais sur ce poste, en plus de sa liste intégrée et des
+  « Mots à ne jamais proposer » de la Classe (Espace enseignant →
+  Mots → « Classe », derrière le code enseignant). Un élève qui tape
+  un de ces mots l'écrit normalement. Dans cette liste, les mots du
+  fichier sont affichés « Réglé par l'administrateur ». Sans Espace
+  enseignant (un seul utilisateur), ce fichier est le seul moyen
+  d'ajouter des mots. La liste intégrée ne peut pas être désactivée.
+  « Pepite.exe --check-config » indique combien d'entrées de
+  motsExclus sont ignorées (pas un mot, ou plus de 500).
 
   L'installation (avec /ALLUSERS) :
     - vérifie le fichier avec "Pepite.exe --check-config <fichier>"

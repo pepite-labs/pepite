@@ -52,10 +52,10 @@ internal static class SoundAlikeCorrection
     /// <summary>Applications that rewrite typed words themselves (AutoCorrect, smart quotes, a canvas editor in a browser),
     /// documented and denied even if someone adds them to <see cref="KeysOnlyHosts"/>: Microsoft Office, LibreOffice, WPS,
     /// ONLYOFFICE, the browsers (Google Docs and other canvas editors), the new Outlook, Teams.</summary>
-    private static readonly HashSet<string> NeverKeysOnly = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> NeverKeysOnly = new(HostApps.LibreOffice, StringComparer.OrdinalIgnoreCase)
     {
         "WINWORD", "OUTLOOK", "POWERPNT", "EXCEL", "ONENOTE", "MSACCESS", "MSPUB", "VISIO",
-        "soffice", "soffice.bin", "swriter", "scalc", "simpress", "wps", "et", "wpp", "DesktopEditors",
+        "wps", "et", "wpp", "DesktopEditors",
         "chrome", "msedge", "firefox", "brave", "opera", "olk", "ms-teams", "Teams",
     };
 

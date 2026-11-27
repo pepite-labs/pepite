@@ -20,6 +20,7 @@ folder), so the help files stay the same and ``help_lint --stage`` checks them a
     <site>/<minor>/aide/...           the help, its fonts in aide/fonts/ (as the csproj copies them)
     <site>/<minor>/THIRD-PARTY-NOTICES.txt, COPYING, DEPLOIEMENT.txt, LISEZ-MOI.txt
     <site>/beta/...                   with --pages <dir>: the site's own pages (the repository's site/), copied
+    <site>/nouveautes/...             (same: the announcement pages, one folder per feature)
 
 ``--pages`` adds pages that are not part of the help, such as the testers page ``site/beta/index.html``: every file of
 ``<dir>`` is copied to the same place under ``<site>`` (never over the root redirect or a minor folder), and

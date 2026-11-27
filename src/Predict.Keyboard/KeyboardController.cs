@@ -53,6 +53,15 @@ namespace Predict.Keyboard;
 /// of the words — alone for ≈ / ? when there is no word to propose (Q10). A click on it, or F9 while a ≈ / ? marker is
 /// shown (the hook reads a volatile flag, as for F1–F8), shows the sound-alike words (≈) or offers to add the word (?).
 /// Nothing is recorded; the log has the state, never the word.
+///
+/// Listen before inserting (owner 2026-11-25, <see cref="ListenFirst"/>), two independent settings. « Touches F1–F8 »
+/// (default: 1st press listens): the first plain F<i>n</i> speaks the tile's word (<see cref="SpeechKind.Manual"/>) and rings
+/// the tile; a second press on it inserts it without saying it again (unless the group differs: « les amis », « l'école »).
+/// « Clic sur un mot »: insert at once, 1st click listens / 2nd inserts (with a ring), or — the default — a click speaks
+/// (no ring) and a double click or a right-click inserts without cutting the word being heard. With option D's speaker band
+/// a click on the word inserts at once. Maj+F<i>n</i> (option A), a right-click (when it does not insert) and the band speak
+/// and arm when a confirming press exists. The hook only reads volatile flags and posts to the UI thread; any other key, a
+/// jump, a hidden or rebuilt bar with another word there cancels the ring.
 /// </summary>
 internal sealed class KeyboardController : IDisposable
 {
@@ -68,7 +77,17 @@ internal sealed class KeyboardController : IDisposable
     private readonly Speaker? _speaker;
     private readonly Native.HookProc _kbProc, _msProc;   // keep delegates alive (GC)
     private readonly HashSet<uint> _consumed = new();    // hook thread only
-    private IntPtr _kbHook, _msHook, _lastFg;            // hook thread only
+    /// <summary>F1…F8 held (hook thread only): the action of each key's first down — only that action repeats, a passed
+    /// down's key-up is not swallowed (<see cref="FKeyHolds"/>).</summary>
+    private FKeyHolds _fKeys = new();
+    /// <summary>+1 on a session lock / unlock (UI thread, <see cref="ForgetHeldKeys"/>): the hook drops its F-key records
+    /// at the next F-key down (a key-up lost to the secure desktop).</summary>
+    private long _fKeysGeneration;
+    /// <summary>+1 (hook thread) for every key that reaches the listen-cancel check; <see cref="Heard"/> compares it with the
+    /// value read when its gesture began, so a key typed while the flags were still false cancels too.</summary>
+    private long _keySeq;
+    private IntPtr _kbHook, _msHook;                     // hook thread only
+    private IntPtr _lastFg;                              // hook thread writes; UI thread reads (Volatile) for the bar's give-back
     private readonly Native.WinEventProc _winEvtProc;    // keep delegate alive (GC)
     private IntPtr _winEvtHook;                          // hook thread only
     private bool _mouseDownOutside;                      // hook thread only
@@ -90,12 +109,13 @@ internal sealed class KeyboardController : IDisposable
     private CaretTextReader? _reader;
     private SelectionReader? _selection;                 // plan 07
     private readonly ReadingMode? _reading;              // plan 07 (UI thread; Active is read by the hook)
-    private volatile bool _readingOn = true, _clipboardFallback;
+    private volatile bool _readingOn = true;
+    private volatile int _clipboardFallback = -1;        // reading.clipboardFallback: -1 not set (the host's default), 0 off, 1 on
     private long _selGesture = -1;                       // tracker version of the last selection gesture (drag, double click, Shift+nav, Ctrl+A)
     private Native.POINT _downPt;                        // hook thread only: button-down point / time, last button-up (double click)
     private long _downTick, _lastUpTick;
     private Native.POINT _lastUpPt;
-    private uint _dblClickMs = 500;
+    private volatile uint _dblClickMs = 500;           // written on the UI thread (each tile click), read by the hook
     /// <summary>A window of the UI thread that owns the clipboard after the Ctrl+C fallback restored it (plan 07).</summary>
     public IntPtr ClipboardWindow { get; set; }
     private Thread? _hookThread;
@@ -113,6 +133,7 @@ internal sealed class KeyboardController : IDisposable
         set
         {
             _enabled = value; _speaker?.PauseRereads(!value); if (!value) ExitReadingSoon("paused");
+            Interlocked.Increment(ref _fKeysGeneration);   // a key-up during Pause is not seen: no stale F-key record
             lock (_sync) _tracker.Reset();   // keys typed while paused were not followed: pause and resume start afresh
         }
     }
@@ -124,6 +145,13 @@ internal sealed class KeyboardController : IDisposable
     /// monitor): the exact typed word goes in the last of those slots, never in one trimmed away.</summary>
     private int _barFits = 8;
     private volatile bool _keysOn = true, _speakInserted = true;
+    // 2026-11-25 owner, listen before inserting: « Touches F1–F8 » 1st press listens (hook reads), A Maj+F1…F8, D the
+    // speaker band; « Clic sur un mot » (UI thread)
+    private volatile bool _keysListenFirst = true, _listenShift, _listenButton;
+    private ClickMode _clickMode = ClickMode.ListenDouble;   // UI thread
+    private volatile bool _listenArmed;                     // a tile is ringed (the hook posts a cancel for any other key)
+    private volatile bool _wordHeard;                       // a word was heard (ListenFirst.LastHeard): any other key forgets it too
+    private readonly ListenFirst _listen = new();           // UI thread
     private volatile int _punct = (int)PunctuationSpacing.French;
     private volatile bool _spellingOn = true;              // plan 10B: « Indicateur d'orthographe »
     private volatile bool _markAction;                     // plan 10B: a ≈ / ? marker is shown: F9 acts on it (hook reads)
@@ -132,7 +160,7 @@ internal sealed class KeyboardController : IDisposable
     // 0.8.3: the ≈ list shown by the marker and the finished word it may replace (UI thread; null once the bar changed)
     private SoundAlikeCorrection.Target? _correction;
     private ReadQueue? _correctRead;                        // 0.8.3: the read that checks the document before a replacement
-    private (SoundAlikeCorrection.Target? Fix, string Word, long Id, bool KeysOnly) _pendingFix;   // (_sync) the replacement waiting for its read
+    private (SoundAlikeCorrection.Target? Fix, string Word, long Id, bool KeysOnly, string? Heard) _pendingFix;   // (_sync) the replacement waiting for its read (Heard: listen before inserting)
     private long _fixIds;                                   // (_sync)
     private EchoEvent? _fixEcho;                            // (_sync) a correction's word echo when « Lire le mot inséré » is off
     private const string ReasonCorrect = "correct";
@@ -192,7 +220,10 @@ internal sealed class KeyboardController : IDisposable
         _msProc = MouseProc;
         _winEvtProc = OnWinEvent;
         _win.Picked += PickedByMouse;
+        _win.Invoked += InvokedByAutomation;
+        _win.TrackedForeground = () => Volatile.Read(ref _lastFg);   // BUG-1: where the bar gives an activation back
         _win.MarkerClicked += _ => OnMarker("click");
+        _win.ListenRequested += OnListenRequested;
     }
 
     /// <summary>Settings that the controller uses (UI thread).</summary>
@@ -209,9 +240,15 @@ internal sealed class KeyboardController : IDisposable
         _reread = s.Speech.RereadEdits;
         if (!_reread) lock (_sync) _session = null;
         _readingOn = s.Reading.Enabled;
-        _clipboardFallback = s.Reading.ClipboardFallback;
+        _clipboardFallback = s.Reading.ClipboardFallback is bool cf ? (cf ? 1 : 0) : -1;
         _spellingOn = s.SpellingIndicator;
         if (!_readingOn) _reading?.Exit("setting off");
+        _keysListenFirst = s.KeysListenFirst;
+        _clickMode = s.Click;
+        _listenShift = s.ListenShiftKeys;
+        _listenButton = s.ListenButton;
+        // a ring set by an Invoke has its confirming Invoke as long as the keys stay « 1er appui », even with the F-keys off
+        if (!Rings && !(_ringByInvoke && _keysListenFirst)) CancelListen("setting");
     }
 
     /// <summary>After the bar was rebuilt or moved outside <see cref="Update"/> (settings change, drag to another
@@ -220,6 +257,7 @@ internal sealed class KeyboardController : IDisposable
     {
         if (_sugg.Count > 0) _suggCount = Math.Min(_sugg.Count, _win.VisibleCount);
         SyncExactBar();
+        KeepListen();   // a rebuilt bar: the ring follows its word, or is cancelled
     }
 
     /// <summary>0.10.2: <see cref="PredictionEngine.ExactBar"/> = the slots the bar shows — the word count, or fewer when the
@@ -239,6 +277,7 @@ internal sealed class KeyboardController : IDisposable
         lock (_sync) { _echo.Reset(); _session = null; _gate.Drop(); }
         _reading?.Exit("paused");
         _speaker?.CancelAll();
+        CancelListen("pause");
     }
 
     /// <summary>Plan 09: another profile becomes active — what the previous pupil typed is forgotten (tracked word, echo,
@@ -249,6 +288,7 @@ internal sealed class KeyboardController : IDisposable
         lock (_sync) { _tracker.Reset(); _echo.Reset(); _session = null; _gate.Drop(); _autoSpace.Disarm(); }
         _reading?.Exit("profile switch");
         _sugg = Array.Empty<Suggestion>(); _suggCount = 0; _markAction = false; _markWord = null;
+        CancelListen("switch");
         _win.HideBar();
     }
 
@@ -280,6 +320,8 @@ internal sealed class KeyboardController : IDisposable
         var es = EditSession.Begin(TextWindow.Of("le chat", 3, false, false), IntPtr.Zero);
         es.Type('a'); es.Type(' '); es.Backspace(); es.Delete(); es.Insert(0, 1, "la "); es.MarkWordSpoken(); _ = es.NeedsProbe; es.StartProbe(1); _ = es.ProbeAnswered(1, ProbeStatus.NotPassword); es.Leave(); es.Type('b');
         _ = KeyboardPolicy.AfterAutoSpace('!', PunctuationSpacing.French, false);
+        _ = KeyboardPolicy.FKeyAction(0, false, false, false, true, false, true, 1, new FKeyHolds().Held(0, Native.IsDown(0x70), 1));
+        _ = KeyboardPolicy.SwallowFKeyUp(FKeyAct.Pass);
         _ = Inserter.Build(0, 1, "!", Marker);
         Translate(0x41, 0x1E, Native.GetForegroundWindow());
         _ = Marshal.SizeOf<Native.KBDLLHOOKSTRUCT>();
@@ -312,6 +354,7 @@ internal sealed class KeyboardController : IDisposable
         {
             _hookThreadId = Native.GetCurrentThreadId();
             var mod = Native.GetModuleHandle(null);
+            _fKeys = new FKeyHolds();   // the hook install starts with no key held
             _kbHook = Native.SetWindowsHookEx(Native.WH_KEYBOARD_LL, _kbProc, mod, 0);
             if (_kbHook == IntPtr.Zero) error = new Win32Exception(Marshal.GetLastWin32Error(), "keyboard hook");
             _msHook = Native.SetWindowsHookEx(Native.WH_MOUSE_LL, _msProc, mod, 0);
@@ -372,6 +415,7 @@ internal sealed class KeyboardController : IDisposable
                 try
                 {
                     if (down) { if (OnKeyDown(k.vkCode, k.scanCode)) return (IntPtr)1; }
+                    else if (k.vkCode >= 0x70 && k.vkCode <= 0x77) { if (FKeyUp(k.vkCode)) return (IntPtr)1; }
                     else if (_consumed.Remove(k.vkCode)) return (IntPtr)1;   // swallow the matching key-up
                 }
                 catch (Exception ex) { Log?.Invoke("hook error: " + ex.Message); }
@@ -446,14 +490,28 @@ internal sealed class KeyboardController : IDisposable
         if (_reading is { Active: true } r) _ui.BeginInvoke(() => r.Exit(why));
     }
 
+    /// <summary>Key-up of F1…F8 (hook thread): the held record ends; swallowed when its first down was handled (never a lone
+    /// key-up to the application), passed when that down was passed.</summary>
+    /// <returns>true to swallow the key-up.</returns>
+    private bool FKeyUp(uint vk) => _fKeys.Up((int)(vk - 0x70));
+
+    /// <summary>A session lock or unlock (UI thread, from the session watcher): a key held at Win+L has its key-up delivered
+    /// to the secure desktop, so the hook drops its F-key records at the next F-key down.</summary>
+    public void ForgetHeldKeys() => Interlocked.Increment(ref _fKeysGeneration);
+
     /// <returns>true to swallow the key.</returns>
     private bool OnKeyDown(uint vk, uint scan)
     {
         Interlocked.Increment(ref _lineEndGen);   // plan 10B: any key cancels a pending line-end marker (Enter re-arms it)
         var fg = Native.GetForegroundWindow();
-        if (fg != _lastFg) { Log?.Invoke($"  foreground changed: reset"); _lastFg = fg; FocusJump(fg); }   // backstop for the WinEvent
-        if (Native.IsOwnWindow(fg)) return false;                // our tray menu / À propos: not tracked, no bar
-        if (_privateHost) return false;                          // 0.8.3: a terminal / remote window: never tracked (owner)
+        if (fg != _lastFg && fg != _win.BarHwnd)   // backstop for the WinEvent (never for the bar: BUG-1, OnForeground)
+        {
+            Log?.Invoke($"  foreground changed: reset"); OnForeground(fg);
+        }
+        bool fkey = vk >= 0x70 && vk <= 0x77;
+        // passed to the app untouched: its key-up must pass too (no record left from an earlier handled down)
+        if (Native.IsOwnWindow(fg)) { if (fkey) _fKeys.Forget((int)(vk - 0x70)); return false; }   // our tray menu / À propos: not tracked, no bar
+        if (_privateHost) { if (fkey) _fKeys.Forget((int)(vk - 0x70)); return false; }             // 0.8.3: a terminal / remote window: never tracked (owner)
 
         bool ctrl = Native.IsDown(Native.VK_CONTROL), alt = Native.IsDown(Native.VK_MENU), shift = Native.IsDown(Native.VK_SHIFT);
         // plan 07: the user's own copy / cut (physical keys): the Ctrl+C fallback never restores over it
@@ -469,13 +527,35 @@ internal sealed class KeyboardController : IDisposable
         if (vk >= 0x70 && vk <= 0x77)   // F1..F8
         {
             int i = (int)(vk - 0x70);
-            if (_keysOn && !ctrl && !alt && !shift && i < _suggCount)
+            // 2026-11-25: insert, or first / second press (« Touches F1–F8 »), Maj+F listen (A); a key still held repeats only
+            // its first down's action: passed stays passed, an « insérer tout de suite » insert inserts again, the rest is
+            // swallowed whatever the bar shows now (review of 238c58b)
+            // a swallowed down: its record decides (its key state is probably never set); a passed one: the key state, read
+            // before Windows updates it (down = already down = an auto-repeat)
+            bool wasDown = Native.IsDown((int)vk);
+            var first = _fKeys.Held(i, wasDown, Volatile.Read(ref _fKeysGeneration));
+            var act = KeyboardPolicy.FKeyAction(i, ctrl, alt, shift, _keysOn, _listenShift, _keysListenFirst, _suggCount, first);
+            _fKeys.Record(i, first ?? act);
+            // VM check of the key-state premise (no word: the decision only)
+            Log?.Invoke($"  F{i + 1} down: isDown={(wasDown ? 1 : 0)} held={(first is { } f ? f.ToString() : "-")} -> {act}");
+            switch (act)
             {
-                _consumed.Add(vk);
-                _ui.BeginInvoke(() => Insert(i));
-                return true;
+                case FKeyAct.Insert: _ui.BeginInvoke(() => InsertTile(i, "F" + (i + 1))); return true;   // heard just before: not said again
+                // armed already here (not only once the UI thread ran the press): a key typed right after it cancels too
+                case FKeyAct.Press: _listenArmed = true; _ui.BeginInvoke(() => OnTilePress(i, "F" + (i + 1))); return true;
+                case FKeyAct.Listen: _listenArmed = true; _ui.BeginInvoke(() => ListenTo(i, "Shift+F" + (i + 1), arm: Rings)); return true;
+                case FKeyAct.Swallow: return true;
             }
+            Interlocked.Increment(ref _keySeq);   // full fence before the flags are read (pairs with Heard)
+            if (_listenArmed || _wordHeard) _ui.BeginInvoke(() => CancelListen("key"));   // Ctrl+Fn, Fn with no word: to the app
             return false;
+        }
+        // any other key but a modifier, a lock or Win cancels a ringed tile and forgets a word heard without a ring (Esc,
+        // typing, Backspace, navigation, shortcuts): a much later insertion of that tile is never taken for a confirmation
+        if (!KeyboardPolicy.IsModifierOrLock(vk))
+        {
+            Interlocked.Increment(ref _keySeq);   // full fence before the flags are read (pairs with Heard)
+            if (_listenArmed || _wordHeard) _ui.BeginInvoke(() => CancelListen("key"));
         }
 
         switch (vk)
@@ -621,12 +701,13 @@ internal sealed class KeyboardController : IDisposable
     }
 
     /// <summary>The « inserted » echo: deferred behind a pending sentence read (then said as a word, after the sentence),
-    /// else said at once (interrupts).</summary>
-    private void SayInserted(string said, IntPtr fg)
+    /// else said at once (interrupts). <paramref name="after"/> (2026-11-25, a confirmation whose group differs from the word
+    /// just heard: « les amis », « l'école »): queued after the word still being spoken, never cutting it.</summary>
+    private void SayInserted(string said, IntPtr fg, bool after = false)
     {
         // deferred as a word echo: through the password guard, in order behind the sentence (never ahead of it)
         if (Deferred(new SentenceEchoGate.Deferred(SpeechKind.Word, said, new EchoEvent(EchoKind.Word, said), fg))) return;
-        _speaker?.SayChecked(said, SpeechKind.Inserted, fg);   // 0.8.3: only in a field proven non-password (owner)
+        _speaker?.SayChecked(said, SpeechKind.Inserted, fg, after);   // 0.8.3: only in a field proven non-password (owner)
     }
 
     /// <returns>true when <paramref name="d"/> waits for the pending sentence read.</returns>
@@ -887,23 +968,40 @@ internal sealed class KeyboardController : IDisposable
         try
         {
             if (evt == Native.EVENT_OBJECT_FOCUS) { OnFocusEvent(hwnd, idObject, idChild); return; }
-            if (hwnd == _lastFg) return;
-            _lastFg = hwnd;
-            FocusJump(hwnd);
+            OnForeground(hwnd);
         }
         catch (Exception ex) { Log?.Invoke("hook error: " + ex.Message); }
     }
 
+    /// <summary>A foreground change seen by the WinEvent or by a key-down's backstop (hook thread). BUG-1: the bar made
+    /// the foreground by a UI Automation call (Invoke, SetFocus) is not a jump — the bar gives the foreground back itself
+    /// (<see cref="SuggestionWindow"/>'s WM_ACTIVATE) and <see cref="_lastFg"/> stays the text window, so its return is
+    /// « the same window » and nothing is reset. The return's focus events are those of a window's first focus.</summary>
+    /// <returns>false when the change was ignored (same window, or the bar).</returns>
+    private bool OnForeground(IntPtr fg)
+    {
+        if (fg == _lastFg) return false;   // cheap first: no Win32 call for the same window
+        var move = KeyboardPolicy.ClassifyForeground(fg, _lastFg, _win.BarHwnd, Native.IsShellOrOwn(fg));
+        if (move == ForegroundMove.Bar) { _fgJumpTick = Environment.TickCount64; return false; }
+        _lastFg = fg;
+        FocusJump(fg, move == ForegroundMove.Own);
+        return true;
+    }
+
     /// <summary>The foreground window changed. Our windows (tray menu, À propos, Réglages) and the taskbar / tray are
     /// not « leaving » the text (D23: Keep, nothing read); any other window is a leave. Hook thread.</summary>
-    private void FocusJump(IntPtr fg)
+    private void FocusJump(IntPtr fg, bool shellOrOwn)
     {
         _fgJumpTick = Environment.TickCount64;
+        // a key-up may have gone to the other (elevated, secure) window: no F-key record survives a foreground change
+        // (WinEvent or seen at a key-down; the bar and its reading view never keep the foreground: a UI Automation call
+        // that activates the bar is given back at once and never reaches here, BUG-1)
+        _fKeys.Clear();
         bool priv = PrivateHosts.Check(fg, out bool unknown);   // a few Win32 calls, cached per window
         if (priv != _privateHost) Log?.Invoke(priv ? (unknown ? "  process not identified: treated as private" : "  terminal or remote window in front: nothing tracked nor said")
                                                    : "  terminal or remote window left");
         _privateHost = priv;
-        if (Native.IsShellOrOwn(fg))
+        if (shellOrOwn)
         {
             if (Native.IsOwnWindow(fg)) Log?.Invoke("  foreground is ours (tray menu / À propos): bar hidden, nothing read");
             Jump("own", -1, fgChanged: true, move: SessionMove.Keep);
@@ -1001,7 +1099,8 @@ internal sealed class KeyboardController : IDisposable
     /// <summary>
     /// Plan 07, reader thread: what the latest caret read means for the reading mode. A selection → read its text (after
     /// Shift + navigation, 250 ms after the last key: a held Shift+→ is not read at every step). No text pattern but a
-    /// selection gesture (drag, double click, Shift+nav, Ctrl+A) and the Ctrl+C fallback on → the fallback. A collapsed
+    /// selection gesture (drag, double click, Shift+nav, Ctrl+A) and the Ctrl+C fallback on (by default: in LibreOffice,
+    /// <see cref="SelectionPolicy.Fallback"/>; never in Calc) → the fallback. A collapsed
     /// caret, a password field, a failed read → the selection is gone: back to predictions. Stale reads decide nothing (a
     /// newer jump has its own read; typing has left already).
     /// </summary>
@@ -1020,7 +1119,13 @@ internal sealed class KeyboardController : IDisposable
             _selection.Request(q.Version, q.Fg, q.Reason == ReasonShift ? 250 : 0, false, q.RequestedTick, q.Reason);
             return;
         }
-        if (SelectionPolicy.MayUseClipboard(_clipboardFallback, gesture, _suppress, r.Status))
+        int cfs = _clipboardFallback;
+        bool? cfSetting = cfs < 0 ? null : cfs == 1;
+        // 0.11.0: not set = LibreOffice Writer only; never in Calc (the window is looked up only when a copy could follow)
+        var module = cfSetting != false && gesture && r.Status == ReadStatus.Unavailable ? HostApps.ModuleOf(q.Fg) : LibreOfficeModule.None;
+        if (module == LibreOfficeModule.Calc)
+            Log?.Invoke("selection: clipboard fallback refused: Calc");   // a spreadsheet is never modified (Enter would paste)
+        if (SelectionPolicy.MayUseClipboard(cfSetting, module, gesture, _suppress, r.Status))
         {
             _selection.Request(q.Version, q.Fg, q.Reason == ReasonShift ? 250 : 30, true, q.RequestedTick, q.Reason);
             return;
@@ -1050,6 +1155,7 @@ internal sealed class KeyboardController : IDisposable
             if (!current || !Enabled || !_readingOn || _suppress || Native.GetForegroundWindow() != q.Fg)
             { Log?.Invoke("selection read: overtaken, not shown"); return; }
             _suggCount = 0;
+            CancelListen("reading");
             _reading.OnSelection(q.Fg, text, trigger, r.Source, r.Ms, r.TailAt, r.Cut);
         });
     }
@@ -1234,6 +1340,7 @@ internal sealed class KeyboardController : IDisposable
     private void HideSoon() => _ui.BeginInvoke(() =>
     {
         _sugg = Array.Empty<Suggestion>(); _suggCount = 0; _markAction = false; _correction = null;
+        CancelListen("hidden");   // a jump (click, focus, window switch, navigation) or a password field
         if (_reading is { Active: true }) return;
         _win.HideBar();
     });
@@ -1243,14 +1350,14 @@ internal sealed class KeyboardController : IDisposable
         Interlocked.Exchange(ref _updatePending, 0);
         _markAction = false;
         _correction = null;   // 0.8.3: the bar is rebuilt — a ≈ list shown before it no longer corrects
-        if (_reading is { Active: true }) { _suggCount = 0; return; }   // plan 07: predictions stay hidden while reading
-        if (!Enabled || _suppress || _privateHost) { _win.HideBar(); _suggCount = 0; return; }
+        if (_reading is { Active: true }) { _suggCount = 0; CancelListen("reading"); return; }   // plan 07: predictions stay hidden while reading
+        if (!Enabled || _suppress || _privateHost) { CancelListen("hidden"); _win.HideBar(); _suggCount = 0; return; }
         if (_field != FieldClear)
         {
             // nothing has seen the focused field yet: it may be a password field, so nothing is shown nor logged
             bool any;
             lock (_sync) any = _tracker.Current.Length > 0 || _tracker.AfterSeparator;
-            if (any) { _win.HideBar(); _suggCount = 0; Log?.Invoke("typed=(pending field probe)"); }
+            if (any) { CancelListen("hidden"); _win.HideBar(); _suggCount = 0; Log?.Invoke("typed=(pending field probe)"); }
             return;
         }
         bool loggable = _probe != ProbePending;   // typed since the jump and not answered yet: no text in the log
@@ -1295,8 +1402,9 @@ internal sealed class KeyboardController : IDisposable
         else Log?.Invoke($"typed=(pending field probe) -> {_sugg.Count} words{marked}");
         // Q10: with no word to propose the bar shows the marker alone for ≈ and ?, never for ✓ alone. While typing, a ✓ word
         // is itself a tile with the exact typed word rule (0.10.2), so this hides the ✓ alone of a finished word (owner Q5)
-        if (_sugg.Count == 0 && mark is not (SpellingMark.SoundsLike or SpellingMark.Unknown)) { _win.HideBar(); return; }
+        if (_sugg.Count == 0 && mark is not (SpellingMark.SoundsLike or SpellingMark.Unknown)) { CancelListen("hidden"); _win.HideBar(); return; }
         ShowBar(mark);
+        KeepListen();   // same word still at the ringed index: ringed again, else cancelled
     }
 
     /// <summary>Plan 10B: the marker for the word being typed or the word just finished (UI thread, a few µs: the
@@ -1409,6 +1517,7 @@ internal sealed class KeyboardController : IDisposable
     {
         var mark = _win.Mark;
         if (!_win.Shown || _markWord is not { } word || mark is not (SpellingMark.SoundsLike or SpellingMark.Unknown)) return;
+        CancelListen("marker");
         string cur; bool start; List<string> ctx; char apostrophe;
         lock (_sync) { cur = _tracker.Current; start = _tracker.AtSentenceStart; ctx = _tracker.Context.ToList(); apostrophe = _tracker.ApostropheStyle; }
         if (cur.Length > 0) return;
@@ -1430,7 +1539,7 @@ internal sealed class KeyboardController : IDisposable
         // every apostrophe in the document's style (« j’ai »), then the case of the word's place
         IReadOnlyList<string> ordered = _markCheck.Candidates;
         long r0 = System.Diagnostics.Stopwatch.GetTimestamp();
-        try { ordered = _engine.RankCorrections(_markCheck.Candidates, KeyboardPolicy.WordsBefore(ctx, word), word); }
+        try { ordered = _engine.RankCorrections(_markCheck.Candidates, KeyboardPolicy.WordsBefore(ctx, word), word, _markCheck.Tolerant); }
         catch (Exception ex) { Log?.Invoke("spelling: ranking error " + ex.GetType().Name); }
         double rankMs = (System.Diagnostics.Stopwatch.GetTimestamp() - r0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
         var cands = ordered.Select(c => new Suggestion(Elision.Styled(c, apostrophe), 0, MatchKind.Phonetic));
@@ -1446,24 +1555,198 @@ internal sealed class KeyboardController : IDisposable
     /// rebuilt (after a correction or an insertion) and inserted its first word. That second click is ignored — the same
     /// tile, or within the double-click rectangle of the first, within the double-click time, measured on the input
     /// messages' own time and point (<c>GetMessageTime</c> / <c>GetMessagePos</c>, not when the busy UI thread handles
-    /// them). A deliberate quick pick of another tile still works (re-review). F-keys are not concerned.</summary>
+    /// them). A deliberate quick pick of another tile still works (re-review). F-keys are not concerned.
+    /// <para>2026-11-25 (« Clic sur un mot », <see cref="ListenFirst.ClickAction"/>): in <see cref="ClickMode.ListenDouble"/>
+    /// (the default) the first click only speaks, so that second click is the insertion — the word just heard, not said
+    /// again; in the other modes it is still ignored.</para></summary>
     private void PickedByMouse(int i)
     {
         uint pos = Native.GetMessagePos();
         var click = new TileClick(Native.GetMessageTime(), i, (short)(pos & 0xFFFF), (short)(pos >> 16));
+        // read now, like the rectangle: a change of the Windows setting (the help points to it) applies at once
+        _dblClickMs = Native.GetDoubleClickTime();
         bool second = _lastTileClick is { } prev && KeyboardPolicy.IsSecondClickOfDouble(prev, click, _dblClickMs,
                           Native.GetSystemMetrics(Native.SM_CXDOUBLECLK), Native.GetSystemMetrics(Native.SM_CYDOUBLECLK));
         _lastTileClick = click;
-        if (second) { Log?.Invoke("  tile click ignored (second click of a double click)"); return; }
-        Insert(i);
+        // mode 3: the second click inserts only the word just heard on that tile (never a blind insert)
+        bool heardHere = second && i >= 0 && i < _sugg.Count &&
+                         _listen.WasHeard(i, _sugg[i].Word, TrackerVersion(), Native.GetForegroundWindow());
+        switch (ListenFirst.ClickAction(_clickMode, _listenButton, second, heardHere))
+        {
+            case ClickAct.Ignore: Log?.Invoke("  tile click ignored (second click of a double click)"); return;
+            case ClickAct.Press: OnTilePress(i, "click"); return;
+            case ClickAct.Listen:   // ListenDouble: speaks, no ring
+                if (second) Log?.Invoke("  second click on a word not heard there: listens");
+                ListenTo(i, "click", arm: false);
+                return;
+            default:
+                // a double click ends here: a third quick click is a first click again (it listens to the new bar's word)
+                if (second) _lastTileClick = null;
+                InsertTile(i, second ? "double click" : "click");
+                return;
+        }
     }
 
-    private void Insert(int i)
+    /// <summary>Owner 2026-11-25: a UI Automation Invoke on tile <paramref name="i"/>'s word (Narrateur, Accès vocal, switch
+    /// tools): follows « Touches F1–F8 » (<see cref="ListenFirst.InvokeAction"/>) — the 1st Invoke speaks and rings the tile
+    /// (item status « Écouté — encore une fois pour insérer »), a 2nd one on it inserts — even with the F-keys off. Never the
+    /// mouse path: the last tile click is forgotten so that a real click after an Invoke is never taken for the second half
+    /// of a double click. Log: <c>listen uia …</c> / <c>listen confirm uia</c>; <c>tile invoked (uia)</c> first.</summary>
+    private void InvokedByAutomation(int i)
     {
+        _lastTileClick = null;
+        // a bar hidden without clearing _sugg (password field, private host, suppression): never speak nor type its old word
+        if (!_win.Shown || i < 0 || i >= _suggCount) { Log?.Invoke($"  tile {i + 1} invoked: ignored, bar hidden"); return; }
+        // BUG-1: the call that brought this Invoke may have made the bar the foreground; the bar gives it back on its
+        // WM_ACTIVATE (before this runs) — again here if it is still ours, so that the heard word and the insertion
+        // are tied to the text window, never to the bar; if the bar is still in front (the text window gone or refusing),
+        // nothing is spoken nor typed: SendInput would type into the bar and the word would be lost
+        if (!_win.GiveBackForeground() && Native.GetForegroundWindow() == _win.BarHwnd)
+        {
+            Log?.Invoke($"  tile {i + 1} invoked: ignored, bar in front");
+            return;
+        }
+        Log?.Invoke($"  tile {i + 1} invoked (uia{(_keysListenFirst ? ", listen first" : ", insert")})");
+        if (ListenFirst.InvokeAction(_keysListenFirst) == ClickAct.Press)
+        {
+            OnTilePress(i, "uia");
+            _ringByInvoke = _listen.Armed;
+        }
+        else InsertTile(i, "uia");
+    }
+
+    /// <summary>The ring was set by an Invoke (UI thread): a settings change that leaves no other confirming press (F-keys
+    /// off) keeps it while « Touches F1–F8 » stays « 1er appui » — the next Invoke confirms it.</summary>
+    private bool _ringByInvoke;
+
+    /// <summary>The bar's listen request on tile <paramref name="i"/>: a right-click (touch press-and-hold) — which inserts
+    /// in <see cref="ClickMode.ListenDouble"/> (band off) — or option D's speaker band.</summary>
+    private void OnListenRequested(int i, string how)
+    {
+        if (how == "right-click" && ListenFirst.RightClickInserts(_clickMode, _listenButton)) { InsertTile(i, how); return; }
+        ListenTo(i, how, arm: Rings);
+    }
+
+    /// <summary>Does a listen gesture arm a ring now (a confirming press exists)? UI thread.</summary>
+    private bool Rings => ListenFirst.Rings(_clickMode, _listenButton, _keysOn && _keysListenFirst);
+
+    /// <summary>An insertion at once (a click, a double click, a right-click, F<i>n</i> in « insérer tout de suite ») that
+    /// may confirm the word just heard on that tile (ringed, or the last listen gesture: <see cref="ListenFirst.WasHeard"/>):
+    /// then it is not said again, and a different group (« les amis », « l'école ») is queued after the word still being
+    /// spoken, never cutting it.</summary>
+    private void InsertTile(int i, string how)
+    {
+        string? heard = null;
+        if (i >= 0 && i < _sugg.Count && _listen.WasHeard(i, _sugg[i].Word, TrackerVersion(), Native.GetForegroundWindow()))
+        {
+            heard = _sugg[i].Word;
+            Log?.Invoke($"listen confirm {how}");
+        }
+        Insert(i, heard);
+    }
+
+    /// <param name="heard">the tile's word when this insertion confirms a word just heard (listen before inserting): it is
+    /// not said again, unless the insertion says something else (<see cref="ListenFirst.SayAtInsert"/>).</param>
+    private void Insert(int i, string? heard = null)
+    {
+        CancelListen(null);   // consumed by this insertion (or moot: another word goes in)
         if (i < 0 || i >= _sugg.Count || i >= _win.VisibleCount) return;
         var word = _sugg[i].Word;
-        if (_correction is { } fix && ReferenceEquals(fix.List, _sugg)) { _correction = null; Correct(fix, word); return; }
-        InsertWord(word);
+        if (_correction is { } fix && ReferenceEquals(fix.List, _sugg)) { _correction = null; Correct(fix, word, heard); return; }
+        InsertWord(word, heard);
+    }
+
+    private long TrackerVersion() { lock (_sync) return _tracker.Version; }
+
+    /// <summary>
+    /// 2026-11-25, listen before inserting (UI thread): a plain press on tile <paramref name="i"/> (F<i>n</i>, a click, a
+    /// tap). It confirms the ringed tile (same index, word, tracker version, window) → the word is inserted, not said again;
+    /// otherwise it is a first press: the word is spoken now and the tile ringed. Called only in a listen-first mode (the
+    /// F-keys' « 1er appui : écouter », the click's <see cref="ClickMode.ListenFirst"/>).
+    /// </summary>
+    private void OnTilePress(int i, string how)
+    {
+        _ringByInvoke = false;
+        if (i < 0 || i >= _sugg.Count || i >= _win.VisibleCount) return;
+        var word = _sugg[i].Word;
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp(), seq = Volatile.Read(ref _keySeq);
+        if (_listen.Press(i, word, TrackerVersion(), Native.GetForegroundWindow()) == ListenFirst.Outcome.Insert)
+        {
+            Log?.Invoke($"listen confirm {how}");
+            Insert(i, heard: word);
+            return;
+        }
+        Heard(i, word, how, t0, seq);
+    }
+
+    /// <summary>
+    /// 2026-11-25: a listen gesture on tile <paramref name="i"/> — a right-click (touch press-and-hold), Maj+F<i>n</i> (option
+    /// A), option D's speaker band, and a click in <see cref="ClickMode.ListenDouble"/>. Speaks the word; with
+    /// <paramref name="arm"/> (<see cref="Rings"/>) the tile is armed (re-armed when it is the ringed one: it stays ringed), so
+    /// the next plain press on it inserts. Without it (the ListenDouble click) nothing is armed and a ring on another tile is
+    /// dropped (the pupil moved on); the word is remembered as heard for the double click / right-click that inserts it.
+    /// UI thread.
+    /// </summary>
+    private void ListenTo(int i, string how, bool arm)
+    {
+        _ringByInvoke = false;
+        if (i < 0 || i >= _sugg.Count || i >= _win.VisibleCount || !_win.Shown) return;
+        var word = _sugg[i].Word;
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp(), seq = Volatile.Read(ref _keySeq);
+        if (arm) _listen.Arm(i, word, TrackerVersion(), Native.GetForegroundWindow());
+        else if (_listen.Current is { } p && p.Index != i) CancelListen("listen elsewhere");
+        Heard(i, word, how, t0, seq);
+    }
+
+    /// <summary>Say the tile's word (Manual: interrupts, the word voice; the bar never shows in a password or unproven
+    /// field) and ring the tile when it is armed. Logs the gesture, the word only when typed text is loggable.
+    /// <paramref name="seq"/>: <c>_keySeq</c> when the gesture began. The flags are published, then (after a full fence) the
+    /// counter is read again: a key the hook counted meanwhile saw the flags still false, so the cancel is done here
+    /// (second review of 238c58b); a key counted later sees the flags and posts its own cancel.</summary>
+    private void Heard(int i, string word, string how, long t0, long seq)
+    {
+        _speaker?.Say(word, SpeechKind.Manual);
+        _listen.NoteHeard(i, word, TrackerVersion(), Native.GetForegroundWindow());
+        bool armed = _listen.Current is { } p && p.Index == i;
+        _wordHeard = true;
+        _listenArmed = armed;
+        Interlocked.MemoryBarrier();   // the flags' writes before the counter's read (pairs with the hook's Increment)
+        if (Volatile.Read(ref _keySeq) != seq) { CancelListen("key"); return; }
+        _win.SetListening(armed ? i : null);
+        double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        string w = _probe != ProbePending ? $" '{word}'" : "";
+        Log?.Invoke(FormattableString.Invariant($"listen {how}{w}{(armed ? " armed" : "")} ({ms:0.0} ms)"));
+    }
+
+    /// <summary>Drop the ringed tile (UI thread); <paramref name="why"/> null = consumed by an insertion (not logged).</summary>
+    private void CancelListen(string? why)
+    {
+        _listenArmed = false; _wordHeard = false; _ringByInvoke = false;
+        bool had = _listen.Cancel();
+        _win.SetListening(null);
+        if (had && why != null) Log?.Invoke($"listen cancelled ({why})");
+    }
+
+    /// <summary>After the bar was rebuilt without a cancelling event (a field-probe answer, a settings change, a caret read
+    /// that re-seeded the tracker): the ring follows its word when it is still at that index, else it is dropped; the last
+    /// heard word follows the same rule on its own (<see cref="ListenFirst.KeepAfterRebuild"/>) — a rebuild with no ring
+    /// never forgets it (review of 238c58b: the mode-3 double click after a picture arrived would have said the word again).
+    /// A hidden bar forgets both.</summary>
+    private void KeepListen()
+    {
+        if (!_listen.Armed && _listen.LastHeard is null) return;
+        if (!_win.Shown) { CancelListen("bar"); return; }
+        bool ringed = _listen.Armed;
+        int? keep = _listen.KeepAfterRebuild(_sugg.Select(x => x.Word).ToList(), Math.Min(_suggCount, _win.VisibleCount),
+                                             TrackerVersion(), Native.GetForegroundWindow());
+        _wordHeard = _listen.LastHeard != null || keep != null;
+        if (ringed && keep is null)
+        {
+            _listenArmed = false; _ringByInvoke = false; _win.SetListening(null);
+            Log?.Invoke("listen cancelled (bar)");
+            return;
+        }
+        if (keep != null) _win.SetListening(keep);
     }
 
     /// <summary>
@@ -1474,7 +1757,7 @@ internal sealed class KeyboardController : IDisposable
     /// <see cref="SoundAlikeCorrection.Decide"/>. The list is hidden at once (a second click must not insert again).
     /// Anything moved: inserted at the caret as before (<see cref="InsertWord"/>). The log has the decision, never the words.
     /// </summary>
-    private void Correct(SoundAlikeCorrection.Target fix, string chosen)
+    private void Correct(SoundAlikeCorrection.Target fix, string chosen, string? heard = null)
     {
         var corr = SoundAlikeCorrection.CasedLike(chosen, fix.Word);
         var fg = Native.GetForegroundWindow();
@@ -1484,9 +1767,9 @@ internal sealed class KeyboardController : IDisposable
         lock (_sync)
         {
             same = _tracker.Version == fix.Version && fg == fix.Fg && _tracker.CanCorrect(fix.Word, out var sep) && sep == fix.Sep;
-            if (same) { id = ++_fixIds; _pendingFix = (fix, corr, id, keysOnly); }
+            if (same) { id = ++_fixIds; _pendingFix = (fix, corr, id, keysOnly, heard); }
         }
-        if (!same) { Log?.Invoke("correction: the text moved since the list, inserted at the caret"); InsertWord(chosen); return; }
+        if (!same) { Log?.Invoke("correction: the text moved since the list, inserted at the caret"); InsertWord(chosen, heard); return; }
         _sugg = Array.Empty<Suggestion>(); _suggCount = 0; _markAction = false; _win.HideBar();
         _correctRead?.Request(fix.Version, fg, 0, ReasonCorrect, trigger: id);
     }
@@ -1497,7 +1780,7 @@ internal sealed class KeyboardController : IDisposable
     /// thread, if still nothing moved; nothing: a key or a jump came first (stale), a password field (tracking suspended).</summary>
     private void OnCorrectRead(ReadRequest q, ReadResult r)
     {
-        (SoundAlikeCorrection.Target? Fix, string Word, long Id, bool KeysOnly) p;
+        (SoundAlikeCorrection.Target? Fix, string Word, long Id, bool KeysOnly, string? Heard) p;
         lock (_sync) p = _pendingFix;
         if (p.Fix is not { } fix || p.Id != q.Trigger) return;
         string docWord = "";
@@ -1518,7 +1801,7 @@ internal sealed class KeyboardController : IDisposable
             {
                 bool still;
                 lock (_sync) { still = _tracker.Version == fix.Version && _pendingFix.Id == p.Id; if (still) _pendingFix = default; }
-                if (still) InsertWord(p.Word);
+                if (still) InsertWord(p.Word, p.Heard);
             });
             return;
         }
@@ -1539,20 +1822,22 @@ internal sealed class KeyboardController : IDisposable
                     var (sent, expected, err) = Inserter.Send(keys);
                     Log?.Invoke($"correction: {how}, replaced (SendInput {sent}/{expected}, error {err})");
                     if (sent != expected) { _tracker.Reset(); _echo.Reset(); _session = null; }
-                    else { ApplyCorrection(fix, corr); done = true; }
+                    else { ApplyCorrection(fix, corr, p.Heard); done = true; }
                 }
                 else Log?.Invoke("correction: typed meanwhile, nothing done");
                 _pendingFix = default;
             }
         }
         finally { Thread.CurrentThread.Priority = prio; }
-        if (done) _ui.BeginInvoke(() => AfterCorrection(corr, fix.Fg));
+        if (done) _ui.BeginInvoke(() => AfterCorrection(corr, fix.Fg, p.Heard));
     }
 
-    /// <summary>0.8.3: the tracker, the echo and the D23 mirror follow the replacement just sent (under _sync).</summary>
-    private void ApplyCorrection(SoundAlikeCorrection.Target fix, string corr)
+    /// <summary>0.8.3: the tracker, the echo and the D23 mirror follow the replacement just sent (under _sync).
+    /// <paramref name="heard"/> (2026-11-25): the word was just heard on the ≈ list's tile, so it counts as said for the
+    /// echo and the D23 session (not repeated by them), as in <see cref="InsertWord"/>.</summary>
+    private void ApplyCorrection(SoundAlikeCorrection.Target fix, string corr, string? heard = null)
     {
-        bool say = _speakInserted;
+        bool say = _speakInserted || heard != null;
         _echo.Backspace();                       // back over the separator: the word is the echo's chunk again
         _echo.Inserted(corr, false, say);
         var ev = _echo.Type(fix.Sep);            // the separator commits it (said as inserted, not by the word echo)
@@ -1568,16 +1853,22 @@ internal sealed class KeyboardController : IDisposable
     }
 
     /// <summary>0.8.3: the corrected word is said (as an inserted word) and the bar follows the new text. UI thread.</summary>
-    private void AfterCorrection(string corr, IntPtr fg)
+    private void AfterCorrection(string corr, IntPtr fg, string? heard = null)
     {
         EchoEvent? ev;
         lock (_sync) { ev = _fixEcho; _fixEcho = null; }
-        if (_speakInserted) SayInserted(corr, fg);
+        if (_speakInserted)
+        {
+            if (ListenFirst.SayAtInsert(corr, heard)) SayInserted(corr, fg, after: heard != null);
+            else Log?.Invoke("  correction: heard just before, not said again");
+        }
         else if (ev != null) Echo(ev, fg);
         ScheduleUpdate();
     }
 
-    private void InsertWord(string word)
+    /// <param name="heard">listen before inserting: the word was just heard (the tile's text), so the insertion does not say it
+    /// again — nor does the word echo or the D23 re-read — unless what it would say differs (« les amis »).</param>
+    private void InsertWord(string word, string? heard = null)
     {
         // D22 per-app rule (UI thread, never in the hook): looked up BEFORE the tracker snapshot, so the lookup does
         // not widen the window in which a typed key makes the snapshot stale
@@ -1598,6 +1889,8 @@ internal sealed class KeyboardController : IDisposable
         EchoEvent? ev;
         // an elision (l') is said with the next word (« l'horizon »), never alone
         bool say = _speakInserted && !Elision.IsElided(word);
+        // 2026-11-25: a word just heard counts as said for the echo and the D23 session (not repeated by them)
+        bool spoken = say || heard != null && !Elision.IsElided(word);
         string said;
         bool raced;
         lock (_sync)
@@ -1613,47 +1906,32 @@ internal sealed class KeyboardController : IDisposable
             else
             {
                 _tracker.Accept(word, space);
-                ev = _echo.Inserted(word, space, say);
+                ev = _echo.Inserted(word, space, spoken);
                 said = _echo.LastInsertedSpoken;   // plan 08b: « les amis » after « les » (liaison grouping)
                 // D23: the same Delete / Backspace / text as sent; a word said now (inserted or word echo) is not re-read
                 _session?.Insert(suf, cur.Length, word + (space ? " " : ""));
-                if (say || ev is { Kind: EchoKind.Word }) _session?.MarkWordSpoken();
+                if (spoken || ev is { Kind: EchoKind.Word }) _session?.MarkWordSpoken();
                 ProbeEdits(fg);
                 // D22: our space may be taken back by the next key (punctuation, a second space)
                 if (space) _autoSpace.Arm(_tracker.Version, fg, mode); else _autoSpace.Disarm();
                 // Word may space ; : ! ? itself (AutoCorrect, French text): read back and adapt, unless « Aucune »
-                bool adaptive = space && AppRules.AppSpacesPunctuation(proc) && (PunctuationSpacing)_punct != PunctuationSpacing.None;
+                // (LibreOffice also spaces them, but cannot be read back: its U+00A0 is accepted as is, 0.11.0)
+                bool adaptive = space && AppRules.ReadsBackSpacing(proc) && (PunctuationSpacing)_punct != PunctuationSpacing.None;
                 _adaptiveFg = adaptive ? fg : IntPtr.Zero;
                 _adaptiveSetting = (PunctuationSpacing)_punct;
             }
         }
         if (raced) Log?.Invoke("  insert: a key was typed meanwhile, tracker reset, auto-space not armed");
         else if (space && mode != (PunctuationSpacing)_punct) Log?.Invoke($"  auto-space armed for {proc}: {AppSettings.PunctuationNames[mode]} (the app spaces ; : ! ? itself)");
-        if (say) SayInserted(said, fg);
+        // a confirmation whose group differs (« les amis », « l'école ») waits for the heard word to end (never cuts it)
+        if (say && ListenFirst.SayAtInsert(said, heard)) SayInserted(said, fg, after: heard != null);
+        else if (say) Log?.Invoke("  insert: heard just before, not said again");
         else if (ev != null) Echo(ev, fg);
         ScheduleUpdate();
     }
 
-    private IntPtr _procHwnd;
-    private uint _procPid;
-    private string? _procName;   // UI thread: last looked-up (window, process); a recycled pid comes with another window
-
-    /// <summary>Process name (no .exe) of the window's process, or null. UI thread only.</summary>
-    private string? ProcessNameOf(IntPtr hwnd)
-    {
-        try
-        {
-            Native.GetWindowThreadProcessId(hwnd, out uint pid);
-            if (pid == 0) return null;
-            if (pid != _procPid || hwnd != _procHwnd)
-            {
-                using var pr = System.Diagnostics.Process.GetProcessById((int)pid);
-                _procName = pr.ProcessName; _procPid = pid; _procHwnd = hwnd;
-            }
-            return _procName;
-        }
-        catch (Exception) { return null; }   // the process just exited, or access denied
-    }
+    /// <summary>Process name (no .exe) of the window's process, or null (one cached helper for every thread).</summary>
+    private static string? ProcessNameOf(IntPtr hwnd) => HostApps.ProcessNameOf(hwnd);
 
     public void Dispose()
     {

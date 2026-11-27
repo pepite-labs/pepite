@@ -33,9 +33,14 @@ internal readonly record struct BarMetrics(double LabelPt, double WordPt, double
     /// pictures, the word line alone without them, so the marker (with its key line above) is never taller than a tile.</summary>
     public double MarkerDiameter(bool pictures) => Math.Round(WordPt * LineEm + (pictures ? LabelPt * LineEm : 0));
 
-    /// <summary>Approximate height (DIP) of a word tile: padding, F-label line, picture slot (+ its 2 + 4 margin), word line.</summary>
-    public double TileHeight(bool pictures, bool keys) =>
-        PadTop + (keys ? LabelPt * LineEm : 0) + (pictures ? PictureDip + 6 : 0) + WordPt * LineEm + PadBottom;
+    /// <summary>Approximate height (DIP) of a word tile: padding, F-label line, picture slot (+ its 2 + 4 margin), word line,
+    /// and the speaker band under the word when option D is on (<paramref name="band"/>).</summary>
+    public double TileHeight(bool pictures, bool keys, bool band = false) =>
+        PadTop + (keys ? LabelPt * LineEm : 0) + (pictures ? PictureDip + 6 : 0) + WordPt * LineEm + PadBottom + (band ? ListenBandDip : 0);
+
+    /// <summary>Owner 2026-11-25 (listen before inserting, answer 8): height (DIP) of option D's speaker band — a full-width
+    /// band under the word, inside the tile: S 24 / M 26 / L 30 / XL 36. The bar gets taller with it, never wider.</summary>
+    public double ListenBandDip => WordPt switch { <= 16 => 24, <= 22 => 26, <= 28 => 30, _ => 36 };
 
     /// <summary>Approximate height (DIP) of the spelling marker: padding, key line, circle.</summary>
     public double MarkerHeight(bool pictures, bool keys) =>

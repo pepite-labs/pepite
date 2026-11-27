@@ -71,6 +71,11 @@ Two keys per lexicon word, one for the input:
   the fold an internal mark tells a sounded e (é è ê ë, ai, ei, eu, oe) from a plain one until the end, where both are
   written `e` (a double « éé », « ée » collapses to one sounded e). The accent pass is one switch over the French letters
   (no Unicode normalisation per word; other letters still go through it).
+- **Tolerant variants (0.11.0, plan dys-sound-tolerance)**: /ʃ/ `C` and /ʒ/ `j` — like the other voicing pairs f/v, k/g,
+  t/d, p/b — stay apart in both keys (bouge ≠ bouche). For a pupil who confuses a pair, `PhoneticKey.Variants(key, pairs)`
+  gives the typed key with 1–2 of its first 4 swappable symbols swapped (« CardE » → « jardE »; at most 10 keys, never the
+  key itself). The fold is symbol by symbol, so a variant of a typed prefix is a prefix of the meant word's key: the
+  variants are looked up in the existing sound index, with no new index and no data rebuild (§ 5h).
 
 ## 4. Ranking: stupid-backoff language model
 
@@ -357,7 +362,7 @@ this work). Cost: `--bench` +0.001–0.003 ms.
 
 A pupil who writes by ear glues an elided word to the next one: « je tème » for « je t'aime », « jai », « lécole »,
 « cest », « quil », « daccord », « jusqua », « il ma » (m'a). Minimal scope (owner Q1): one bare form + one word; fixed
-expressions (« ilya », « parceque »), double clitics (« jtaime ») and 3-word splits are for 0.10.3. No data rebuild.
+expressions (« ilya », « parceque »), double clitics (« jtaime ») and 3-word splits are for 0.11.0. No data rebuild.
 
 - **Sound map** (`Elision.Sound`, `SplitsOf`): the fold of each bare form before a vowel — `j m t s n l d` as themselves,
   `c` → `s` (c'est), `qu` → `k`, `jusqu` → `jusk`, `lorsqu` → `lorsk`, `puisqu` → `puisk` (checked against
@@ -404,6 +409,75 @@ Weights and gates: [evaluation.md](../development/evaluation.md) § Glued words.
 p99 12.7–13.6 µs, `--bench-split` p99 0.6 ms once warm; its isolated maxima (12–26 ms) also occur with splits off
 (10–17 ms): pre-existing, accepted by the owner (2026-11-18), investigated separately (TODO: GC or scheduling).
 
+## 5h. Sound confusions (0.11.0, plan dys-sound-tolerance, owner 2026-11-26)
+
+Voiced / voiceless confusions are « frequent and persistent » in phonological dysorthographia, and the pairs differ per
+child (study `dys-sound-confusions.md`). A pupil who writes « chardin », « jien », « gien », « mancher » wrote a
+*different* sound key, one symbol away (`CardE` / `jardE`), which neither the sound pass nor the edit pass (ch ↔ j is two
+letter edits) bridges.
+
+```
+ typed ──► Fold = f ──┬─► literal prefix                      + WPrefix·gate
+                      ├─► sound prefix (f)                     + 0
+                      ├─► tolerant: v ∈ Variants(f, Tolerance), f ≥ TolerantFrom symbols   − WTolerant, green (Phonetic)
+                      └─► edit-1, splits, user, names, grammar …
+ finished word ──► Check: Mes fautes, same letters, same whole key, splits │ then whole key = v  ──► ≈ list, tier 2
+```
+
+- **`Tolerance`** (`SoundPairs` flags: ChJ, FV, KG, TD, PB; one volatile int, the app may set it per profile): the enabled
+  pairs. `None` gives the 0.10.2 results byte for byte (measured: curated logs and held-out dumps).
+- **Bar (`Predict`)**: after the sound-prefix pass, from `TolerantFrom` = 3 key symbols (« je » / « chez » get none), each
+  variant's prefix range in `_fKeys`; a word not scored yet gets the sound pass's score − `WTolerant` (owner Q-A: a fixed
+  penalty, log10 scale like `WEdit`), kind `Phonetic` (the green « même son » tile, owner Q4). A word already scored keeps
+  its score, so the literal prefixes and exact sound-alikes are never touched. When `WTolerant` > `WEdit` the edit pass
+  compares with a tolerant score instead of skipping it. `Homophone`, `PlaceExact`, the split, personal and names passes
+  are unchanged (no tolerance for personal words or names).
+- **≈ check (`Check`)**: after the splits, from `TolerantCheckFrom` = 2 symbols, the words whose whole key equals a
+  variant fill what the exact candidates left of the 6 slots, most frequent first; `SpellingCheck.Tolerant` = how many of
+  the last candidates came that way. « chardin » becomes ≈ jardin (owner Q5) instead of « ? »; a known word stays ✓.
+- **≈ list in two tiers (`RankCorrections(…, tolerant)`)**: the exact candidates are ranked by the context among
+  themselves, then the tolerant ones among themselves: a confusion never goes ahead of an exact sound-alike.
+- **Weights**: `WTolerant` = 1.5, the only value tried that leaves every curated set identical (0.5 is best on `chj-full`
+  top-1, but 0.5 and 1.0 move one `cases-names` rank); held-out KSS unchanged at 1.0 and 1.5 (0.5 not run) (evaluation.md § Sound confusions). **Default `Tolerance = ChJ`, `WTolerant` = 1.5**
+  (owner 2026-11-26, D33); Phase 2 adds the per-profile setting « Sons que l'élève confond ».
+- Speed: ≤ 10 extra binary searches per query and per `Check`; `--bench` within noise, `Check` p99 13.5 µs.
+
+## 5i. Mots exclus (0.11.0, plan offensive-words, D35)
+
+Lexique keeps every attested word, so nothing stopped a slur reaching the bar (the dys-sound review found one, reached
+by the ch/j pass for a typed first name). A reviewed list of words is now **never offered**; a word the pupil **types**
+is accepted, ✓, inserted, echoed and read like any other (owner Q1).
+
+```
+ exclusions\fr.txt ──► ExcludedWords.FromFile (at Load, before the engine is returned)
+   (base64 forms, #categories, #lemmas)      │ Entry[] (one bool per lexicon entry) + Forms (case ignored)
+ grammar.sqlite loaded ──► WithGrammar: + the French.lex forms of the excluded lemmas whose grammar lemmas are all
+                                          excluded and that are no lexicon form (homograph guard) ──► swapped in
+ query ──► one snapshot x ──┬─ lexicon passes (prefix, sound, tolerant, edit, splits, Inject family / siblings,
+                            │  Check's Offerable): skip Entry[i] before scoring
+                            ├─ string sources (personal words, « Mes fautes » targets, pack names, n-gram successors,
+                            │  Check's AddFound): skip x.IsExcluded(word)
+                            └─ safety net on Predict / PredictNext / Check: drop and count (ExcludedLate, must stay 0)
+```
+
+- **Data**: `exclusions\fr.txt` next to the database (`src/Data.Build/exclusions/build_exclusions.py ship`): a header, the
+  forms per category, one base64 form per line (owner Q4: out of a child's sight, not a secret), then after `#lemmas` the
+  excluded lemmas. Only Lexique forms (CC BY-SA 4.0) are listed; the inflections French.lex alone knows are added at run
+  time from the lemmas, so the file holds no MPL-2.0 content. Before the grammar is in, only the listed forms apply.
+- **Matching**: `IsExcluded` = the whole word, case ignored, then the part after each apostrophe (« l'… », « qu'… »: a
+  joined candidate goes with its word). `ExcludedWords.Empty` gives the 0.10.2 results byte for byte (`--exclusions none`
+  measured equal to the previous build on every curated and dys log).
+- **Typed word**: `Check`, `KnowsSpelled`, `KnowsForMark` are unchanged (the mark is the one it had without the list);
+  `ExactEligible` is false for a listed word, so `PlaceExact` never puts it in the bar. `RankCorrections` only reorders.
+- **Names-pack exemption** (owner 2026-11-27): two listed spellings (`lemmas.tsv` rows N01, N02, the `#names` section)
+  stay offered as capitalised « Noms propres » pack names only, also at a sentence start; never the lowercase lexicon word.
+- **Not filtered** (out of scope): what the pupil types, reads or has echoed; the lesson extractor; pictures in reading mode.
+- **No switch** for the built-in list (owner Q3); `Predict.Eval` / `Predict.Cli` take `--exclusions <file>|none` for A/B
+  runs only. Phase B adds the Classe's « Mots à ne jamais proposer » through `ExcludedWords.With`.
+- **Load log**: counts per category, the file's SHA-256 and the time — never a word.
+- Cost: one array read per scored entry (an excluded entry is cheaper than before: it is not scored), a few hash
+  lookups per string candidate; measured in evaluation.md § Mots exclus.
+
 ## 6. Design choices and rejected alternatives
 
 | Choice | Alternative rejected | Reason |
@@ -413,6 +487,7 @@ p99 12.7–13.6 µs, `--bench-split` p99 0.6 ms once warm; its isolated maxima (
 | rules + Lexique `phon` | espeak-ng G2P | GPL; Lexique already holds the pronunciations of every word in the lexicon |
 | edit-1 only, ≥ 4 letters | edit-2 / always on | edit-2 explodes the candidate set; on short prefixes edit-1 drowns the bar in noise |
 | per-word kind (`MatchKind`) | score only | the UI colours suggestions by why they were proposed |
+| sound confusions: variants of the typed key, looked up in the sound index, penalised (0.11.0) | weighted grapheme edits in `Edits1` (ch↔j, f↔v…); merging ch/j in the key itself | edits match finished words only (no gain while typing) and duplicate the fold's context rules (g before e/i); a merged key makes bouge / bouche homophones for `Check`, the colours and the exact typed word rule, and cannot be switched off per pupil |
 | personal words: a fixed unigram-level lift (plan 10A) | a log-scale bonus (× 10–100 on the probability); a mixture share λ/N of the list | the log bonus beat context predictions and the list's own inflections (lesson set −0.7 to −3 pts, Wikipedia neutrality +0.1 to +1.0 pt); a λ/N share gave short lists of names a huge per-word weight (measured, evaluation.md) |
 
 ## 7. Extending

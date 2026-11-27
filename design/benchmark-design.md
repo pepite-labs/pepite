@@ -44,6 +44,12 @@ sentence as context:
   *not* type if they accept the word as soon as it is first. It is a single number aligned with user value.
 - Out-of-lexicon words are skipped and reported as coverage (they are unpredictable by construction).
 - Accepting costs a key (F*n*) that KSS does not count; this is the usual convention, and comparisons stay fair.
+- **Selection cost** (`--select-cost C`, 2026-11-25, listen before inserting): with « Touches F1–F8 : 1er appui : écouter, 2e :
+  insérer » (the default) the pupil presses the key twice, so choosing a word is not free. KSS_c charges c keys per choice: per word
+  cost = min(p + c, |w|) at the first p where w is top-1 (typing the word in full when choosing does not pay), else |w|;
+  KSS_c = 1 − Σ cost / Σ |w|. KSS_0 is the headline KSS exactly (same queries, no extra prediction); c = 1 is the F-key
+  under listen-first (one key more than today), c = 2 a pessimistic bound. The ranking is not tuned on KSS_1 / KSS_2:
+  they are reported for information, the decision metric stays KSS_0.
 - **Several held-out sets** on purpose (plan corpus-light): the decision sets are written for children — E1 (held-out
   public-domain books), E2 (held-out Vikidia articles), E3 (invented school sentences); W (Leipzig Wikipedia 2021) is the
   cross-domain check. The older subtitle held-out set (`heldout_subs_40k.txt`, no longer trained on since 0.10.0) is kept

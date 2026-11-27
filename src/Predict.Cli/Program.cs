@@ -9,12 +9,23 @@ using Predict.Core;
 //        --bench-exact [--grammar <g>] [--names <folder>]  speed of the rule (2 000 grammar-context queries typed as words)
 //        0.10.2 (glued words): --splits / --no-splits [--w-split F] [--split-known 0|1] for --probe and --bench;
 //        --bench-split [--grammar <g>] [--names <folder>]  speed of the split pass (off / on) and of RankCorrections
+//        0.11.0 (plan dys-sound-tolerance): --sound-pairs none|chj|chj,fv,kg,td,pb|all5 [--w-tolerant F] [--tolerant-from N]
+//        [--tolerant-check-from N] for --probe and --bench;
+//        --bench-sound [--grammar <g>] [--names <folder>] [--dys <dys-sound folder>]  speed with the pairs none / chj / all five
+//        0.11.0 (plan offensive-words): --exclusions <fr.txt>|none (any mode; default: the list next to the database;
+//        --grammar expands it as the app does); --mem-exclusions [--grammar <g>]  load time and memory of the list;
+//        the exhaustive probe is Predict.Eval --probe-exclusions
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 var db = args.Length > 0 ? args[0] : "Data.Build/out/prediction.sqlite";
 var sw = Stopwatch.StartNew();
 using var engine = PredictionEngine.Load(db);
 sw.Stop();
-Console.WriteLine($"loaded {engine.Count} words in {sw.ElapsedMilliseconds} ms; context={engine.HasContext}\n");
+Console.WriteLine($"loaded {engine.Count} words in {sw.ElapsedMilliseconds} ms; context={engine.HasContext}");
+// 0.11.0 (plan offensive-words A4): the « mots exclus » — the engine's own (next to the database), « --exclusions none »
+// (A/B, benches) or another file; counts only, never a word
+if (Array.IndexOf(args, "--exclusions") is var xi && xi >= 0 && xi + 1 < args.Length)
+    engine.Excluded = args[xi + 1] == "none" ? ExcludedWords.Empty : ExcludedWords.FromFile(args[xi + 1], engine);
+Console.WriteLine((engine.Excluded.IsEmpty ? "excluded: none" : FormattableString.Invariant($"excluded: {engine.Excluded.Describe()}, {engine.ExclusionsLoadMs:0.0} ms")) + "\n");
 string OptAfter(string name, string def) { int i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal) ? args[i + 1] : def; }
 const string DefaultGrammar = "Data.Build/out/grammar.sqlite";
 static ExactTypedMode ParseExact(string s) => s switch
@@ -36,6 +47,101 @@ if (OptAfter("--split-known", "") is { Length: > 0 } sk) engine.SplitKnown = sk 
 engine.SplitMinCount = int.Parse(OptAfter("--split-min", engine.SplitMinCount.ToString()));
 if (args.Contains("--splits") || args.Contains("--no-splits") || args.Contains("--w-split") || args.Contains("--split-known"))
     Console.WriteLine(FormattableString.Invariant($"glued words: splits {(engine.Splits ? "on" : "off")}, WSplit {engine.WSplit}, SplitMax {engine.SplitMax}, from {engine.SplitFrom}, known {engine.SplitKnown}\n"));
+
+// 0.11.0 (plan dys-sound-tolerance): the pupil's confused sounds for --probe and --bench (default: the engine's)
+if (OptAfter("--sound-pairs", "") is { Length: > 0 } sp) engine.Tolerance = SoundPairsInfo.Parse(sp);
+engine.WTolerant = double.Parse(OptAfter("--w-tolerant", engine.WTolerant.ToString(System.Globalization.CultureInfo.InvariantCulture)), System.Globalization.CultureInfo.InvariantCulture);
+engine.TolerantFrom = int.Parse(OptAfter("--tolerant-from", engine.TolerantFrom.ToString()));
+engine.TolerantCheckFrom = int.Parse(OptAfter("--tolerant-check-from", engine.TolerantCheckFrom.ToString()));
+if (args.Contains("--sound-pairs") || args.Contains("--w-tolerant") || args.Contains("--tolerant-from") || args.Contains("--tolerant-check-from"))
+    Console.WriteLine(FormattableString.Invariant($"sound pairs: {SoundPairsInfo.Describe(engine.Tolerance)}, WTolerant {engine.WTolerant}, from {engine.TolerantFrom}, check from {engine.TolerantCheckFrom}, max swaps {engine.TolerantMaxSwaps}\n"));
+
+if (args.Contains("--mem-exclusions"))
+{
+    // 0.11.0: the time and managed memory of the list (the file, then the grammar expansion), 5 rounds; counts only
+    var path = PredictionEngine.ExclusionsNextTo(db) ?? throw new FileNotFoundException("no exclusions next to the database");
+    var gpath = OptAfter("--grammar", DefaultGrammar);
+    for (int r = 1; r <= 5; r++)
+    {
+        long m0 = GC.GetTotalMemory(true);
+        var t0 = Stopwatch.GetTimestamp();
+        var x = ExcludedWords.FromFile(path, engine);
+        double ms1 = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+        t0 = Stopwatch.GetTimestamp();
+        var y = x.WithGrammar(gpath, engine);
+        double ms2 = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+        long m1 = GC.GetTotalMemory(true);
+        Console.WriteLine(FormattableString.Invariant($"round {r}: file {ms1:0.0} ms ({x.Count} forms), grammar expansion {ms2:0.0} ms (+{y.GrammarCount}); managed memory +{(m1 - m0) / 1024.0:0} KB"));
+        GC.KeepAlive(y);
+    }
+    return;
+}
+
+if (args.Contains("--bench-sound"))
+{
+    // 0.11.0: the speed of the tolerant pass. 2 000 queries: two thirds the dys set's misspellings (dys-sound-cases.json, the
+    // « -full » cases with their context) typed letter by letter (2 letters to full), one third the --bench inputs in « il
+    // fait »; 200 warm-up queries, 3 rounds of the pairs none / chj / all five at k = 11 (the keyboard's 8 + 3 spares), with
+    // the grammar (and the names pack with --names). Then Check over the dys spelling words (200 rounds per setting).
+    engine.Grammar = LoadGrammar(OptAfter("--grammar", DefaultGrammar), engine);
+    if (OptAfter("--names", "") is { Length: > 0 } np) engine.Names = LoadNames(np, engine);
+    var dir = OptAfter("--dys", "Predict.Eval/dys-sound");
+    var full = new List<(string T, string[] C)>();
+    using (var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "dys-sound-cases.json"))))
+        foreach (var c in doc.RootElement.EnumerateArray())
+            if (c.GetProperty("category").GetString()!.EndsWith("-full", StringComparison.Ordinal) &&
+                c.GetProperty("context").ValueKind == System.Text.Json.JsonValueKind.String)
+                full.Add((c.GetProperty("typed").GetString()!, c.GetProperty("context").GetString()!.Split(' ', StringSplitOptions.RemoveEmptyEntries)));
+    var spellWords = new List<string>();
+    using (var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "dys-sound-spelling.json"))))
+        foreach (var c in doc.RootElement.EnumerateArray())
+            if (SpellingIndicator.LastWord(c.GetProperty("text").GetString()!)?.Word is { } lw) spellWords.Add(lw);
+    var common = new[] { "maiz", "oriz", "bo", "sou", "enfan", "ordi", "ékri", "boku", "tele", "kestion" };
+    var rnd = new Random(1);
+    var qs = new List<(string Q, string[] C)>();
+    for (int i = 0; i < 2000; i++)
+    {
+        if (i % 3 == 2) { qs.Add((common[rnd.Next(common.Length)], new[] { "il", "fait" })); continue; }
+        var (w, c) = full[rnd.Next(full.Count)];
+        qs.Add((w[..Math.Min(w.Length, rnd.Next(2, w.Length + 1))], c));
+    }
+    var keepTol = engine.Tolerance;
+    var settings = new[] { SoundPairs.None, SoundPairs.ChJ, SoundPairsInfo.All };
+    for (int round = 1; round <= 3; round++)
+        foreach (var pairs in settings)
+        {
+            engine.Tolerance = pairs;
+            for (int i = 0; i < 200; i++) engine.Predict(qs[i].Q, qs[i].C, 11);
+            var times = new double[qs.Count];
+            for (int i = 0; i < qs.Count; i++)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                engine.Predict(qs[i].Q, qs[i].C, 11);
+                times[i] = (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency;
+            }
+            Array.Sort(times);
+            Console.WriteLine(FormattableString.Invariant(
+                $"round {round} pairs {SoundPairsInfo.Describe(pairs),-22}: 2000 queries: mean {times.Average():0.000} ms, p50 {times[1000]:0.000}, p95 {times[1899]:0.000}, p99 {times[1979]:0.000}, max {times[^1]:0.000} ms"));
+        }
+    foreach (var pairs in settings)
+    {
+        engine.Tolerance = pairs;
+        foreach (var x in spellWords) engine.Check(x);
+        var ct = new List<double>(spellWords.Count * 200);
+        for (int r = 0; r < 200; r++)
+            foreach (var x in spellWords)
+            {
+                var t0 = Stopwatch.GetTimestamp();
+                engine.Check(x);
+                ct.Add((Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency);
+            }
+        ct.Sort();
+        Console.WriteLine(FormattableString.Invariant(
+            $"Check pairs {SoundPairsInfo.Describe(pairs),-22}: {spellWords.Count} dys spelling words × 200: mean {ct.Average() * 1000:0.0} µs, p99 {ct[(int)(ct.Count * 0.99)] * 1000:0.0} µs, max {ct[^1]:0.000} ms"));
+    }
+    engine.Tolerance = keepTol;
+    return;
+}
 
 if (args.Contains("--bench-exact"))
 {
@@ -434,7 +540,7 @@ if (args.Contains("--probe"))
         var s = engine.Predict(parts[1], ctx, 8, start);
         var c = engine.Check(parts[1]);
         // ~ = sounds like (Phonetic), * = correction (Edit)
-        Console.WriteLine($"[{parts[0]}] {parts[1],-10}{(start ? " (start)" : "")} -> {string.Join(", ", s.Select(x => x.Word + (x.Kind == MatchKind.Prefix ? "" : x.Kind == MatchKind.Phonetic ? "~" : "*") + (scores ? "(" + x.Score.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ")" : "")))}   check={c.Status} {string.Join("/", c.Candidates)}{expect}");
+        Console.WriteLine($"[{parts[0]}] {parts[1],-10}{(start ? " (start)" : "")} -> {string.Join(", ", s.Select(x => x.Word + (x.Kind == MatchKind.Prefix ? "" : x.Kind == MatchKind.Phonetic ? "~" : "*") + (scores ? "(" + x.Score.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ")" : "")))}   check={c.Status} {string.Join("/", c.Candidates)}{(c.Tolerant > 0 ? $" (tolerant tier {c.Tolerant})" : "")}{expect}");
     }
     return;
 }
@@ -447,7 +553,14 @@ foreach (var t in tests)
 }
 
 [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-static GrammarLexicon LoadGrammar(string path, PredictionEngine eng) => GrammarLexicon.Load(path, eng);
+static GrammarLexicon LoadGrammar(string path, PredictionEngine eng)
+{
+    var g = GrammarLexicon.Load(path, eng);
+    var x0 = eng.Excluded;
+    eng.Excluded = x0.WithGrammar(path, eng);   // 0.11.0: as the app once its grammar is in (plan offensive-words A1)
+    if (!ReferenceEquals(x0, eng.Excluded)) Console.WriteLine($"excluded: +{eng.Excluded.GrammarCount} grammar forms ({eng.Excluded.Count} in all)");
+    return g;
+}
 
 [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 static NamesLexicon LoadNames(string path, PredictionEngine eng) => NamesLexicon.Load(path, eng).Lexicon;

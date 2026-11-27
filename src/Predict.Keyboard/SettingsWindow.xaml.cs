@@ -105,7 +105,12 @@ public partial class SettingsWindow : Window
             wordsDock.Children.Add(new WordEditor(words, service.ProfileId, teacher: false,
                                                   HelpButtonFor("mes-mots", "HelpMyWords", Strings.MyWordsList, new Thickness(10, 0, 0, 0)))
                                    { Tag = "aide:mes-mots" });
-        WordsTab.Content = wordsDock;
+        // 0.11.0: « Classe »'s Mots tab is taller than a 768-pixel screen: the window never outgrows the work area and the
+        // tab scrolls (reviewer 2026-11-27)
+        WordsTab.Content = new ScrollViewer { Content = wordsDock, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                                              HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false };
+        MaxHeight = SystemParameters.WorkArea.Height;
+        SizeChanged += (_, _) => KeepOnScreen();
         // Enter in the word search box must not « Enregistrer » and close the window
         Tabs.SelectionChanged += (_, e) => { if (e.OriginalSource == Tabs) SaveButton.IsDefault = Tabs.SelectedItem != WordsTab; };
         _service = service;
@@ -130,6 +135,29 @@ public partial class SettingsWindow : Window
             };
             System.Windows.Automation.AutomationProperties.SetAutomationId(item, "Font-" + AppSettings.FontNames[spec.Font]);
             FontBox.Items.Add(item);
+        }
+        // 2026-11-25 owner: « Clic sur un mot » and « Touches F1–F8 » (listen before inserting)
+        foreach (var (mode, text) in new[] { (ClickMode.Insert, Strings.ClickInsert), (ClickMode.ListenFirst, Strings.ClickListenFirst),
+                                             (ClickMode.ListenDouble, Strings.ClickListenDouble) })
+        {
+            var item = new ComboBoxItem { Content = text, Tag = mode };
+            System.Windows.Automation.AutomationProperties.SetAutomationId(item, "ClickMode-" + AppSettings.ClickModeNames[mode]);
+            ClickModeBox.Items.Add(item);
+        }
+        foreach (var (listenFirst, text, id) in new[] { (false, Strings.KeysInsert, "insert"), (true, Strings.KeysListenFirst, "listenFirst") })
+        {
+            var item = new ComboBoxItem { Content = text, Tag = listenFirst };
+            System.Windows.Automation.AutomationProperties.SetAutomationId(item, "KeysMode-" + id);
+            KeysModeBox.Items.Add(item);
+        }
+        // 0.11.0 (owner 2026-11-27): « Copier la sélection par Ctrl+C… » — Writer only (not set) / Partout / Jamais
+        foreach (var (value, text, id) in new (bool?, string, string)[] { (null, Strings.ReadingClipboardWriter, "writer"),
+                                                                           (true, Strings.ReadingClipboardEverywhere, "everywhere"),
+                                                                           (false, Strings.ReadingClipboardNever, "never") })
+        {
+            var item = new ComboBoxItem { Content = text, Tag = new ClipboardChoice(value) };
+            System.Windows.Automation.AutomationProperties.SetAutomationId(item, "ReadingClipboard-" + id);
+            ReadingClipboard.Items.Add(item);
         }
         Voice.Items.Add(new ComboBoxItem { Content = Strings.VoiceLoading, IsEnabled = false });
         Voice.SelectedIndex = 0;
@@ -232,6 +260,13 @@ public partial class SettingsWindow : Window
         _ => Strings.FontSegoe,
     };
 
+    /// <summary>A tab switch resizes the window (SizeToContent): move it up when its bottom would leave the work area.</summary>
+    private void KeepOnScreen()
+    {
+        var wa = SystemParameters.WorkArea;
+        if (Top + ActualHeight > wa.Bottom) Top = Math.Max(wa.Top, wa.Bottom - ActualHeight);
+    }
+
     private void CentreOnPrimary()
     {
         var wa = SystemParameters.WorkArea;   // primary monitor, DIP
@@ -248,6 +283,11 @@ public partial class SettingsWindow : Window
         Pictures.IsChecked = s.Pictures;
         if (_pictures is null) { Pictures.IsEnabled = false; PicturesMissing.Visibility = Visibility.Visible; }
         Keys.IsChecked = s.Keys == KeyMode.F1F8;
+        ClickModeBox.SelectedItem = ClickModeBox.Items.Cast<ComboBoxItem>().First(i => (ClickMode)i.Tag == s.Click);
+        KeysModeBox.SelectedItem = KeysModeBox.Items.Cast<ComboBoxItem>().First(i => (bool)i.Tag == s.KeysListenFirst);
+        ClickBandNote.Visibility = s.ListenButton ? Visibility.Visible : Visibility.Collapsed;
+        ListenShiftBox.IsChecked = s.ListenShiftKeys;
+        ListenButtonBox.IsChecked = s.ListenButton;
         // the hidden "french-nbsp" (JSON only) is French typography too
         (s.Punctuation == PunctuationSpacing.None ? PunctNone : PunctFrench).IsChecked = true;
         (s.Position switch { BarPosition.Top => PosTop, BarPosition.Bottom => PosBottom, BarPosition.Free => PosFree, _ => PosCaret }).IsChecked = true;
@@ -258,7 +298,7 @@ public partial class SettingsWindow : Window
         ReadingEnabled.IsChecked = s.Reading.Enabled;
         ReadingPictures.IsChecked = s.ReadingPictures;
         if (_pictures is null) ReadingPictures.IsEnabled = false;
-        ReadingClipboard.IsChecked = s.Reading.ClipboardFallback;
+        ReadingClipboard.SelectedItem = ReadingClipboard.Items.Cast<ComboBoxItem>().First(i => ((ClipboardChoice)i.Tag).Value == s.Reading.ClipboardFallback);
         // locked by the machine file: its value; else the app-level « shown » flag (the profile's value never decides now)
         ShowWelcome.IsChecked = _welcome is null || _service.IsLocked("start.welcome") ? s.Welcome : _welcome.Due();
         SpellingBox.IsChecked = s.SpellingIndicator;
@@ -268,6 +308,9 @@ public partial class SettingsWindow : Window
         FreeHint.Visibility = s.Position == BarPosition.Free ? Visibility.Visible : Visibility.Collapsed;
         ShowTuning();
     }
+
+    /// <summary>A position of the Ctrl+C choice (a boxed bool? cannot tell null from « no tag »).</summary>
+    private sealed record ClipboardChoice(bool? Value);
 
     /// <summary>The chosen speed and volume as words next to the sliders, and in their UI Automation name, so a screen
     /// reader says « Vitesse : Un peu lente (−2) » rather than a bare number (owner, 2026-11-14).</summary>
@@ -299,6 +342,16 @@ public partial class SettingsWindow : Window
         }
         OnToggle(Pictures, (w, on) => w with { Pictures = on });
         OnToggle(Keys, (w, on) => w with { Keys = on ? KeyMode.F1F8 : KeyMode.Off });
+        // 2026-11-25: « Touches F1–F8 » and Maj + F1…F8 need the F-keys (disabled, not changed, while they are off)
+        Keys.Checked += (_, _) => SyncListenControls();
+        Keys.Unchecked += (_, _) => SyncListenControls();
+        ClickModeBox.SelectionChanged += (_, _) => Edit(w => w with { Click = ClickModeBox.SelectedItem is ComboBoxItem { Tag: ClickMode m } ? m : w.Click });
+        KeysModeBox.SelectionChanged += (_, _) => Edit(w => w with { KeysListenFirst = KeysModeBox.SelectedItem is ComboBoxItem { Tag: bool b } ? b : w.KeysListenFirst });
+        OnToggle(ListenShiftBox, (w, on) => w with { ListenShiftKeys = on });
+        OnToggle(ListenButtonBox, (w, on) => w with { ListenButton = on });
+        // the speaker band (D) on: a click on the word inserts at once whatever the click mode (owner answer 4) — greyed
+        ListenButtonBox.Checked += (_, _) => SyncListenControls();
+        ListenButtonBox.Unchecked += (_, _) => SyncListenControls();
         PunctFrench.Checked += (_, _) => Edit(w => w with
         { Punctuation = w.Punctuation == PunctuationSpacing.None ? PunctuationSpacing.French : w.Punctuation });
         PunctNone.Checked += (_, _) => Edit(w => w with { Punctuation = PunctuationSpacing.None });
@@ -314,7 +367,8 @@ public partial class SettingsWindow : Window
         OnToggle(RereadEdits, (w, on) => w with { Speech = w.Speech with { RereadEdits = on } });
         OnToggle(ReadingEnabled, (w, on) => w with { Reading = w.Reading with { Enabled = on } });
         OnToggle(ReadingPictures, (w, on) => w with { Reading = w.Reading with { Pictures = on } });
-        OnToggle(ReadingClipboard, (w, on) => w with { Reading = w.Reading with { ClipboardFallback = on } });
+        ReadingClipboard.SelectionChanged += (_, _) => Edit(w => ReadingClipboard.SelectedItem is ComboBoxItem { Tag: ClipboardChoice c }
+            ? w with { Reading = w.Reading with { ClipboardFallback = c.Value } } : w);
         OnToggle(SpellingBox, (w, on) => w with { SpellingIndicator = on });
         OnToggle(NamePicturesBox, (w, on) => w with { NamePictures = on });
         ShowWelcome.Checked += (_, _) => { if (!_loading) _welcomeTouched = true; };
@@ -391,6 +445,11 @@ public partial class SettingsWindow : Window
         L("words.spacing", LockSpacing, SpacingNormal, SpacingWider, SpacingWidest);
         L("words.pictures", LockPictures, Pictures);
         L("words.keys", LockKeys, Keys);
+        L("words.clickMode", LockClickMode, ClickModeBox);
+        L("words.keysListenFirst", LockKeysMode, KeysModeBox);
+        L("words.listenShiftKeys", LockListenShift, ListenShiftBox);
+        L("words.listenButton", LockListenButton, ListenButtonBox);
+        SyncListenControls();
         L("text.punctuationSpace", LockPunct, PunctFrench, PunctNone);
         L("bar.position", LockPosition, PosCaret, PosTop, PosBottom, PosFree);
         L("speech.speakInserted", LockSpeakInserted, SpeakInserted);
@@ -408,17 +467,29 @@ public partial class SettingsWindow : Window
         L("speech.volume", LockSpeechTuning, Volume);
     }
 
+    /// <summary>2026-11-25 (listen before inserting): « Touches F1–F8 » and Maj + F1…F8 are greyed while the F-keys are
+    /// off; « Clic sur un mot » is greyed, with its note, while the speaker band is on (a click on the word then inserts at
+    /// once). A machine lock keeps its control disabled.</summary>
+    private void SyncListenControls()
+    {
+        bool keys = Keys.IsChecked == true, band = ListenButtonBox.IsChecked == true;
+        KeysModeBox.IsEnabled = keys && !_service.IsLocked("words.keysListenFirst");
+        ListenShiftBox.IsEnabled = keys && !_service.IsLocked("words.listenShiftKeys");
+        ClickModeBox.IsEnabled = !band && !_service.IsLocked("words.clickMode");
+        ClickBandNote.Visibility = band ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private void RefreshPreview()
     {
         Preview.Children.Clear();
         var look = new BarLook(BarMetrics.For(_w.Size), _pictures != null && _w.Pictures, _w.Keys == KeyMode.F1F8,
-                               _fonts.Resolve(_w.Font), _w.Spacing);
-        var style = (Style)FindResource("Sugg");
+                               _fonts.Resolve(_w.Font), _w.Spacing, _w.Click, _w.KeysListenFirst, _w.ListenButton);
+        var styles = BarStyles.From(this);
         var kinds = new[] { MatchKind.Prefix, MatchKind.Phonetic, MatchKind.Edit };
         for (int i = 0; i < Strings.PreviewWords.Length; i++)
         {
             var word = Strings.PreviewWords[i];
-            var b = BarBuilder.MakeButton(i, new Suggestion(word, 0, kinds[i % 3]), look, style, out var slot, out _);
+            var b = BarBuilder.MakeTile(i, new Suggestion(word, 0, kinds[i % 3]), look, styles, out var slot, out _).Root;   // with D: the band under the word
             b.IsHitTestVisible = false;
             if (slot is { } sl && _pictures?.GetNow(word) is System.Windows.Media.ImageSource img)
             {

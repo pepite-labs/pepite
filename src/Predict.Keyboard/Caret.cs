@@ -8,7 +8,8 @@ namespace Predict.Keyboard;
 /// <summary>
 /// Finds the text caret of the foreground application, in physical screen pixels. Order:
 /// 1) GetGUIThreadInfo (Win32 caret — Notepad, classic edit controls),
-/// 2) UI Automation TextPattern (modern apps: browsers, Word, WinUI),
+/// 2) UI Automation TextPattern (modern apps: browsers, Word, WinUI) — not asked in a host that never gives one
+///    (<see cref="HostApps.UiaTextUnavailable(IntPtr)"/>: LibreOffice),
 /// 3) the mouse position (last resort).
 /// </summary>
 internal static class Caret
@@ -24,6 +25,15 @@ internal static class Caret
             if (Native.ClientToScreen(gi.hwndCaret, ref p)) return (p.X, p.Y, "win32");
         }
 
+        // 0.11.0: LibreOffice has no system caret and gives UIA none: the lookup only cost ≈ 110 ms (phase 0 probe)
+        if (!HostApps.UiaTextUnavailable(fg) && FromUia() is { } u) return (u.X, u.Y, "uia");
+
+        Native.GetCursorPos(out var c);
+        return (c.X, c.Y + 20, "mouse");
+    }
+
+    private static (int X, int Y)? FromUia()
+    {
         try
         {
             var el = AutomationElement.FocusedElement;
@@ -39,14 +49,12 @@ internal static class Caret
                     if (rects.Length > 0)
                     {
                         var b = rects[^1];
-                        return ((int)b.Right, (int)b.Bottom, "uia");
+                        return ((int)b.Right, (int)b.Bottom);
                     }
                 }
             }
         }
         catch { /* provider without TextPattern, or cross-process failure: fall through */ }
-
-        Native.GetCursorPos(out var c);
-        return (c.X, c.Y + 20, "mouse");
+        return null;
     }
 }

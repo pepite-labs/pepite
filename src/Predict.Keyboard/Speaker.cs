@@ -65,7 +65,10 @@ internal sealed class Speaker : IDisposable
     /// <summary>0.8.3 (owner, « ne rien lire si on ne sait pas »): typed text said outside the echo — the inserted word, the
     /// corrected word — goes through the same <see cref="EchoGuard"/>: spoken only in a field proven non-password, never in
     /// a terminal or a remote window.</summary>
-    public void SayChecked(string text, SpeechKind kind, IntPtr fg) => _guard.Submit(new SpeechItem(text, kind), fg);
+    /// <param name="after">2026-11-25: queued after what is being spoken instead of interrupting it
+    /// (<see cref="SpeechItem.After"/>).</param>
+    public void SayChecked(string text, SpeechKind kind, IntPtr fg, bool after = false) =>
+        _guard.Submit(new SpeechItem(text, kind, After: after), fg);
 
     /// <summary>A pupil's first name (« Qui es-tu ? »): spoken at once, never written to the log (plan 09).</summary>
     public void SayName(string name) => _worker.Say(new SpeechItem(name, SpeechKind.Manual, Private: true));

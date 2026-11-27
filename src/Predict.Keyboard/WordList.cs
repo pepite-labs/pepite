@@ -9,7 +9,7 @@ using Predict.Core;
 namespace Predict.Keyboard;
 
 /// <summary>Why a word, a list or a spelling pair cannot be stored (the French sentence: <see cref="Strings.WordProblemText"/>).</summary>
-internal enum WordProblem { Empty, TooLong, BadChars, Duplicate, TooManyWords, TooManyInList, TooManyLists, TooManyFautes, SamePair }
+internal enum WordProblem { Empty, TooLong, BadChars, Duplicate, TooManyWords, TooManyInList, TooManyLists, TooManyFautes, SamePair, TooManyExclus, ClassOnly }
 
 /// <param name="W">the word as shown and suggested (capitals kept, plan 10 Q13).</param>
 /// <param name="Src">« manuel » (added by hand), « lecon » (a lesson), « import » (a .txt or a .pepite rebase).</param>
@@ -49,12 +49,23 @@ internal sealed record SpellingPair(string Ecrit, string Mot);
 /// is recorded). Entry rules: 1–40 characters, letters (any case, accents, œ æ ç), an inner <c>-</c> or <c>'</c> (Q16:
 /// « Jean-Pierre », « aujourd'hui »); unique per list as stored (« Pierre » and « pierre » may both exist). Limits (Q15):
 /// 5 000 words for a pupil, 10 000 for « Classe », 500 « Mes fautes », 50 lists, 500 words per lesson.
+/// <c>exclus</c> (« Classe » only, 0.11.0, D35): « Mots à ne jamais proposer », see <see cref="Exclus"/>.
 /// </summary>
 internal sealed record WordBook(IReadOnlyList<WordListDef> Lists, IReadOnlyList<SpellingPair> Fautes, IReadOnlyList<string> Masques,
                                 JsonObject? Raw = null)
 {
     public const int Schema = 1;
     public const int MaxPupilWords = 5000, MaxClassWords = 10000, MaxFautes = 500, MaxLists = 50, MaxPerLesson = 500, MaxLength = 40;
+    /// <summary>At most 500 « Mots à ne jamais proposer » (plan offensive-words B1; the machine file has the same limit).</summary>
+    public const int MaxExclus = 500;
+
+    /// <summary>
+    /// 0.11.0 (plan offensive-words B1, D35): the teacher's « Mots à ne jamais proposer » — whole words added to the built-in
+    /// exclusion list for every profile of the PC. « Classe » only: <see cref="FromJson"/> drops them from a pupil's file,
+    /// and no pupil editor shows them, so a pupil can neither hide nor remove one (<see cref="WordLayering.Of"/> hands them on
+    /// untouched by <see cref="Masques"/>). Same entry rule as a word, at most <see cref="MaxExclus"/>, unique ignoring case.
+    /// </summary>
+    public IReadOnlyList<string> Exclus { get; init; } = Array.Empty<string>();
     /// <summary>The default list's id: « Mes mots » (a pupil), « Mots de la classe » (« Classe »).</summary>
     public const string DefaultListId = "mes-mots";
     private const string Base32 = "abcdefghijklmnopqrstuvwxyz234567";
@@ -62,7 +73,7 @@ internal sealed record WordBook(IReadOnlyList<WordListDef> Lists, IReadOnlyList<
     public static readonly WordBook Empty = new(Array.Empty<WordListDef>(), Array.Empty<SpellingPair>(), Array.Empty<string>());
 
     public int WordCount => Lists.Sum(l => l.Words.Count);
-    public bool IsEmpty => Lists.Count == 0 && Fautes.Count == 0 && Masques.Count == 0;
+    public bool IsEmpty => Lists.Count == 0 && Fautes.Count == 0 && Masques.Count == 0 && Exclus.Count == 0;
     public WordListDef? Default => Lists.FirstOrDefault(l => l.Id == DefaultListId);
     public WordListDef? Get(string id) => Lists.FirstOrDefault(l => l.Id == id);
 
@@ -244,8 +255,26 @@ internal sealed record WordBook(IReadOnlyList<WordListDef> Lists, IReadOnlyList<
         return this with { Masques = m };
     }
 
-    /// <summary>« Effacer tous mes mots… »: the lists, « Mes fautes » and hidden words go; unknown keys stay.</summary>
-    public WordBook Cleared() => Empty with { Raw = Raw };
+    /// <summary>« Mots à ne jamais proposer » (« Classe », plan offensive-words B1): add a word (the entry rule of a word,
+    /// unique ignoring case, at most <see cref="MaxExclus"/>).</summary>
+    public WordBook AddExclu(string word, bool isClass, out WordProblem? problem)
+    {
+        if (!isClass) { problem = WordProblem.ClassOnly; return this; }   // a pupil's book never holds one
+        problem = Check(word);
+        if (problem != null) return this;
+        var w = Clean(word);
+        if (Exclus.Any(x => string.Equals(x, w, StringComparison.OrdinalIgnoreCase))) { problem = WordProblem.Duplicate; return this; }
+        if (Exclus.Count >= MaxExclus) { problem = WordProblem.TooManyExclus; return this; }
+        return this with { Exclus = Exclus.Append(w).ToList() };
+    }
+
+    public WordBook RemoveExclu(string word) =>
+        Exclus.Contains(word) ? this with { Exclus = Exclus.Where(x => x != word).ToList() } : this;
+
+    /// <summary>« Effacer tous mes mots… »: the lists, « Mes fautes » and hidden words go; unknown keys stay. The « Mots à
+    /// ne jamais proposer » stay too: erasing the class's words must not bring back a word the teacher banned (they are
+    /// removed one by one).</summary>
+    public WordBook Cleared() => Empty with { Raw = Raw, Exclus = Exclus };
 
     // ------------------------------------------------------------------ JSON
     public JsonObject ToJson()
@@ -279,6 +308,7 @@ internal sealed record WordBook(IReadOnlyList<WordListDef> Lists, IReadOnlyList<
         }).ToArray());
         o["fautes"] = new JsonArray(Fautes.Select(p => (JsonNode?)new JsonObject { ["ecrit"] = p.Ecrit, ["mot"] = p.Mot }).ToArray());
         o["masques"] = new JsonArray(Masques.Select(m => (JsonNode?)JsonValue.Create(m)).ToArray());
+        if (Exclus.Count > 0) o["exclus"] = new JsonArray(Exclus.Select(m => (JsonNode?)JsonValue.Create(m)).ToArray());
         return o;
     }
 
@@ -329,7 +359,20 @@ internal sealed record WordBook(IReadOnlyList<WordListDef> Lists, IReadOnlyList<
         }
         var masques = (o["masques"] as JsonArray ?? new JsonArray()).Select(S).Where(s => s != null && Check(s) == null)
                       .Select(s => Clean(s)).Distinct(StringComparer.Ordinal).Take(MaxClassWords).ToList();
-        return new WordBook(lists, fautes, isClass ? Array.Empty<string>() : masques, Unknown(o, "schema", "listes", "fautes", "masques"));
+        // « Mots à ne jamais proposer »: « Classe » only (a pupil's file never brings one, and never keeps the key)
+        var exclus = new List<string>();
+        if (isClass)
+        {
+            var seenX = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var s in (o["exclus"] as JsonArray ?? new JsonArray()).Select(S))
+            {
+                if (s is null || Check(s) != null || !seenX.Add(Clean(s))) continue;
+                if (exclus.Count >= MaxExclus) { overLimit = true; break; }
+                exclus.Add(Clean(s));
+            }
+        }
+        return new WordBook(lists, fautes, isClass ? Array.Empty<string>() : masques, Unknown(o, "schema", "listes", "fautes", "masques", "exclus"))
+               { Exclus = exclus };
     }
 
     /// <summary>The names-database fields of a « noms » entry (a picture is a bare file name: no folder, no « .. »).</summary>

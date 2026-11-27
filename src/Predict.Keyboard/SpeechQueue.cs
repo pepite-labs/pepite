@@ -26,9 +26,12 @@ internal readonly record struct SpeechProgress(int CharPos, int CharLen, double 
 /// with that text is dropped.</param>
 /// <param name="Private">personal data (a pupil's first name in « Qui es-tu ? », plan 09): the log line gives the
 /// length, never the text.</param>
+/// <param name="After">2026-11-25 (listen before inserting): appended after the utterance being spoken and the pending
+/// items, even for a kind that interrupts — the inserted group (« les amis ») of a word just heard waits for that word to
+/// end instead of cutting it.</param>
 internal sealed record SpeechItem(string Text, SpeechKind Kind, SpeechSettings? Settings = null,
                                   Action<SpeechProgress>? Progress = null, Action<SpeechOutcome>? Done = null, string? Covers = null,
-                                  bool Private = false);
+                                  bool Private = false, bool After = false);
 
 /// <param name="Id">the setting value (<see cref="VoiceId"/>): <c>sapi:&lt;name&gt;</c>, <c>piper:siwis</c>.</param>
 /// <param name="Engine"><see cref="VoiceId.Sapi"/> or <see cref="VoiceId.Piper"/>.</param>
@@ -58,6 +61,7 @@ internal interface ISynth : IDisposable
 /// A grouped word (<see cref="SpeechItem.Covers"/>, « les amis ») drops a still pending « les »: it says it again. A
 /// pending group that ends with the covered word (« ils en », then « en ont ») is merged instead: « ils en ont ».</item>
 /// <item>Sentence, Reread — drop the pending words, then appended.</item>
+/// <item>Any kind with <see cref="SpeechItem.After"/> — appended, nothing interrupted nor dropped.</item>
 /// </list>
 /// </summary>
 internal sealed class SpeechQueue
@@ -72,6 +76,7 @@ internal sealed class SpeechQueue
     /// <returns>true when the utterance being spoken must be cancelled first.</returns>
     public bool Enqueue(SpeechItem item)
     {
+        if (item.After) { _pending.Add(item); return false; }   // never interrupts (listen before inserting)
         switch (item.Kind)
         {
             case SpeechKind.Word:

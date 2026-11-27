@@ -74,6 +74,11 @@
     <None Include="..\Data.Build\out\spelling\SOURCE.txt" Link="spelling\SOURCE.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Data.Build\out\spelling\MPL-2.0.txt" Link="spelling\MPL-2.0.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- 0.11.0 (plan offensive-words): the « mots exclus » (CC BY-SA 4.0, Data.Build/exclusions/build_exclusions.py ship),
+       fr.txt (base64, not a secret) with its SOURCE.txt; release_lint.py fails a publish without them -->
+  <ItemGroup Condition="Exists('..\Data.Build\out\exclusions\fr.txt') And Exists('..\Data.Build\out\exclusions\SOURCE.txt')">
+    <None Include="..\Data.Build\out\exclusions\**" Link="exclusions\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
   <!-- plan 08a: espeak-ng (GPL-3.0-or-later, Data.Build/build_espeak.ps1) with its licence and build record -->
   <ItemGroup Condition="Exists('..\Data.Build\out\espeak\libespeak-ng.dll')">
     <None Include="..\Data.Build\out\espeak\libespeak-ng.dll" Link="libespeak-ng.dll" CopyToOutputDirectory="PreserveNewest" />

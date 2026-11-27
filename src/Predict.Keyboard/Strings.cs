@@ -41,7 +41,12 @@ internal static class Strings
                                        "Liste de référence de l'indicateur d'orthographe : Grammalecte, « Lexique simplifié » v7.7 " +
                                        "(grammalecte.net), licence MPL 2.0. " +
                                        // plan 11 (10D-1): the agreement of the proposed words reads the morphology of grammar.sqlite
-                                       "Accords des mots proposés : Grammalecte — lexique (MPL-2.0).";
+                                       "Accords des mots proposés : Grammalecte — lexique (MPL-2.0). " +
+                                       // plan offensive-words (0.6): the « mots exclus » list (exclusions\fr.txt)
+                                       "Mots exclus : choisis d'après les étiquettes d'usage du Wiktionnaire (contributeurs, " +
+                                       "fr.wiktionary.org, extraction kaikki.org, licence CC BY-SA 4.0) et LDNOOBW (Shutterstock et " +
+                                       "contributeurs, CC BY 4.0), " +
+                                       "puis relus.";
     /// <summary>The corpora the word and context frequencies of prediction.sqlite are counted from (plan corpus-light,
     /// Phase 2: written sources only, no film subtitles; the full list with versions and SHA-256 is prediction-SOURCES.txt,
     /// written from Data.Build/data.lock.json). Leipzig states no CC BY version: credited as « CC BY » with its download
@@ -87,6 +92,60 @@ internal static class Strings
     public const string TipPhonetic = "Même son (orthographe phonétique)";
     public const string TipEdit = "Lettres inversées / faute de frappe";
     public const string TipActions = " — clic : insérer, clic droit : écouter";
+    // 2026-11-25 owner: listen before inserting (« Clic sur un mot », « Touches F1–F8 », A Maj + F1…F8, D the speaker band)
+    public const string TipActionsListenFirst = " — 1er clic : écouter, 2e clic : insérer, clic droit : écouter";
+    public const string TipActionsListenDouble = " — clic : écouter, double-clic ou clic droit : insérer";
+    /// <summary>The click part of a tile's tooltip. With the speaker band (D) a click on the word inserts at once whatever
+    /// the click mode (owner answer 4).</summary>
+    public static string TipActionsFor(ClickMode mode, bool band) => (band ? ClickMode.Insert : mode) switch
+    {
+        ClickMode.ListenFirst => TipActionsListenFirst,
+        ClickMode.ListenDouble => TipActionsListenDouble,
+        _ => TipActions,
+    };
+    /// <summary>The Invoke part of a tile's UI Automation help text (owner 2026-11-25: an Invoke follows « Touches F1–F8 »,
+    /// even with the F-keys off). Provisional wording, the owner may change it.</summary>
+    public const string TileHelpInvokeListenFirst = "activer : écouter, puis encore une fois : insérer";
+    public const string TileHelpInvokeInsert = "activer : insérer";
+    /// <summary>The tile's UI Automation help text: the F-key part (<paramref name="fkey"/> = 3 for F3; null when the F-keys
+    /// are off), then the click part (<see cref="TipActionsFor"/>), then the Invoke part (<see cref="TileHelpInvokeListenFirst"/>
+    /// / <see cref="TileHelpInvokeInsert"/>, following <paramref name="keysListenFirst"/>).</summary>
+    public static string TileHelp(int? fkey, bool keysListenFirst, ClickMode mode, bool band)
+    {
+        string click = (band ? ClickMode.Insert : mode) switch
+        {
+            ClickMode.ListenFirst => "clic : écouter, puis encore une fois : insérer ; clic droit : écouter",
+            ClickMode.ListenDouble => "clic : écouter ; double-clic ou clic droit : insérer",
+            _ => "clic : insérer ; clic droit : écouter",
+        };
+        string invoke = " ; " + (keysListenFirst ? TileHelpInvokeListenFirst : TileHelpInvokeInsert);
+        if (fkey is not int n) return char.ToUpperInvariant(click[0]) + click.Substring(1) + invoke;
+        return (keysListenFirst ? $"F{n} : écouter, puis encore une fois : insérer" : $"F{n} : insérer") + " ; " + click + invoke;
+    }
+    /// <summary>UI Automation name of option D's speaker band (« Écouter maison »).</summary>
+    public const string ListenButtonName = "Écouter {0}";
+    public const string ListenButtonTip = "Écouter ce mot (sans l'insérer)";
+    /// <summary>UI Automation item status of the tile whose word was heard and waits for its second press.</summary>
+    public const string ListenArmedStatus = "Écouté — encore une fois pour insérer";
+    // Réglages (owner addendum 2026-11-25): « Clic sur un mot » (3 values) and « Touches F1–F8 » (2 values); no access key
+    // for the lists and D (every letter of their labels is taken on this tab), « j » for A. Mode 3 is described as the usual
+    // convention of other word-prediction tools — never by a product's name.
+    public const string ClickModeLabel = "Clic sur un mot :";
+    public const string ClickInsert = "Insérer tout de suite (clic droit : écouter)";
+    public const string ClickListenFirst = "1er clic : écouter, 2e clic : insérer";
+    public const string ClickListenDouble = "Clic : écouter ; double-clic ou clic droit : insérer";
+    public const string ClickModeHint =
+        "« Clic : écouter ; double-clic : insérer » est la convention habituelle d'autres outils de prédiction de mots " +
+        "(un clic écoute, un double-clic insère). Un toucher compte comme un clic.";
+    public const string ClickBandNote = "Avec le haut-parleur sous chaque mot, un clic sur le mot l'insère tout de suite.";
+    public const string KeysModeLabel = "Touches F1–F8 :";
+    public const string KeysInsert = "Insérer tout de suite";
+    public const string KeysListenFirst = "1er appui : écouter, 2e : insérer";
+    public const string KeysModeHint = "1er appui sur F1…F8 : le mot est lu. 2e appui sur la même touche : il est inséré.";
+    public const string ListenShiftLabel = "Ma_j + F1…F8 : écouter le mot";
+    public const string ListenShiftHint = "Quand la barre est affichée, Maj+F3, Maj+F5, Maj+F7… ne vont plus à l'application (par exemple Word).";
+    public const string ListenButtonLabel = "Bouton haut-parleur sous chaque mot";
+    public const string ListenButtonHint = "Un clic sur le haut-parleur, sous le mot, le lit. Un clic sur le mot lui-même l'insère alors tout de suite.";
 
     // bar grip (free position)
     public const string GripName = "Poignée de la barre";
@@ -216,12 +275,16 @@ internal static class Strings
     // reading of the selected text (plan 07, D21/D24)
     public const string SecReading = "Lecture";
     public const string ReadingEnabled = "Lire le te_xte sélectionné (barre de lecture)";
-    public const string ReadingClipboard = "Copier la sélection par Ctrl+C si l'application ne la donne pas (presse-papiers rétabli)";
+    public const string ReadingClipboard = "Copier la sélection par Ctrl+C si l'application ne la donne pas (presse-papiers rétabli) :";
     public const string ReadingPictures = "Images dans la barre de lecture";
+    /// <summary>0.11.0 (owner 2026-11-27): the three positions of « Copier la sélection par Ctrl+C… » (never in Calc).</summary>
+    public const string ReadingClipboardWriter = "Dans LibreOffice Writer seulement";
+    public const string ReadingClipboardEverywhere = "Partout";
+    public const string ReadingClipboardNever = "Jamais";
     public const string ReadingClipboardHint =
         "Envoie Ctrl+C à l'application, lit le texte copié, puis remet le presse-papiers comme avant (sans l'ajouter à " +
         "l'historique). La copie faite par l'application elle-même peut apparaître dans l'historique du presse-papiers " +
-        "(Windows+V) : cela ne peut pas être évité. Jamais dans un champ de mot de passe ni dans une console.";
+        "(Windows+V) : cela ne peut pas être évité. Jamais dans un champ de mot de passe, dans une console ni dans LibreOffice Calc.";
     public const string Save = "_Enregistrer";
     public const string Cancel = "Annuler";
     /// <summary>Words of the settings preview and of the bar warm-up (one with an accent: glyph cache).</summary>
@@ -555,6 +618,15 @@ internal static class Strings
     public const string WordHide = "Ne pas me le proposer";
     public const string WordUnhide = "Me le proposer de nouveau";
     public const string WordHiddenMark = "{0} (caché)";
+    // 0.11.0 (plan offensive-words B3, D35): « Classe » only, behind the PIN
+    public const string ExclusHeading = "Mots à ne jamais proposer";
+    public const string ExclusHelp = "Ces mots ne sont jamais proposés, à aucun élève de ce poste (en plus de la liste intégrée). Un élève qui en tape un l'écrit normalement.";
+    public const string ExclusAddTitle = "Mot à ne jamais proposer — Pépite";
+    public const string ExclusRemove = "Retirer";
+    public const string ExclusAdded = "Ce mot ne sera plus proposé.";
+    public const string ExclusRemoved = "Ce mot peut de nouveau être proposé.";
+    public const string ExclusMachineMark = "{0} — " + LockedNote;
+    public const string WordBannedMark = "{0} (jamais proposé)";
     public const string FautesHeading = "Mes fautes";
     public const string FautesHelp = "« J'écris … » → « Je veux écrire … » : le bon mot est proposé en premier.";
     public const string FauteRow = "{0} → {1}";
@@ -571,7 +643,7 @@ internal static class Strings
     public const string EraseAllWords = "Effacer tous mes mots…";
     public const string EraseClassWords = "Effacer tous les mots de la classe…";
     public const string EraseAllConfirm = "Effacer tous les mots de ce profil (ses listes, « Mes fautes », les mots cachés) ? Les mots de la classe ne changent pas. Une sauvegarde des profils est faite avant.";
-    public const string EraseClassConfirm = "Effacer tous les mots de « Classe » (ses listes et « Mes fautes ») ? Une sauvegarde des profils est faite avant.";
+    public const string EraseClassConfirm = "Effacer tous les mots de « Classe » (ses listes et « Mes fautes ») ? Les mots à ne jamais proposer sont gardés. Une sauvegarde des profils est faite avant.";
     public const string EraseDone = "Les mots ont été effacés (une sauvegarde a été faite avant).";
     public const string EraseFailed = "Les mots n'ont pas été effacés : la sauvegarde n'a pas pu être faite.";
     public const string WordAdded = "Mot ajouté.";
@@ -617,6 +689,8 @@ internal static class Strings
         WordProblem.TooManyLists => "Un profil a au plus 50 listes.",
         WordProblem.TooManyFautes => "Au plus 500 « Mes fautes ».",
         WordProblem.SamePair => "Les deux mots sont identiques.",
+        WordProblem.TooManyExclus => "Au plus 500 mots à ne jamais proposer.",
+        WordProblem.ClassOnly => "Seuls les réglages de « Classe » ont des mots à ne jamais proposer.",
         _ => "Écrivez un mot.",
     };
 

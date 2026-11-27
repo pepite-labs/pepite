@@ -127,10 +127,21 @@ VIE PRIVÉE
 UTILISER
 --------------------------------------------------------------------
   - Écrivez dans n'importe quelle application : une barre de mots
-    apparaît. F1 à F8 ou un clic pour choisir un mot ; clic droit
-    pour l'entendre ; Échap cache la barre. Le rond à gauche des mots
-    est l'indicateur d'orthographe (F9 ou clic pour ≈ et ?).
+    apparaît. Un clic sur un mot le lit ; un double-clic ou un clic
+    droit l'insère (la convention habituelle d'autres outils de
+    prédiction de mots). F1 à F8 : un premier appui lit le mot (un
+    cadre blanc l'entoure), un deuxième l'insère. Les deux se
+    règlent séparément dans les Réglages (« Clic sur un mot »,
+    « Touches F1–F8 »), par exemple pour insérer tout de suite.
+    Échap cache la barre. Le rond à gauche des mots est
+    l'indicateur d'orthographe (F9 ou clic pour ≈ et ?).
   - Lire un texte : sélectionnez-le, puis « Lire » ou Espace / F9.
+  - LibreOffice Writer : la lecture d'une sélection passe par une
+    copie (Ctrl+C), faite d'office, puis le presse-papiers est remis
+    comme avant (jamais dans LibreOffice Calc : la feuille n'est
+    jamais modifiée). La barre s'affiche près de la souris ; devant
+    « ! ? : ; », l'espace est celle de LibreOffice ; un mot corrigé
+    avec ≈ est ajouté sans remplacer l'ancien.
   - Dans un champ de mot de passe, rien n'est proposé ni lu.
   - Aide : menu de l'icône -> « Aide », bouton « ? » ou touche F1 dans
     les Réglages. Des pages simples, pour les élèves (« tu ») et pour

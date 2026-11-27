@@ -29,7 +29,9 @@ extension) and the extra
   the package (or its family: ``SQLitePCLRaw`` for ``SQLitePCLRaw.core``);
 - **licence files** (plan 13, first CI installer run): a publish (``Pepite.deps.json`` present) must ship the non-empty
   licence texts of ``REQUIRED_LICENSES`` (.NET and Windows Desktop runtimes, System.Speech, the Apache-2.0 text): the
-  build used to skip a missing one silently.
+  build used to skip a missing one silently;
+- **the « mots exclus »** (plan offensive-words, 0.11.0): a publish must ship ``exclusions\\fr.txt`` (its first line the
+  format header) and ``exclusions\\SOURCE.txt``: without them the app would offer every word, and there is no switch.
 
 Exit code 0 = clean, 1 = problems (listed), 2 = bad arguments.
 """
@@ -65,6 +67,9 @@ REQUIRED_LICENSES = (
     r"licenses\system-speech\THIRD-PARTY-NOTICES.TXT",
     r"licenses\apache-2.0\LICENSE.txt",
 )
+# 0.11.0 (plan offensive-words): the list of words never offered, and its credits (Predict.Keyboard.csproj copies them)
+REQUIRED_EXCLUSIONS = (r"exclusions\fr.txt", r"exclusions\SOURCE.txt")
+EXCLUSIONS_HEADER = "#pepite-exclusions/1 base64-utf8"
 DRIVE_PATH = re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:\\[^\s\"'<>|*?]*")
 HTTP = re.compile(r"http://[^\s\"'<>)]+")
 # XML namespace names (the help's SVG drawings: xmlns="http://www.w3.org/2000/svg") are identifiers, never fetched
@@ -211,8 +216,27 @@ def check_licenses(stage):
     return problems
 
 
+def check_exclusions(stage):
+    """The « mots exclus » files of a publish (a stage with ``Pepite.deps.json``): present, not empty, the list's header."""
+    if not os.path.isfile(os.path.join(stage, "Pepite.deps.json")):
+        return []
+    problems = []
+    for rel in REQUIRED_EXCLUSIONS:
+        path = os.path.join(stage, *rel.split("\\"))
+        if not os.path.isfile(path):
+            problems.append(f"{rel} missing: a publish ships the « mots exclus » (src/Data.Build/exclusions, « ship »)")
+        elif os.path.getsize(path) == 0:
+            problems.append(f"{rel} is empty")
+        elif rel.endswith("fr.txt"):
+            with open(path, "rb") as f:
+                first = f.readline().rstrip(b"\r\n")
+            if first != EXCLUSIONS_HEADER.encode("ascii"):
+                problems.append(f"{rel} is not a Pépite exclusions file (header)")
+    return problems
+
+
 def lint(stage, forbidden, public=False, texts=()):
-    problems = check_versions(stage) + check_licenses(stage)
+    problems = check_versions(stage) + check_licenses(stage) + check_exclusions(stage)
     for root, _, files in os.walk(stage):
         for fn in files:
             path = os.path.join(root, fn)

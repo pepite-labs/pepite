@@ -68,6 +68,26 @@ public sealed class PredictionEngine : IDisposable
     public double WLm = 1.0;        // scale of the log language-model probability
     public double WPrefix = 1.0;    // literal-prefix bonus (gated by frequency)
     public double WEdit = 1.0;      // penalty for edit-distance candidates
+    private volatile int _tol = (int)SoundPairs.ChJ;
+    /// <summary>0.11.0 (plan dys-sound-tolerance): the voicing pairs the pupil confuses. The typed sound key is also looked up
+    /// with those symbols swapped (<see cref="PhoneticKey.Variants"/>), at a penalty of <see cref="WTolerant"/>: « le chard »
+    /// → jardin, a « same sound » (green) candidate ranked after the exact sound-alikes; <see cref="Check"/> gives « chardin »
+    /// ≈ jardin in a second tier. One int write: the app may change it from the UI thread. Default ch/j (owner 2026-11-26, the
+    /// Phase 1 gates met); None = the 0.10.2 results.</summary>
+    public SoundPairs Tolerance { get => (SoundPairs)_tol; set => _tol = (int)value; }
+    /// <summary>0.11.0: the penalty (log10 scale, like <see cref="WEdit"/>) of a candidate found only through a confused sound
+    /// (owner Q-A: a fixed penalty — a confusion counts as this many tens of times less likely, so it can still pass a rare
+    /// exact sound-alike when the words before make it far more likely). 1.5: the only value of 0.5 / 1.0 / 1.5 that leaves
+    /// every curated set unchanged (evaluation.md § Sound confusions).</summary>
+    public double WTolerant = 1.5;
+    /// <summary>0.11.0: the typed sound key needs this many symbols before the tolerant pass of <see cref="Predict"/> (« je »
+    /// / « chez »: 2 symbols get none).</summary>
+    public int TolerantFrom = 3;
+    /// <summary>0.11.0: the whole sound key of a finished word needs this many symbols for the tolerant tier of
+    /// <see cref="Check"/>.</summary>
+    public int TolerantCheckFrom = 2;
+    /// <summary>0.11.0: at most this many confused symbols swapped in one variant (<see cref="PhoneticKey.Variants"/>).</summary>
+    public int TolerantMaxSwaps = 2;
     public double Alpha = 0.2;      // stupid-backoff discount per level
     public bool UseFourgrams = true;// use the 4-gram level (if the table exists); off = trigram model
     /// <summary>D22: after an elided word (<c>l' d' qu'</c>…, bare in the context), the probability of a
@@ -136,6 +156,7 @@ public sealed class PredictionEngine : IDisposable
                              string? spellingPath, Func<List<BareCounts>> bareCounts)
     {
         _e = entries; _phon = phon; _con = con;
+        _noExcluded = new bool[entries.Length];
         _bare = new bool[entries.Length];
         for (int i = 0; i < entries.Length; i++) _bare[i] = Elision.IsBare(entries[i].Ortho);
         (_unlisted, SpellingProblem) = ReadUnlisted(con, spellingPath);
@@ -351,7 +372,36 @@ public sealed class PredictionEngine : IDisposable
     /// <param name="dbPath">prediction.sqlite.</param>
     /// <param name="spellingPath">the spelling reference; null = <see cref="SpellingFileName"/> next to
     /// <paramref name="dbPath"/> when it exists, else the tables of the database itself.</param>
-    public static PredictionEngine Load(string dbPath, string? spellingPath = null) => Load(dbPath, spellingPath, null);
+    /// <param name="exclusionsPath">0.11.0: the « mots exclus » file; null = <c>exclusions\fr.txt</c> next to
+    /// <paramref name="dbPath"/> when it exists, else none (<see cref="ExcludedWords.Empty"/>). Set before the engine is
+    /// returned, so no query ever runs without it; an unreadable file gives none and <see cref="ExclusionsProblem"/>.</param>
+    public static PredictionEngine Load(string dbPath, string? spellingPath = null, string? exclusionsPath = null)
+    {
+        var eng = Load(dbPath, spellingPath, (Func<string, SqliteConnection>?)null);
+        eng.LoadExclusions(exclusionsPath ?? ExclusionsNextTo(dbPath));
+        return eng;
+    }
+
+    /// <summary>0.11.0: <c>exclusions\fr.txt</c> next to a database, or null when there is none.</summary>
+    public static string? ExclusionsNextTo(string dbPath)
+    {
+        var dir = Path.GetDirectoryName(Path.GetFullPath(dbPath));
+        var p = dir is null ? null : Path.Combine(dir, ExcludedWords.FolderName, ExcludedWords.FileName);
+        return p is not null && File.Exists(p) ? p : null;
+    }
+
+    private void LoadExclusions(string? path)
+    {
+        if (path is null) return;
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try { _excluded = ExcludedWords.FromFile(path, this); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            _excluded = ExcludedWords.Empty;
+            ExclusionsProblem = $"{Path.GetFileName(path)} unreadable ({ex.GetType().Name}); no word is excluded";
+        }
+        ExclusionsLoadMs = sw.Elapsed.TotalMilliseconds;
+    }
 
     /// <param name="openSecond">tests: opens the second connection of the elided forms' counts (null = read-only, no pool).</param>
     internal static PredictionEngine Load(string dbPath, string? spellingPath, Func<string, SqliteConnection>? openSecond)
@@ -443,6 +493,62 @@ public sealed class PredictionEngine : IDisposable
 
     /// <summary>Why the spelling reference file could not be read (null when it was, or when there is none).</summary>
     public string? SpellingProblem { get; }
+
+    // ---- 0.11.0 (plan offensive-words): the « mots exclus »
+    private volatile ExcludedWords _excluded = ExcludedWords.Empty;
+    private readonly bool[] _noExcluded;
+    private long _excludedLate;
+
+    /// <summary>0.11.0: the words never offered (bar, next word, ≈ list); a typed one stays ✓ Known. Every lexicon pass skips
+    /// an excluded entry before scoring it, every string source (personal words, « Mes fautes » targets, names, the n-gram
+    /// successors) checks <see cref="ExcludedWords.IsExcluded"/>, and a safety net on each public output drops what got
+    /// through (<see cref="ExcludedLate"/>). One snapshot per query; the app swaps a new one in one reference write (the
+    /// grammar's forms once it is loaded; Phase B the teacher's words). <see cref="ExcludedWords.Empty"/> = the 0.10.2
+    /// results.</summary>
+    public ExcludedWords Excluded { get => _excluded; set => _excluded = value ?? ExcludedWords.Empty; }
+
+    /// <summary>0.11.0: the one place that changes the snapshot when several parts change from different threads (the
+    /// grammar forms from the grammar worker, Phase B the teacher's words from the UI): <paramref name="change"/> gets the
+    /// current snapshot and returns the new one (<see cref="ExcludedWords.WithGrammarForms"/>, <see cref="ExcludedWords.WithExtra"/>
+    /// keep the other parts); retried until no other swap happened in between, so a later rebuild never loses a part. Keep
+    /// <paramref name="change"/> cheap: it may run more than once.</summary>
+    public ExcludedWords UpdateExcluded(Func<ExcludedWords, ExcludedWords> change)
+    {
+        while (true)
+        {
+            var cur = _excluded;
+            var next = change(cur) ?? ExcludedWords.Empty;
+            if (ReferenceEquals(Interlocked.CompareExchange(ref _excluded, next, cur), cur)) return next;
+        }
+    }
+    /// <summary>0.11.0: why the exclusions file could not be read (null when it was, or when there is none).</summary>
+    public string? ExclusionsProblem { get; private set; }
+    /// <summary>0.11.0: the time <see cref="Load(string, string?, string?)"/> took to read the exclusions file (ms; the load log).</summary>
+    public double ExclusionsLoadMs { get; private set; }
+    /// <summary>0.11.0: the excluded words the safety net dropped from a final output — a source that forgot to filter. The
+    /// tests and the probe assert it stays 0.</summary>
+    public long ExcludedLate => Interlocked.Read(ref _excludedLate);
+
+    /// <summary>The snapshot's entry flags, or all false when it was built for another engine (the string checks still
+    /// apply).</summary>
+    private bool[] Xe(ExcludedWords x) => x.Entry.Length == _e.Length ? x.Entry : _noExcluded;
+
+    /// <summary>0.11.0: the safety net of <see cref="Predict"/> and <see cref="PredictNext"/>.</summary>
+    private IReadOnlyList<Suggestion> Net(IReadOnlyList<Suggestion> res, ExcludedWords x)
+    {
+        if (x.IsEmpty) return res;
+        int bad = 0;
+        foreach (var s in res) if (Blocked(x, s.Word)) bad++;
+        if (bad == 0) return res;
+        Interlocked.Add(ref _excludedLate, bad);
+        var o = new Suggestion[res.Count - bad];
+        int j = 0;
+        foreach (var s in res) if (!Blocked(x, s.Word)) o[j++] = s;
+        return o;
+    }
+
+    /// <summary>0.11.0: an excluded word, unless it is a pack name the owner exempted (written with its capital).</summary>
+    private bool Blocked(ExcludedWords x, string w) => x.IsExcluded(w) && !(x.NameExempt(w) && _names.ContainsForm(w));
 
     public int Count => _e.Length;
     /// <summary>0.8.3: lexicon forms left out of the spelling reference (0 without the table).</summary>
@@ -605,6 +711,8 @@ public sealed class PredictionEngine : IDisposable
         if (w.Length == 0) return SpellingCheck.Unknown;
         var u = _user;                                  // one snapshot for the whole check
         var nm = _names;
+        var x = _excluded;                              // 0.11.0: a listed word typed is Known (✓), never offered
+        var xe = Xe(x);
         if (KnowsSpelled(w) || u.Contains(w)) return SpellingCheck.Known;
         // owner 2026-11-15: a very rare recognised-tier pack name (« Pome », « Kan ») is checked by its sound too, so that at a
         // sentence start it may be ≈ (the indicator decides: WeakName); any other pack form is Known
@@ -613,19 +721,22 @@ public sealed class PredictionEngine : IDisposable
         // no LINQ / closure in this path (it runs on the UI thread for each finished word): plain loops, one cached comparer
         List<string>? found = null;
         List<int>? hits = null;
+        int tolerant = 0;
 
         var strip = PhoneticKey.StripLower(w);
         int fx = u.FixKeys.Length > 0 ? LowerBound(u.FixKeys, strip) : 0;
-        if (fx < u.FixKeys.Length && u.FixKeys[fx] == strip) AddFound(ref found, u.FixTargets[fx], max);   // « Mes fautes »
+        if (fx < u.FixKeys.Length && u.FixKeys[fx] == strip) AddFound(ref found, u.FixTargets[fx], max, x);   // « Mes fautes »
         if (_strip.TryGetValue(strip, out var si))
         {
             hits = new List<int>(si.Count);
-            foreach (var i in si) if (Offerable(i, w)) hits.Add(i);
+            foreach (var i in si) if (Offerable(i, w, xe)) hits.Add(i);
             AddRanked(ref found, hits, max);
         }
-        if (u.Strip.TryGetValue(strip, out var us)) foreach (var i in us) AddFound(ref found, u.Entries[i].Form, max);
+        if (u.Strip.TryGetValue(strip, out var us)) foreach (var i in us) AddFound(ref found, u.Entries[i].Form, max, x);
         // plan 10C: the same letters as a pack name, but another case or accents (« emma » → Emma, « ines » → Inès)
-        if (!nm.IsEmpty) foreach (var f in nm.SameLetters(w)) if (f != w) AddFound(ref found, f, max);
+        if (!nm.IsEmpty)
+            foreach (var f in nm.SameLetters(w))
+                if (f != w) AddFound(ref found, f, max, x.NameExempt(f) ? ExcludedWords.Empty : x);   // owner 2026-11-27
         var fold = PhoneticKey.Fold(w);
         if (fold.Length >= 2)
         {
@@ -636,22 +747,52 @@ public sealed class PredictionEngine : IDisposable
                 for (int p = p0; p < _fKeys.Length && _fKeys[p] == fold; p++)
                 {
                     int i = _fIdx[p];
-                    if (Offerable(i, w) && !hits.Contains(i)) hits.Add(i);   // a word may have both keys equal
+                    if (Offerable(i, w, xe) && !hits.Contains(i)) hits.Add(i);   // a word may have both keys equal
                 }
                 AddRanked(ref found, hits, max);
             }
-            for (int p = LowerBound(u.FoldKeys, fold); p < u.FoldKeys.Length && u.FoldKeys[p] == fold; p++) AddFound(ref found, u.Entries[u.FoldIdx[p]].Form, max);
+            for (int p = LowerBound(u.FoldKeys, fold); p < u.FoldKeys.Length && u.FoldKeys[p] == fold; p++) AddFound(ref found, u.Entries[u.FoldIdx[p]].Form, max, x);
             // 0.10.2 (glued words): « lécole » → l'école, « jai » → j'ai (a pack name is judged by its sound only)
-            if (Splits && !packOnly) CheckSplits(ref found, w, fold, max, fx < u.FixKeys.Length && u.FixKeys[fx] == strip);
+            if (Splits && !packOnly) CheckSplits(ref found, w, fold, max, fx < u.FixKeys.Length && u.FixKeys[fx] == strip, xe);
+            // 0.11.0 (plan dys-sound-tolerance, owner Q5): the whole key with the pupil's confused sounds swapped (« chardin »
+            // ≈ jardin), in a second tier: it only fills what the exact candidates left of max, at the end of the list
+            var tol = Tolerance;
+            if (!packOnly && tol != SoundPairs.None && fold.Length >= TolerantCheckFrom && (found?.Count ?? 0) < max)
+            {
+                int before = found?.Count ?? 0;
+                var vs = PhoneticKey.Variants(fold, tol, TolerantMaxSwaps);
+                if (hits is null) hits = new List<int>(); else hits.Clear();
+                for (int k = 0; k < vs.Count; k++)
+                {
+                    var v = vs[k];
+                    for (int p = LowerBound(_fKeys, v); p < _fKeys.Length && _fKeys[p] == v; p++)
+                    {
+                        int i = _fIdx[p];
+                        if (Offerable(i, w, xe) && !hits.Contains(i)) hits.Add(i);
+                    }
+                }
+                AddRanked(ref found, hits, max);
+                tolerant = (found?.Count ?? 0) - before;
+            }
         }
+        // 0.11.0: the safety net (every source above filters; a word removed here counts in ExcludedLate)
+        if (found is { Count: > 0 } && !x.IsEmpty)
+            for (int q = found.Count - 1; q >= 0; q--)
+                if (Blocked(x, found[q]))
+                {
+                    Interlocked.Increment(ref _excludedLate);
+                    if (q >= found.Count - tolerant) tolerant--;
+                    found.RemoveAt(q);
+                }
         if (packOnly) return found is { Count: > 0 } ? new SpellingCheck(SpellingStatus.SoundsLike, found, WeakName: true) : SpellingCheck.Known;
-        return found is { Count: > 0 } ? new SpellingCheck(SpellingStatus.SoundsLike, found) : SpellingCheck.Unknown;
+        return found is { Count: > 0 } ? new SpellingCheck(SpellingStatus.SoundsLike, found, Tolerant: tolerant) : SpellingCheck.Unknown;
     }
 
-    /// <summary>A lexicon entry the ≈ list may offer for <paramref name="typed"/>: no noise, a form of the spelling reference
-    /// (0.8.3: never « yeah »), and not the typed word itself (an unlisted word is never its own correction).</summary>
-    private bool Offerable(int i, string typed) =>
-        !Elision.IsNoise(_e[i].Ortho) && !(_unlisted.Count > 0 && _unlisted.Contains(_e[i].OrthoLower)) &&
+    /// <summary>A lexicon entry the ≈ list may offer for <paramref name="typed"/>: not excluded (0.11.0), no noise, a form of
+    /// the spelling reference (0.8.3: never « yeah »), and not the typed word itself (an unlisted word is never its own
+    /// correction).</summary>
+    private bool Offerable(int i, string typed, bool[] xe) =>
+        !xe[i] && !Elision.IsNoise(_e[i].Ortho) && !(_unlisted.Count > 0 && _unlisted.Contains(_e[i].OrthoLower)) &&
         !string.Equals(_e[i].OrthoLower, typed, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
@@ -663,10 +804,15 @@ public sealed class PredictionEngine : IDisposable
     /// — a personal word, a name, and the pupil's own « Mes fautes » target for <paramref name="typed"/> — keep their places,
     /// the ranked ones fill the others, best first (stable). No context: the list as it is (<see cref="Check"/>'s order by
     /// estimated frequency). For all ≈ lists, splits on or off.
+    /// 0.11.0 (plan dys-sound-tolerance, owner Q5): the last <paramref name="tolerant"/> candidates (<see cref="SpellingCheck.Tolerant"/>,
+    /// the confused sounds) are ranked among themselves only, after the others: a confusion never jumps ahead of an exact
+    /// sound-alike. 0 = one tier (0.10.2).
     /// </summary>
-    public IReadOnlyList<string> RankCorrections(IReadOnlyList<string> candidates, IReadOnlyList<string>? context, string? typed = null)
+    public IReadOnlyList<string> RankCorrections(IReadOnlyList<string> candidates, IReadOnlyList<string>? context, string? typed = null,
+                                                 int tolerant = 0)
     {
         if (candidates is null || candidates.Count < 2) return candidates ?? Array.Empty<string>();
+        int tier2 = candidates.Count - Math.Clamp(tolerant, 0, candidates.Count);   // first index of the tolerant tier
         var (c1, c2, c3) = PrevWords(context);
         if (c1 is null) return candidates;
         var ctx = ContextMaps(c1, c2, c3);
@@ -705,7 +851,9 @@ public sealed class PredictionEngine : IDisposable
             if (sc is { } s) { slots.Add(k); ranked.Add((s, k)); }
         }
         if (ranked.Count < 2) return candidates;
-        ranked.Sort((a, b) => a.Score != b.Score ? b.Score.CompareTo(a.Score) : a.Order.CompareTo(b.Order));
+        // the slots are in list order, so the exact tier's slots come first: sorting by tier first keeps each tier in its own
+        ranked.Sort((a, b) => (a.Order >= tier2) != (b.Order >= tier2) ? (a.Order >= tier2 ? 1 : -1)
+                              : a.Score != b.Score ? b.Score.CompareTo(a.Score) : a.Order.CompareTo(b.Order));
         var o = new string[candidates.Count];
         for (int k = 0; k < candidates.Count; k++) o[k] = candidates[k];
         for (int j = 0; j < slots.Count; j++) o[slots[j]] = candidates[ranked[j].Order];
@@ -723,7 +871,7 @@ public sealed class PredictionEngine : IDisposable
     /// best <see cref="CheckSplitMax"/> are merged into the list by that frequency, after a « Mes fautes » target, and the list
     /// is cut at <paramref name="max"/>. No SQL, no LINQ: a few binary searches and dictionary lookups.
     /// </summary>
-    private void CheckSplits(ref List<string>? found, string w, string fold, int max, bool fixFirst)
+    private void CheckSplits(ref List<string>? found, string w, string fold, int max, bool fixFirst, bool[] xe)
     {
         if (fold.Length < 2 || CheckSplitMax <= 0 || _bareNext.Length == 0) return;
         foreach (var ch in w) if (ch is '\'' or '’' or '-') return;
@@ -747,7 +895,7 @@ public sealed class PredictionEngine : IDisposable
                 var key = _fKeys[p];
                 if (key.Length != restLen || string.CompareOrdinal(key, 0, fold, at, restLen) != 0) break;
                 int i = _fIdx[p];
-                if (!_e[i].Elides || !Injectable(i) || !map.TryGetValue(_e[i].OrthoLower, out var c) || !SplitPair(b, i, c)) continue;
+                if (!_e[i].Elides || !Injectable(i, xe) || !map.TryGetValue(_e[i].OrthoLower, out var c) || !SplitPair(b, i, c)) continue;
                 double f = Math.Log10(perMillion * c / next.Total + 1);
                 bool dup = false;
                 for (int j = 0; j < n; j++) if (kb[j] == b && ki[j] == i) { dup = true; break; }
@@ -803,13 +951,14 @@ public sealed class PredictionEngine : IDisposable
     {
         if (idx.Count == 0) return;
         idx.Sort(_byFreq ??= (a, b) => _e[a].Freq != _e[b].Freq ? _e[b].Freq.CompareTo(_e[a].Freq) : string.CompareOrdinal(_e[a].Ortho, _e[b].Ortho));
-        foreach (var i in idx) AddFound(ref found, _e[i].Ortho, max);
+        foreach (var i in idx) AddFound(ref found, _e[i].Ortho, max, ExcludedWords.Empty);   // entries: Offerable checked them
     }
 
-    private static void AddFound(ref List<string>? found, string c, int max)
+    /// <param name="x">0.11.0: a string source (« Mes fautes » target, personal word, pack name) is checked here.</param>
+    private static void AddFound(ref List<string>? found, string c, int max, ExcludedWords x)
     {
         found ??= new List<string>(max);
-        if (found.Count >= max) return;
+        if (found.Count >= max || x.IsExcluded(c)) return;
         foreach (var f in found) if (string.Equals(f, c, StringComparison.Ordinal)) return;
         found.Add(c);
     }
@@ -829,8 +978,16 @@ public sealed class PredictionEngine : IDisposable
     public IReadOnlyList<Suggestion> Predict(string typed, IReadOnlyList<string>? context = null, int k = 8, bool sentenceStart = false,
                                              bool? exactMark = null)
     {
+        var x = _excluded;   // 0.11.0: one snapshot for the query and its safety net
+        return Net(PredictCore(typed, context, k, sentenceStart, exactMark, x), x);
+    }
+
+    private IReadOnlyList<Suggestion> PredictCore(string typed, IReadOnlyList<string>? context, int k, bool sentenceStart,
+                                                  bool? exactMark, ExcludedWords x)
+    {
         typed = (typed ?? "").Trim();
         if (typed.Length == 0) return Array.Empty<Suggestion>();
+        var xe = Xe(x);   // 0.11.0: an excluded entry is skipped before it is scored
         var (c1, c2, c3) = PrevWords(context);
         var ctx = ContextMaps(c1, c2, c3);
         double eb = ElisionBonus(c1);
@@ -852,6 +1009,7 @@ public sealed class PredictionEngine : IDisposable
         foreach (var pos in PrefixRange(_aoKeys, typed.ToLowerInvariant()))
         {
             int i = _ao[pos];
+            if (xe[i]) continue;
             double gate = Math.Clamp(_e[i].Freq / 1.5, 0.0, 1.0);
             double sc = Lm(ctx, _e[i].OrthoLower, _uni[i], UB(_e[i].OrthoLower)) + WPrefix * gate + (_e[i].Elides ? eb : 0);
             // plan 11: only the word typed in full can lend its siblings among the literal prefixes (see Inject)
@@ -871,6 +1029,7 @@ public sealed class PredictionEngine : IDisposable
             foreach (var pos in PrefixRange(_fKeys, f))
             {
                 int i = _fIdx[pos];
+                if (xe[i]) continue;
                 // 0.8.3 (speed): a word already scored — as a literal prefix (prefix bonus ≥ 0) or by its other sound key — can
                 // only keep its score here, so its LM is not computed again (same results, fewer lookups)
                 if (WPrefix >= 0 && best.ContainsKey(_e[i].Ortho)) continue;
@@ -880,23 +1039,44 @@ public sealed class PredictionEngine : IDisposable
                 Consider(best, _e[i].Ortho, sc, MatchKind.Phonetic);
             }
 
+        // 0.11.0 (plan dys-sound-tolerance): the pupil's confused voicing pairs — the typed key with those symbols swapped,
+        // looked up as the sound pass does, at a fixed penalty (owner Q-A); green like the sound-alikes (owner Q4). A word
+        // already scored keeps its score (the penalty only lowers it), so the exact candidates are never touched.
+        var tol = Tolerance;
+        // the words this pass added, only when a tolerant score may be below an edit's (WTolerant > WEdit): the edit pass then
+        // compares with them instead of skipping them; every other word already scored is skipped there as before
+        HashSet<string>? tolWords = null;
+        if (tol != SoundPairs.None && f.Length >= TolerantFrom)
+            foreach (var v in PhoneticKey.Variants(f, tol, TolerantMaxSwaps))
+                foreach (var pos in PrefixRange(_fKeys, v))
+                {
+                    int i = _fIdx[pos];
+                    if (xe[i] || WTolerant >= 0 && best.ContainsKey(_e[i].Ortho)) continue;
+                    double sc = Lm(ctx, _e[i].OrthoLower, _uni[i], UB(_e[i].OrthoLower)) + (_e[i].Elides ? eb : 0) + soundCap - WTolerant;
+                    if (gt.On) { if (lazy) top!.Offer(i, sc + T(i)); else { sc += T(i); top!.Offer(i, sc); } }
+                    Consider(best, _e[i].Ortho, sc, MatchKind.Phonetic);
+                    if (WTolerant > WEdit) (tolWords ??= new HashSet<string>(StringComparer.Ordinal)).Add(_e[i].Ortho);
+                }
+
         List<string>? edits = typed.Length >= 4 ? Edits1(PhoneticKey.StripLower(typed)).ToList() : null;
         if (edits != null)
             foreach (var v in edits)
                 if (_strip.TryGetValue(v, out var idxs))
                     foreach (var i in idxs)
                     {
-                        if (best.ContainsKey(_e[i].Ortho) && WEdit >= 0) continue;   // an edit (− WEdit) never beats a score already there
+                        // an edit (− WEdit) never beats a score already there, but a tolerant one when WTolerant > WEdit
+                        if (xe[i]) continue;
+                        if (WEdit >= 0 && best.ContainsKey(_e[i].Ortho) && !(tolWords is not null && tolWords.Contains(_e[i].Ortho))) continue;
                         double sc = Lm(ctx, _e[i].OrthoLower, _uni[i], UB(_e[i].OrthoLower)) - WEdit + (_e[i].Elides ? eb : 0);
                         if (gt.On) { if (lazy) top!.Offer(i, sc + T(i)); else { sc += T(i); top!.Offer(i, sc); } }
                         Consider(best, _e[i].Ortho, sc, MatchKind.Edit);
                     }
 
-        if (Splits) SplitPass(best, typed, f, ctx, c1, c2, sentenceStart, exactMark);
-        if (user) UserPass(u, best, typed, f, edits, ctx, eb, share, sentenceStart, lazy ? default : gt);
+        if (Splits) SplitPass(best, typed, f, ctx, c1, c2, sentenceStart, exactMark, xe);
+        if (user) UserPass(u, best, typed, f, edits, ctx, eb, share, sentenceStart, lazy ? default : gt, x);
         var nm = _names;
-        if (!nm.IsEmpty) NamesPass(nm, best, typed, eb, sentenceStart, k);
-        if (gt.On) Inject(best, typed, gt, top!, lazy);
+        if (!nm.IsEmpty) NamesPass(nm, best, typed, eb, sentenceStart, k, x);
+        if (gt.On) Inject(best, typed, gt, top!, lazy, xe);
 
         bool capital = !sentenceStart && char.IsUpper(typed[0]);
         bool Name(string key) => key.Length > 0 && char.IsUpper(key[0]) && (user && (u.Contains(key) || u.IsFixTarget(key)) ||
@@ -907,7 +1087,7 @@ public sealed class PredictionEngine : IDisposable
         var mode = ExactTyped;
         bool exact = mode != ExactTypedMode.Off && exactMark != false
                      && (mode == ExactTypedMode.First || k >= ExactBar && ExactBar >= 2)
-                     && ExactEligible(typed, sentenceStart, exactMark == true);
+                     && ExactEligible(typed, sentenceStart, exactMark == true, x);
         int n = exact && mode == ExactTypedMode.First ? Math.Max(k, ExactBar) : k;
         bool capped = capital && typed.Length < NamesCapUntil;
         Suggestion[] res;
@@ -948,10 +1128,10 @@ public sealed class PredictionEngine : IDisposable
 
     /// <summary>0.10.2: may the rule apply to <paramref name="typed"/>? Two letters at least, not all capitals (an acronym),
     /// not a bare elision form (« qu »), and ✓ while typing: the caller's (<paramref name="ticked"/>), else
-    /// <see cref="KnowsForMark"/>.</summary>
-    private bool ExactEligible(string typed, bool sentenceStart, bool ticked)
+    /// <see cref="KnowsForMark"/>. 0.11.0: never an excluded word (it stays ✓, but gets no tile).</summary>
+    private bool ExactEligible(string typed, bool sentenceStart, bool ticked, ExcludedWords x)
     {
-        if (typed.Length < 2 || Elision.IsBare(typed)) return false;
+        if (typed.Length < 2 || Elision.IsBare(typed) || x.IsExcluded(typed) && !(x.NameExempt(typed) && _names.ContainsForm(typed))) return false;
         bool lower = false;
         foreach (var ch in typed) if (char.IsLower(ch)) { lower = true; break; }
         return lower && (ticked || KnowsForMark(typed, sentenceStart));
@@ -1133,7 +1313,7 @@ public sealed class PredictionEngine : IDisposable
     /// form). The best <see cref="SplitMax"/> go in as one « sounds like » tile each.
     /// </summary>
     private void SplitPass(Dictionary<string, (double, MatchKind)> best, string typed, string fold, Ctx ctx, string? c1, string? c2,
-                           bool sentenceStart, bool? exactMark)
+                           bool sentenceStart, bool? exactMark, bool[] xe)
     {
         if (typed.Length < SplitFrom || fold.Length < 2 || SplitMax <= 0 || _bareNext.Length == 0) return;
         foreach (var ch in typed) if (ch is '\'' or '’' or '-') return;
@@ -1160,7 +1340,7 @@ public sealed class PredictionEngine : IDisposable
                 var key = _fKeys[p];
                 if (exact ? key.Length != 1 || key[0] != rest[0] : !key.StartsWith(rest, StringComparison.Ordinal)) break;
                 int i = _fIdx[p];
-                if (!_e[i].Elides || !map.TryGetValue(_e[i].OrthoLower, out var pc) || !SplitPair(b, i, pc) || !Injectable(i)) continue;
+                if (!_e[i].Elides || !map.TryGetValue(_e[i].OrthoLower, out var pc) || !SplitPair(b, i, pc) || !Injectable(i, xe)) continue;
                 if (!ready)
                 {
                     // the bare form in the context, and the context with the bare form at its end (the trigram / 4-gram
@@ -1253,7 +1433,7 @@ public sealed class PredictionEngine : IDisposable
     /// within one query, the best k + 4 names of the prefix range are chosen by frequency and only they are scored.
     /// </summary>
     private void NamesPass(NamesLexicon n, Dictionary<string, (double, MatchKind)> best, string typed, double eb,
-                           bool sentenceStart, int k)
+                           bool sentenceStart, int k, ExcludedWords x)
     {
         bool capital = !sentenceStart && char.IsUpper(typed[0]);
         if (!capital && typed.Length < NamesFrom) return;
@@ -1294,6 +1474,8 @@ public sealed class PredictionEngine : IDisposable
 
         void Merge(string form, string lower, double sc)
         {
+            // 0.11.0: a pack name with a listed spelling is not offered, but the owner's exempted ones (2026-11-27)
+            if (x.IsExcluded(form) && !x.NameExempt(form)) return;
             if (lower != form && TryUni(lower, out var u) && u * _z - 1 <= NameMergeBelow
                 && best.TryGetValue(lower, out var low))
             {
@@ -1312,8 +1494,10 @@ public sealed class PredictionEngine : IDisposable
     /// target with <see cref="WSpelling"/> on top, kind Phonetic (the bar's « sounds like » colour).
     /// </summary>
     private void UserPass(UserLexicon u, Dictionary<string, (double, MatchKind)> best, string typed, string fold, List<string>? edits,
-                          Ctx ctx, double eb, double share, bool sentenceStart, GTerm gt)
+                          Ctx ctx, double eb, double share, bool sentenceStart, GTerm gt, ExcludedWords x)
     {
+        // 0.11.0: a personal word or a « Mes fautes » target on the list is never offered (a grammar-only form may be one)
+        bool xOn = !x.IsEmpty;
         // a name (stored with a capital) gets its full share when the pupil starts the word with a capital inside a
         // sentence, as French writes names (at a sentence start every word has one); typed in lowercase it is still offered, with NameLowercaseShare of it (common words come first)
         bool capital = !sentenceStart && typed.Length > 0 && char.IsUpper(typed[0]);
@@ -1355,6 +1539,7 @@ public sealed class PredictionEngine : IDisposable
             foreach (var i in idxs)
             {
                 var e = u.Entries[i];
+                if (xOn && x.IsExcluded(e.Form)) continue;
                 if (!_idxOf.ContainsKey(e.Lower) && !InContext(e.Lower)) { Shortlist(i, W(e)); continue; }
                 double sc = Score(e.Lower, W(e), out var gate, e.Name) + B(e);
                 Consider(best, e.Form, prefix ? sc + WPrefix * gate : sc, kind);
@@ -1375,6 +1560,7 @@ public sealed class PredictionEngine : IDisposable
                     foreach (var i in idxs)
                     {
                         var e = u.Entries[i];
+                        if (xOn && x.IsExcluded(e.Form)) continue;
                         Consider(best, e.Form, Score(e.Lower, W(e), out _, e.Name) - WEdit + B(e), MatchKind.Edit);
                     }
         if (u.FixKeys.Length > 0)
@@ -1384,6 +1570,7 @@ public sealed class PredictionEngine : IDisposable
             {
                 if (u.FixKeys[pos].Length != key.Length && key.Length < 3) continue;   // a prefix counts from 3 letters (Q12)
                 var target = u.FixTargets[pos];
+                if (xOn && x.IsExcluded(target)) continue;
                 Consider(best, target, Score(target.ToLowerInvariant(), 1.0, out _, target.Length > 0 && char.IsUpper(target[0])) + WSpelling, MatchKind.Phonetic);
             }
         }
@@ -1431,7 +1618,7 @@ public sealed class PredictionEngine : IDisposable
     /// </summary>
     /// <param name="lazy">the candidates' scores do not hold their terms yet (they are added at the ranking): a form put here
     /// is stored without its own term, so that the ranking gives it the same score.</param>
-    private void Inject(Dictionary<string, (double, MatchKind)> best, string typed, GTerm gt, TopSources top, bool lazy)
+    private void Inject(Dictionary<string, (double, MatchKind)> best, string typed, GTerm gt, TopSources top, bool lazy, bool[] xe)
     {
         var g = gt.G;
         // (1) first, so that a family member keeps the « sounds like » colour
@@ -1441,7 +1628,7 @@ public sealed class PredictionEngine : IDisposable
             double raw = lazy ? typedHave.Item1 : typedHave.Item1 - gt.Of(ti);
             foreach (var m in fam)
             {
-                if (m == lower || !HomophoneFamilies.RuleMayChoose(m) || !_idxOf.TryGetValue(m, out int mi) || gt.Agrees(mi) <= 0) continue;
+                if (m == lower || !HomophoneFamilies.RuleMayChoose(m) || !_idxOf.TryGetValue(m, out int mi) || xe[mi] || gt.Agrees(mi) <= 0) continue;
                 Put(mi, raw - InjectGap + gt.Of(mi), MatchKind.Phonetic);
             }
         }
@@ -1470,7 +1657,7 @@ public sealed class PredictionEngine : IDisposable
                 if (classes == 0) continue;
                 foreach (int f in g.FormsOfLemma(lem[k]))
                 {
-                    if (f == src || FirstLetter(_e[f].OrthoLower) != first || !Injectable(f) || gt.AgreesAs(f, lem[k], classes) <= 0) continue;
+                    if (f == src || FirstLetter(_e[f].OrthoLower) != first || !Injectable(f, xe) || gt.AgreesAs(f, lem[k], classes) <= 0) continue;
                     cands ??= new List<(int, double)>(8);
                     bool dup = false;
                     foreach (var c in cands) if (c.F == f) { dup = true; break; }
@@ -1505,10 +1692,10 @@ public sealed class PredictionEngine : IDisposable
         };
     }
 
-    /// <summary>A lexicon form the bar may receive as an added agreeing form: not an elision or noise form, and a form of
-    /// the spelling reference (never « yeah »).</summary>
-    private bool Injectable(int i) =>
-        !Elision.IsBare(_e[i].Ortho) && !Elision.IsNoise(_e[i].Ortho) && !(_unlisted.Count > 0 && _unlisted.Contains(_e[i].OrthoLower));
+    /// <summary>A lexicon form the bar may receive as an added agreeing form: not excluded (0.11.0), not an elision or noise
+    /// form, and a form of the spelling reference (never « yeah »).</summary>
+    private bool Injectable(int i, bool[] xe) =>
+        !xe[i] && !Elision.IsBare(_e[i].Ortho) && !Elision.IsNoise(_e[i].Ortho) && !(_unlisted.Count > 0 && _unlisted.Contains(_e[i].OrthoLower));
 
     /// <summary>
     /// Plan 11 (speed): the candidates in final order (score with its term descending, then — <paramref name="byLength"/> —
@@ -1551,6 +1738,14 @@ public sealed class PredictionEngine : IDisposable
     /// <summary>Pure next-word prediction from context only (the grey ghost word a keyboard shows).</summary>
     public IReadOnlyList<Suggestion> PredictNext(IReadOnlyList<string>? context, int k = 8)
     {
+        var x = _excluded;   // 0.11.0: one snapshot for the query and its safety net
+        return Net(PredictNextCore(context, k, x), x);
+    }
+
+    private IReadOnlyList<Suggestion> PredictNextCore(IReadOnlyList<string>? context, int k, ExcludedWords x)
+    {
+        var xe = Xe(x);
+        bool xOn = !x.IsEmpty;
         var (c1, c2, c3) = PrevWords(context);
         var ctx = ContextMaps(c1, c2, c3);
         if (ctx.Bi.Map is null && ctx.Tri.Map is null && ctx.Four.Map is null) return Array.Empty<Suggestion>();
@@ -1566,6 +1761,9 @@ public sealed class PredictionEngine : IDisposable
             // (a name) still may be. The lexicon forms left out of the spelling reference stay: they hold the lowercase names
             // the bar shows after « en », « à » (« amérique », « berlin », « york »: removing them cost 91 words of KSS)
             if (!known && _strip.ContainsKey(PhoneticKey.StripLower(w))) return;
+            // 0.11.0: an excluded successor — a lexicon entry, or a form known only to grammar.sqlite (2 in the bigrams, 1 in
+            // the trigrams, measured 2026-11-27) — is never the next word
+            if (xOn && (known ? xe[i] : x.IsExcluded(w))) return;
             var s = Lm(ctx, w, known ? _uni[i] : UniFloor) + (eb != 0 && _elides.Contains(w) ? eb : 0);
             if (gt.On && !lazy && known) s += gt.Of(i);
             if (!best.TryGetValue(w, out var c) || s > c) best[w] = s;

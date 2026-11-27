@@ -6,7 +6,13 @@ using Predict.Core;
 namespace Predict.Keyboard;
 
 /// <summary>The words a profile actually gets, as handed to <see cref="UserLexicon.Build"/>; counts for the log.</summary>
-internal sealed record EffectiveWords(IReadOnlyList<UserWord> Words, IReadOnlyList<SpellingFix> Fixes, int Own, int Class, int Hidden);
+/// <param name="Exclus">0.11.0 (plan offensive-words B1): the « Classe » « Mots à ne jamais proposer » this profile gets —
+/// all of them, whatever its hidden words (a pupil cannot hide or remove one).</param>
+internal sealed record EffectiveWords(IReadOnlyList<UserWord> Words, IReadOnlyList<SpellingFix> Fixes, int Own, int Class, int Hidden,
+                                     IReadOnlyList<string>? Exclus = null)
+{
+    public IReadOnlyList<string> ExclusOrEmpty => Exclus ?? Array.Empty<string>();
+}
 
 /// <summary>
 /// Inheritance of the word lists (plan 10A, Q2), pure: a pupil's effective words = the active lists of « Classe » ∪ its
@@ -39,8 +45,17 @@ internal static class WordLayering
         // UserLexicon keeps the first pair of a spelling: the pupil's own first
         var fixes = own.Fautes.Select(p => new SpellingFix(p.Ecrit, p.Mot)).ToList();
         if (cls != null) fixes.AddRange(cls.Fautes.Select(p => new SpellingFix(p.Ecrit, p.Mot)));
-        return new EffectiveWords(words, fixes, nOwn, nClass, nHidden);
+        // « Classe »'s banned words: from the class book for a pupil, its own for « Classe » itself (a pupil's book has none)
+        return new EffectiveWords(words, fixes, nOwn, nClass, nHidden, (cls ?? own).Exclus);
     }
+
+    /// <summary>
+    /// Where « Mots à ne jamais proposer » is shown (reviewer 2026-11-27): « Classe » only, and only behind the PIN — always
+    /// in the Espace enseignant (<paramref name="teacher"/>), in Réglages only when Réglages asks for the PIN
+    /// (<paramref name="settingsProtected"/>: management on and « Code requis pour modifier le profil » ticked). Otherwise a
+    /// pupil could open Réglages of « Classe » and see or change the list.
+    /// </summary>
+    internal static bool ShowsExclus(bool isClass, bool teacher, bool settingsProtected) => isClass && (teacher || settingsProtected);
 
     /// <summary>The distinct effective forms (Ordinal), for comparisons.</summary>
     public static ISet<string> FormSet(WordBook own, WordBook? cls) => new HashSet<string>(Of(own, cls).Words.Select(w => w.Form), StringComparer.Ordinal);

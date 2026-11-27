@@ -1127,7 +1127,7 @@ WSplit grid {0, 0.5, 1} could not give back. Probes (WSplit 0): « je tème » �
 « tème » alone → même, tête, t'aime…, « jai » → j'ai 1st, « je pense quil » → qu'il, qu'ils, « a-til » → t'il dropped by
 the display step after « - », « il ma » → m'a 3rd. « ce », « cé », « sé », « nè » never give c'est / n'est: Fold(« ce ») = `s`
 has no vowel after the bare sound (no split), and for « cé » / « nè » the rest `e` is not the key of « est » — its
-spelled key is `est`, and keys shorter than 2 letters are not indexed from Lexique's pronunciation (TODO 0.10.3).
+spelled key is `est`, and keys shorter than 2 letters are not indexed from Lexique's pronunciation (TODO 0.11.0).
 The plan's step-3 test « tème alone → thème first » holds on the xUnit fixture at WSplit 0 and 0.5; on the real database
 « tème » alone gives même, tête, t'aime… with thème 6th, splits on or off (no context: the frequent sound-alikes lead).
 
@@ -1154,6 +1154,128 @@ dau: no nonsense joined form) 9/9, ≈ list top-1 0.811 → 0.902, `--glued` ful
 → E1 0.904, 20 → 0.886, 30 → 0.874) but every gate holds. The ≈ merge now puts a joined form before the first place from
 which every remaining entry is rarer (« sai » keeps « sais » ahead). `Check` p99 13.0 µs. KSS was not re-run: the change
 only removes split candidates, and the KSS harness never ranks a joined form as a target.
+
+## Sound confusions ch/j (0.11.0, Phase 1)
+
+Plan `dys-sound-tolerance.md` (study `dys-sound-confusions.md`, owner Q1–Q6, Q-A, Q-B; predict-core-design § 5h): a pupil
+who swaps a voiced and a voiceless consonant (« chardin » for jardin, « jien » for chien, « mancher » for manger) still gets
+the word. Method: one binary (the plan's steps 1–4 on HEAD `55699dc`), `--sound-pairs none | chj` and `--w-tolerant
+0.5 | 1.0 | 1.5`, each with `--grammar out\grammar.sqlite --names <pack>`, one run at a time; light held-out lower case
+(E1, E2, W `--max 2000`, E3 all: `<work>\corpus-work\corpus-light\heldout\`). Outputs: `<work>\runs-sound\`
+(`run.sh`, `runs\<label>\`).
+
+**Set** — `src/Predict.Eval/dys-sound/` (generated, committed with its generator; owner Q6: invented, no pupil data):
+
+```
+python -I -X utf8 Predict.Eval/dys-sound/gen_dys_sound.py Predict.Eval/dys-sound [--verify Data.Build/out/prediction.sqlite]
+```
+
+Our own frequent child words with a short context (54 for ch/j, 25 per other pair), one grapheme-level sound swap each
+(ch → j / g before e,i / ge before a,o,u; final « che » → « ge », « je »; j / g(e,i) → ch; f/ph ↔ v; c / qu / k ↔ g; t ↔ d
+and p ↔ b on sounded letters), plus the literature patterns (« visache », national CE2 evaluation 2026; « crogne », a dyslexia fact sheet; « pifteck », after Jaffré 1992) and the user's
+chardin, jien, gien, mancher. A form is kept only if its key differs from the intended word's key in exactly one symbol of
+the pair (a Python port of `Fold`; 8 forms dropped: « ge » before a/o/u writes an extra `e`, « gu » keeps its `u`); the
+xUnit test `Every_Full_Dys_Case_Is_One_Variant_Away` checks it on the C# fold. `--verify` found 10 generated forms that
+are lexicon words (cavé, vête, care, coûter, cris, gour, pureau, doit, drain, ratio): moved to `-real`. 1 472 cases
+(ch/j: `full` 142, `p4` 42 + `p4-cut` 46, `p3` 26 + `p3-cut` 62, `real` 14, `guard` 216; « -cut » = a prefix the tolerant
+pass cannot reach, see below), each with and without its context; `id` even = dev, odd =
+test (`--split`; the split is by context variant, not by word: each typed form has its with-context case in one split and
+its no-context case in the other); 342 spelling cases (`dys-<pair>` expect ≈ with a target, `dys-<pair>-real` and `dys-guard` expect ✓).
+
+| Gate (plan) | head / `none` | chj, W 0.5 | chj, W 1.0 | **chj, W 1.5** |
+|---|---|---|---|---|
+| `--sound-pairs none` = head, byte for byte (curated logs, timing aside; four dumps) | — | | | **met** |
+| KSS lc E1 / E2 / E3 / W (Δ ≥ −0.10 pt each) | 44.67 / 50.86 / 54.57 / 48.07 | not run | 44.67 / 50.86 / 54.57 / 48.07 (dumps identical) | **44.67 / 50.86 / 54.57 / 48.07, Δ 0.00, the four dumps and the hit@8 lines identical** |
+| `cases.json` top-1 / hit@8 (127) | 0.73 / 1.00 | identical ranks | identical ranks | **identical ranks** |
+| `cases-exact`, `cases-personal` (« Mes fautes » 1.000), `grammar-cases`, G-invented | 0.60 / 0.98; 0.491 / 1.000 | identical | identical | **identical** |
+| `cases-names` (38) | 0.66 / 0.92 | « roger » → Roger 1st → 3rd (rochers, rocher ahead) | same | **identical** |
+| `--spelling`: wrong reds, recall, intended first, junk + typo | 0; 0.827; 51 / 75; 11 / 12 | identical table | identical | **identical** (only the ≈ list of the already-missed typo « chein » grows: + gym, gin, geint, geins) |
+| `chj-full` test hit@8 ≥ 0.90, top-1 ≥ 0.60 | 0.00 / 0.00 | 1.00 / 0.77 | 1.00 / 0.70 | **0.93 / 0.63** |
+| `chj-p4` test hit@8 ≥ 0.50, reachable prefixes (owner 2026-11-26; p3 reported) | 0.00 (0.00) | 0.90 (1.00) | 0.81 (0.92) | **0.71 (0.62), met** (21 and 13 cases) |
+| `chj-p4-cut` / `chj-p3-cut` hit@8 (reported, not gated) | 0.00 / 0.00 | 0.00 / 0.00 | 0.00 / 0.00 | 0.00 / 0.00 (23 and 31 cases) |
+| all 44 p4 test prefixes (the plan's first definition) | 0.00 | 0.43 | 0.39 | 0.34 |
+| `chj-guard` keeps its rank (dev and test) | — | 100 % | 100 % | **100 %** |
+| `chj-real` hit@8 (info) | 0.00 | 0.57 | 0.43 | 0.43 |
+| dys spelling ch/j: ≈ recall ≥ 0.90, target among ≥ 0.90, first with context ≥ 0.70; `real`, `guard` all ✓ | — | 1.000 / 1.000 / 0.873; 7/7, 154/154 | same | **1.000 / 1.000 / 0.873** (Check order 0.761); **7/7, 154/154** |
+| `--bench` mean (3 runs) +≤ 0.05 ms | 0.174–0.179 ms | | | **0.171–0.173 ms** |
+| `--bench-sound` warm p99 < 1 ms; max < 5 ms vs `none` | — | | | p99 none 0.63–0.73, chj 0.66–0.77, all five 0.67–0.68 ms; max none 12.6–13.4, chj 2.1–11.9, all five 2.0–13.9 ms (the pre-existing spikes, § Glued words) |
+| `--bench-split` warm p99 | 0.63–0.68 ms | | | 0.62–0.68 ms |
+| `Check` p99 < 20 µs | 12.9 µs | 13.2 | 13.6 | **13.5 µs** (`--bench-sound` dys words: none 4.4, chj 5.3, all five 6.4 µs) |
+| working set / load | 119–120 MB; 828–1000 ms | | | 114–115 MB; 803–840 ms |
+
+**Reachable prefixes (owner 2026-11-26)**: 23 of the 44 test prefixes cannot reach the tolerant pass by construction — the
+fold of 4 letters has fewer than `TolerantFrom` = 3 symbols (« chou » `Cu`, « cham » `CA`, « chen » `CA`, « geau » `jo`,
+« jais » `je`) or the prefix cuts a digraph or a nasal (« jerc » `jerk` for chercher, « jemi » for chemin, « cojo » for
+cochon). Measured on all 44 the gate failed at every penalty (0.43 / 0.39 / 0.34). The owner kept `TolerantFrom` = 3
+(it protects « je » / « chez ») and redefined the gate on the reachable prefixes — key ≥ 3 symbols and, one symbol swapped,
+a prefix of the word's key — which the generator now writes as `<pair>-p4` / `-p3`; the others stay in the set as
+`<pair>-p4-cut` / `-p3-cut`, reported, not gated.
+**Choice of the penalty (plan rule)**: 0.5 has the best `chj-full` top-1, but it and 1.0 move a `cases-names` rank
+(« roger »); 1.5 is the only value with every curated set identical. **Step 6 done (owner 2026-11-26)**: engine default
+`Tolerance = ChJ`, `WTolerant` = 1.5; the curated suite and the dys sets with no flag equal the `chj-w1.5` run (timing
+aside), and the whole xUnit suite (1 652 tests) passes with no expectation changed.
+
+Probes (`Predict.Cli --probe`, chj, W 1.5; `~` sounds like, `*` edit): « chardin » → jardin~ 1st, ≈ jardin / jardins
+(tolerant tier 2); « le chard » → jardin~ 1st; « mon jien » → chien~ 1st (alone: 4th after bien, rien, mien); « mancher »
+→ marcher*, manger~ 2nd, ≈ manger first; « il faut manch » → manger~ 1st; « visache » → visage~ 1st; « le jat » →
+château~, chat~ 2nd; « bouche » stays ✓ (bar unchanged); « chanbe » → chambre~ 1st, jambes~ 7th, ≈ jambes / jambe.
+
+## Selection cost — « Écouter avant d'insérer » (2026-11-25)
+
+Listen before inserting (owner request, on by default) makes the pupil act twice on a tile: the first action speaks the
+word, the second inserts it. `Predict.Eval --select-cost 2` reports KSS_c, where choosing a word costs c keys (method:
+`design/benchmark-design.md` §4). **c = 1** covers each default and setting that asks for a second action: « Touches
+F1–F8 : 1er appui : écouter, 2e : insérer » (the default: a second F*n*), « Clic sur un mot » in its default mode 3 (« Clic :
+écouter ; double-clic ou clic droit : insérer »: the double click is one more click) and in mode C (« 1er clic :
+écouter, 2e clic : insérer »: the second click). A mode-3 right-click inserts at once and costs nothing extra (c = 0,
+like « Touches F1–F8 : Insérer tout de suite » and « Clic sur un mot : Insérer tout de suite »).
+No predictor change: KSS_0 is the headline, and the run checks it against the previous build. **Light run** (owner: no multi-hour job): `--max 2000` per set (E3: all its 1 536 words), the shipped DB and
+`--grammar out\grammar.sqlite`, lower case, one run at a time.
+
+| Set (evaluated words) | KSS_0 (= KSS) | KSS_1 | KSS_2 |
+|---|---|---|---|
+| E1 books (2 000) | 44.67 | 27.58 | 14.92 |
+| E2 Vikidia (2 000) | 50.86 | 35.23 | 22.63 |
+| E3 pupil-level sentences (1 536) | 54.57 | 36.64 | 21.94 |
+| W Leipzig Wikipedia (2 000) | 48.07 | 33.26 | 21.26 |
+
+**Coût du choix**: one more key per chosen word costs 15–19 KSS points (17.1 on E1, 15.6 on E2, 17.9 on E3, 14.8 on W);
+a second one 12–15 more. KSS_0 and the `--dump` files are byte-identical to the build before the change on all four
+sets, and so is the rest of the held-out output; `cases.json` unchanged (127 cases, overall 0.73 / 1.00 / 0.84). E3 at
+54.57 equals the last committed full-set figure; E1, E2 and W are on fewer words than the committed `--max 5000` /
+`--max 10000` runs, so their KSS_0 differs from those tables only by the word count (the same build gives the same numbers
+at the same `--max`). The cost is the price of hearing before writing; for pupils who do not need it, a profile sets
+« Touches F1–F8 : Insérer tout de suite » and « Clic sur un mot : Insérer tout de suite » (or the pupil uses the right-click
+in mode 3). The numbers above were measured before the click modes were split from the keys (238c58b); the predictor and the
+harness are unchanged since, so they still hold (not re-run).
+
+## Mots exclus (0.11.0, plan offensive-words Phase A, 2026-11-27)
+
+Plan `offensive-words.md` (D35; predict-core-design § 5i): 258 listed forms (R 38, H 8, S 16, D 7, X 148, I 13, G 28) from 148
+reviewed lemmas, + 255 grammar forms added at load from those lemmas = 513 excluded forms. Method: one binary from the
+Phase A working tree against HEAD `3edd90f` (no exclusions), both with `--grammar out\grammar.sqlite --names <pack>`, one
+run at a time; the new binary also with `--exclusions none` (A/B check); light held-out lower case (E1, E2, W `--max
+2000`, E3 all, `<work>\corpus-work\corpus-light\heldout\`). Outputs: `<work>\runs-excl\`. `scan_dumps.py` reports listed
+forms by `forms.tsv` id only.
+
+| Gate (plan) | HEAD (no list) | **Phase A (list)** |
+|---|---|---|
+| `--exclusions none` = HEAD, byte for byte (every curated and dys log, timing aside) | — | **met** |
+| `scan_dumps.py` over the logs and dumps (offered / expected) | **25 offered** / 0 expected (the Phase 1 run gives the same 25) | **0 / 0** |
+| expected words on the list (curated, dys, held-out dumps) | 0 | 0 (so no case is exempt) |
+| « Ginet » (`cases-names`, the trigger) | F00055 in the bar | **absent**, case rank unchanged |
+| curated, dys and spelling sets: ranks | — | **identical**; 21 case lines differ only by a listed form gone from their bar (cases 2, cases-names 1, dys dev 10, dys test 8) |
+| KSS lc E1 / E2 / E3 / W (Δ ≥ −0.05 pt each) | 44.67 / 50.86 / 54.57 / 48.07 | **44.67 / 50.86 / 54.57 / 48.07, Δ 0.00**; the four dumps identical (E1 hit@k at 3 letters +0.001) |
+| exhaustive probe (`Predict.Eval --probe-exclusions`, 513 forms: every prefix × 6 contexts × ch/j and all five pairs, Check of every edit-1, next word after the top-20 bigram / trigram predecessors, all as personal words and « Mes fautes » targets; `--edits` also predicts every edit-1) | — | **0 offered, ExcludedLate 0, 0 failures** (808 747 queries, 19.7 s; with `--edits` 1 560 321 queries, 92 s) |
+| pack names colliding with a listed form (for a `form-` decision) | — | 3 collisions: 2 exempt (owner: F00099, F00186, capitalised pack names, also at a sentence start), F00178 blocked |
+| `--bench` mean (3 runs, k 8) +≤ 0.02 ms | 0.165–0.166 ms | **0.166–0.167 ms** (`--exclusions none` 0.166–0.168) |
+| `--bench-sound` warm p99 < 1 ms (chj, grammar, names) | 0.654–0.793 ms | **0.667–0.827 ms** |
+| `Check` mean +≤ 0.5 µs (342 dys spelling words × 200) | 1.3 µs (p99 5.5) | **1.3 µs** (p99 5.7) |
+| load ≤ 15 ms; RAM < 1 MB | — | **file 0.6 ms warm, 4.4 ms in the first `Load`**; the grammar expansion 23 ms on the grammar worker thread (after the grammar's own load, off the UI thread); ≈ 0.2 MB |
+
+The only changes are the bars that held a listed form: the word is gone and the next candidate fills the tile; no
+expected word moved. 45 of the listed lexicon forms are not in the spelling reference (they were never ✓); a typed listed
+word keeps exactly the mark it had without the list (checked for the 513 forms by `RealExclusionTests`).
 
 ## Performance / footprint (the resource budget)
 

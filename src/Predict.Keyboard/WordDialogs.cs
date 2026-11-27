@@ -10,8 +10,11 @@ namespace Predict.Keyboard;
 /// <param name="Knows">is a (lowercase) word in the lexicon (the lesson dialog's « nouveau » / « connu »).</param>
 /// <param name="Frequent">the 300 most frequent lexicon forms (unticked in a lesson).</param>
 /// <param name="ProfileName">the shown name of a profile (null = no name: single user).</param>
+/// <param name="SettingsProtected">0.11.0 (plan offensive-words B3): Réglages asks for the teacher PIN (management on and
+/// « Code requis pour modifier le profil » ticked) — only then does Réglages → Mots of « Classe » show « Mots à ne jamais
+/// proposer » (the Espace enseignant, always behind the PIN, shows it anyway). Null = never.</param>
 internal sealed record WordsContext(WordListService Words, Func<string, bool> Knows, Func<System.Collections.Generic.IReadOnlySet<string>> Frequent,
-                                    Speaker? Speaker, Func<string, string?> ProfileName, Action<string>? Log);
+                                    Speaker? Speaker, Func<string, string?> ProfileName, Action<string>? Log, Func<bool>? SettingsProtected = null);
 
 /// <summary>
 /// The small word dialogs (plan 10A, code-built, every control with an AutomationId): one word (« Ajouter un mot… » from

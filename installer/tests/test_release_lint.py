@@ -65,11 +65,35 @@ class ReleaseLintTest(unittest.TestCase):
     def write_licenses(self):
         for rel in rl.REQUIRED_LICENSES:
             self.write(rel.replace("\\", "/"), "MIT License\n")
+        self.write_exclusions()
+
+    def write_exclusions(self):
+        # an invented word, base64 of « zorblat »
+        self.write("exclusions/fr.txt", rl.EXCLUSIONS_HEADER + "\nem9yYmxhdA==\n#lemmas\nem9yYmxhdA==\n")
+        self.write("exclusions/SOURCE.txt", "Pépite — mots exclus (fr.txt)\n")
+
+    def test_publish_requires_the_exclusions(self):
+        self.write("Pepite.deps.json", json.dumps(self.DEPS))
+        self.write("THIRD-PARTY-NOTICES.txt", ".NET runtime 6.0.32\n  package Microsoft.NETCore.App.Runtime.win-x64 6.0.32\n\n"
+                                              "SQLitePCLRaw 2.1.2 — Apache-2.0\n")
+        self.write_licenses()
+        self.assertEqual(rl.lint(self.stage, WORDS), [])
+        os.remove(os.path.join(self.stage, "exclusions", "fr.txt"))
+        self.assertEqual(len(probs := rl.lint(self.stage, WORDS)), 1, probs)
+        self.assertIn("exclusions\\fr.txt missing", probs[0])
+        self.write("exclusions/fr.txt", "zorblat\n")                                    # a plain list: not the format
+        self.assertEqual(rl.lint(self.stage, WORDS), ["exclusions\\fr.txt is not a Pépite exclusions file (header)"])
+        self.write_exclusions()
+        self.write("exclusions/SOURCE.txt", b"")
+        self.assertEqual(rl.lint(self.stage, WORDS), ["exclusions\\SOURCE.txt is empty"])
+        os.remove(os.path.join(self.stage, "Pepite.deps.json"))                          # not a publish: not required
+        self.assertEqual(rl.check_exclusions(self.stage), [])
 
     def test_publish_requires_the_licence_files(self):
         self.write("Pepite.deps.json", json.dumps(self.DEPS))
         self.write("THIRD-PARTY-NOTICES.txt", ".NET runtime 6.0.32\n  package Microsoft.NETCore.App.Runtime.win-x64 6.0.32\n\n"
                                               "SQLitePCLRaw 2.1.2 — Apache-2.0\n")
+        self.write_exclusions()
         probs = rl.lint(self.stage, WORDS)
         self.assertEqual(len(probs), len(rl.REQUIRED_LICENSES), probs)
         for sub in ("dotnet", "windowsdesktop", "system-speech", "apache-2.0"):

@@ -4,6 +4,9 @@ using System.Linq;
 
 namespace Predict.Keyboard;
 
+/// <summary>The Ctrl+C fallback for a window (<see cref="SelectionPolicy.Fallback"/>).</summary>
+internal enum ClipboardFallback { Off, Allowed, RefusedCalc }
+
 /// <summary>What a selection read means for the reading mode.</summary>
 internal enum SelectionAction
 {
@@ -19,7 +22,8 @@ internal enum SelectionAction
 
 /// <summary>
 /// Selection capture policy (plan 07, pure). De-duplication on the trimmed text; a selection dismissed with Esc is not
-/// shown again until it changes; the simulated Ctrl+C fallback (setting, off by default) only after a selection gesture
+/// shown again until it changes; the simulated Ctrl+C fallback (setting; by default on in LibreOffice only,
+/// <see cref="Fallback"/>, never in Calc) only after a selection gesture
 /// (drag, double click, Shift + navigation, Ctrl+A) in a window whose own read gave no selection, never in a password
 /// field (or one that could not be checked), never while a modifier is held.
 /// </summary>
@@ -44,6 +48,25 @@ internal static class SelectionPolicy
     /// <summary>May the simulated Ctrl+C be tried? (Also re-checked by <see cref="ClipboardCopy.Run"/> right before it.)</summary>
     public static bool MayUseClipboard(bool settingOn, bool gesture, bool passwordSuppressed, ReadStatus caretRead) =>
         settingOn && gesture && !passwordSuppressed && caretRead == ReadStatus.Unavailable;
+
+    /// <summary><see cref="MayUseClipboard(bool, bool, bool, ReadStatus)"/> with the three-state setting resolved for the
+    /// foreground window (<see cref="Fallback"/>).</summary>
+    public static bool MayUseClipboard(bool? setting, LibreOfficeModule module, bool gesture, bool passwordSuppressed, ReadStatus caretRead) =>
+        MayUseClipboard(Fallback(setting, module) == ClipboardFallback.Allowed, gesture, passwordSuppressed, caretRead);
+
+    /// <summary>
+    /// 0.11.0 (owners 2026-11-26 / 2026-11-27): the setting « Copier la sélection par Ctrl+C… » has three positions —
+    /// not set (null, « Dans LibreOffice Writer seulement », the default): only in a LibreOffice <b>Writer</b> window (it
+    /// gives no selection to UI Automation; until IA2 selection reading, phase 1); <c>true</c> (« Partout »): every
+    /// application; <c>false</c> (« Jamais »): none. <b>Never in Calc</b>, whatever the setting: after a simulated copy
+    /// Calc stays in its copy mode and the next Enter pastes the (restored) clipboard into the sheet (review VM run
+    /// 2026-11-27) — a spreadsheet is never modified. Impress / Draw / other LibreOffice windows: only with « Partout ».
+    /// </summary>
+    public static ClipboardFallback Fallback(bool? setting, LibreOfficeModule module)
+    {
+        if (module == LibreOfficeModule.Calc) return ClipboardFallback.RefusedCalc;
+        return (setting ?? module == LibreOfficeModule.Writer) ? ClipboardFallback.Allowed : ClipboardFallback.Off;
+    }
 
     /// <summary>A selection longer than the reader's character limit: the text up to its last space / line break (never a
     /// cut word); unchanged when it has none.</summary>
@@ -97,7 +120,8 @@ internal interface IClipboardOps
 }
 
 /// <summary>
-/// The simulated Ctrl+C fallback (plan 07, setting « Copier la sélection par Ctrl+C », off by default): password check,
+/// The simulated Ctrl+C fallback (plan 07, setting « Copier la sélection par Ctrl+C »; by default on in LibreOffice only,
+/// <see cref="SelectionPolicy.Fallback"/>): password check,
 /// owner responsive, every format saved, Ctrl+C sent, wait ≤ <see cref="WaitMs"/> for the clipboard to change, read the
 /// text, restore the saved content. Nothing is touched when the clipboard holds data that cannot be restored as it was
 /// (metafiles, owner-drawn or GDI-private formats). Once the snapshot is taken the user's clipboard is always put back
@@ -109,6 +133,13 @@ internal interface IClipboardOps
 /// </summary>
 internal static class ClipboardCopy
 {
+    /// <summary>0.11.0 (VM run): Writer may answer Ctrl+C right after a double click only once its double-click time is over
+    /// (a copy 650 ms after the key, the first double click of a session): in LibreOffice the copy is waited for longer.</summary>
+    public const int LibreOfficeWaitMs = 800;
+
+    /// <summary>How long the copy is waited for in <paramref name="process"/> (image name).</summary>
+    public static int WaitFor(string? process) => HostApps.IsLibreOffice(process) ? LibreOfficeWaitMs : WaitMs;
+
     public const int WaitMs = 300, ModifierWaitMs = 300, LateWatchMs = 1500, RestoreTries = 8, RestoreRetryMs = 50, RecheckMs = 200;
 
     /// <summary>Environment.TickCount64 of the user's last physical copy / cut chord (set by the keyboard hook).</summary>
@@ -116,7 +147,7 @@ internal static class ClipboardCopy
 
     /// <summary>Worst duration of <see cref="Run"/> (modifier wait, owner check, copy wait, late watch, restore retries,
     /// re-check, small pauses): the selection worker's « stuck » limit is above it.</summary>
-    public const int WorstMs = ModifierWaitMs + 100 + WaitMs + LateWatchMs + RestoreTries * RestoreRetryMs * 2 + RecheckMs + 500;
+    public const int WorstMs = ModifierWaitMs + 100 + LibreOfficeWaitMs + LateWatchMs + RestoreTries * RestoreRetryMs * 2 + RecheckMs + 500;
 
     /// <summary>A physical copy / cut chord (hook thread): Ctrl+C, Ctrl+X, Ctrl+Insert, Shift+Delete.</summary>
     public static bool IsCopyChord(uint vk, bool ctrl, bool shift, bool alt) =>
@@ -145,7 +176,8 @@ internal static class ClipboardCopy
 
     /// <param name="probe">password check of the focused field, made right before (anything but NotPassword: no copy).</param>
     /// <returns>the copied text (null when nothing was copied) and what happened (for the log, never the text).</returns>
-    public static (string? Text, string Outcome) Run(IClipboardOps ops, Func<ProbeStatus> probe)
+    /// <param name="waitMs">how long the copy is waited for (<see cref="WaitFor"/>; ≤ <see cref="LibreOfficeWaitMs"/>).</param>
+    public static (string? Text, string Outcome) Run(IClipboardOps ops, Func<ProbeStatus> probe, int waitMs = WaitMs)
     {
         var field = probe();
         if (field != ProbeStatus.NotPassword) return (null, $"field {field}: no copy");
@@ -168,7 +200,8 @@ internal static class ClipboardCopy
             if (!ops.StillTarget()) return (null, "window changed: no copy");
             if (!ops.SendCopy()) return (null, "Ctrl+C blocked");
             t1 = ops.NowMs;
-            while (ops.Sequence == seq && ops.NowMs - t1 <= WaitMs) ops.Sleep(10);
+            waitMs = Math.Clamp(waitMs, 0, LibreOfficeWaitMs);
+            while (ops.Sequence == seq && ops.NowMs - t1 <= waitMs) ops.Sleep(10);
             if (ops.Sequence != seq)
             {
                 ops.Sleep(20);   // an app may write several formats in a row
@@ -180,8 +213,8 @@ internal static class ClipboardCopy
                 // too late for this read: watch a little longer so that a late copy is undone, never left in place
                 long t2 = ops.NowMs;
                 while (ops.Sequence == seq && ops.NowMs - t2 <= LateWatchMs) ops.Sleep(20);
-                if (ops.Sequence != seq) { ops.Sleep(20); what = $"no copy within {WaitMs} ms, a late copy after {ops.NowMs - t1} ms"; }
-                else return (null, $"no copy within {WaitMs + LateWatchMs} ms (clipboard untouched)");
+                if (ops.Sequence != seq) { ops.Sleep(20); what = $"no copy within {waitMs} ms, a late copy after {ops.NowMs - t1} ms"; }
+                else return (null, $"no copy within {waitMs + LateWatchMs} ms (clipboard untouched)");
             }
         }
         catch (Exception ex) { what = $"error {ex.GetType().Name} after Ctrl+C"; text = null; }

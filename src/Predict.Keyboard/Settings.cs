@@ -8,6 +8,11 @@ namespace Predict.Keyboard;
 internal enum BarSize { S, M, L, XL }
 internal enum BarPosition { Caret, Top, Bottom, Free }
 internal enum KeyMode { F1F8, Off }
+/// <summary>Owner 2026-11-25 (listen before inserting, addendum): what a click / tap on a word of the bar does — insert at
+/// once (a right-click listens), listen first (1st click listens, a 2nd click on the same word inserts), or listen on a
+/// click and insert on a double click or a right-click (the usual convention of other word-prediction tools; the default).
+/// </summary>
+internal enum ClickMode { Insert, ListenFirst, ListenDouble }
 internal enum BarFont { SegoeUI, OpenDyslexic, Lexend, Andika }
 internal enum LetterSpacing { Normal, Wider, Widest }
 /// <summary>Space put before <c>; : ! ?</c> typed right after an inserted word (D22): French typography with a
@@ -24,10 +29,11 @@ internal enum PunctuationSpacing { French, None, FrenchNbsp }
 internal sealed record SpeechSettings(bool SpeakInserted = true, bool SpeakWords = true, bool SpeakSentences = true,
                                       string? Voice = null, int Rate = 0, int Volume = 100, bool RereadEdits = true);
 
-/// <summary>Selection reading (plan 07, D21/D24): the reading mode on (default), the simulated Ctrl+C fallback (off by
-/// default), pictures in the reading tiles (null = follow <c>words.pictures</c>), and the « grande fenêtre » place and size
-/// (physical px; null until the user moved or resized it).</summary>
-internal sealed record ReadingSettings(bool Enabled = true, bool ClipboardFallback = false, bool? Pictures = null,
+/// <summary>Selection reading (plan 07, D21/D24): the reading mode on (default), the simulated Ctrl+C fallback (null = not
+/// set: « Dans LibreOffice Writer seulement » — 0.11.0, <see cref="SelectionPolicy.Fallback"/>; true = « Partout »
+/// (never in Calc), false = « Jamais »), pictures in the reading tiles (null = follow <c>words.pictures</c>), and the « grande fenêtre » place
+/// and size (physical px; null until the user moved or resized it).</summary>
+internal sealed record ReadingSettings(bool Enabled = true, bool? ClipboardFallback = null, bool? Pictures = null,
                                        int? WinX = null, int? WinY = null, int? WinW = null, int? WinH = null)
 {
     public const int MinWindow = 200;
@@ -51,7 +57,8 @@ internal sealed record AppSettings(
     BarFont Font = BarFont.SegoeUI, LetterSpacing Spacing = LetterSpacing.Normal,
     BarPosition Position = BarPosition.Caret, int? FreeX = null, int? FreeY = null,
     SpeechSettings? Speech = null, LockSettings? Lock = null, PunctuationSpacing Punctuation = PunctuationSpacing.French,
-    ReadingSettings? Reading = null, bool Welcome = true, bool SpellingIndicator = true, bool NamePictures = true)
+    ReadingSettings? Reading = null, bool Welcome = true, bool SpellingIndicator = true, bool NamePictures = true,
+    ClickMode Click = ClickMode.ListenDouble, bool KeysListenFirst = true, bool ListenShiftKeys = false, bool ListenButton = false)
 {
     public const int Schema = 1;
     public const int MinWords = 1, MaxWords = 8;
@@ -68,6 +75,7 @@ internal sealed record AppSettings(
         WordCount = Math.Clamp(WordCount, MinWords, MaxWords),
         Size = Enum.IsDefined(Size) ? Size : BarSize.M,
         Keys = Enum.IsDefined(Keys) ? Keys : KeyMode.F1F8,
+        Click = Enum.IsDefined(Click) ? Click : ClickMode.ListenDouble,
         Font = Enum.IsDefined(Font) ? Font : BarFont.SegoeUI,
         Spacing = Enum.IsDefined(Spacing) ? Spacing : LetterSpacing.Normal,
         Position = Enum.IsDefined(Position) ? Position : BarPosition.Caret,
@@ -91,6 +99,8 @@ internal sealed record AppSettings(
         new Dictionary<BarSize, string> { [BarSize.S] = "S", [BarSize.M] = "M", [BarSize.L] = "L", [BarSize.XL] = "XL" };
     public static readonly IReadOnlyDictionary<KeyMode, string> KeyNames =
         new Dictionary<KeyMode, string> { [KeyMode.F1F8] = "F1-F8", [KeyMode.Off] = "off" };
+    public static readonly IReadOnlyDictionary<ClickMode, string> ClickModeNames = new Dictionary<ClickMode, string>
+    { [ClickMode.Insert] = "insert", [ClickMode.ListenFirst] = "listenFirst", [ClickMode.ListenDouble] = "listenDouble" };
     public static readonly IReadOnlyDictionary<BarFont, string> FontNames = new Dictionary<BarFont, string>
     { [BarFont.SegoeUI] = "segoe-ui", [BarFont.OpenDyslexic] = "opendyslexic", [BarFont.Lexend] = "lexend", [BarFont.Andika] = "andika" };
     public static readonly IReadOnlyDictionary<LetterSpacing, string> SpacingNames = new Dictionary<LetterSpacing, string>
@@ -115,6 +125,11 @@ internal sealed record AppSettings(
                 ["spellingIndicator"] = SpellingIndicator,
                 // plan 10C: flags and the teacher's pictures above proper names; on by default, per profile, lockable
                 ["namePictures"] = NamePictures,
+                // 2026-11-25 owner: listen before inserting — the click mode (default listenDouble: a click listens, a
+                // double click or a right-click inserts) and the F-keys mode (default: 1st press listens, 2nd inserts),
+                // independent, also for users who never set them; A (Shift+F1…F8 speaks; off), D (speaker band; off)
+                ["clickMode"] = ClickModeNames[Click], ["keysListenFirst"] = KeysListenFirst,
+                ["listenShiftKeys"] = ListenShiftKeys, ["listenButton"] = ListenButton,
             },
             ["bar"] = bar,
             ["text"] = new JsonObject { ["punctuationSpace"] = PunctuationNames[Punctuation] },
@@ -176,11 +191,16 @@ internal sealed record AppSettings(
                 Int(s?["volume"]) ?? sd.Volume, Bool(s?["rereadEdits"]) ?? sd.RereadEdits),
             Lock: new LockSettings(Bool(l?["enabled"]) ?? false, pin),
             Punctuation: ParseEnum(t?["punctuationSpace"], PunctuationNames, d.Punctuation),
-            Reading: new ReadingSettings(Bool(rd?["enabled"]) ?? true, Bool(rd?["clipboardFallback"]) ?? false, Bool(rd?["pictures"]),
+            // 0.11.0: an absent (or JSON null) clipboardFallback = the host's default; an explicit false stays false everywhere
+            Reading: new ReadingSettings(Bool(rd?["enabled"]) ?? true, Bool(rd?["clipboardFallback"]), Bool(rd?["pictures"]),
                                          Int(rw?["x"]), Int(rw?["y"]), Int(rw?["w"]), Int(rw?["h"])),
             Welcome: Bool(st?["welcome"]) ?? d.Welcome,
             SpellingIndicator: Bool(w?["spellingIndicator"]) ?? d.SpellingIndicator,
-            NamePictures: Bool(w?["namePictures"]) ?? d.NamePictures).Validated();
+            NamePictures: Bool(w?["namePictures"]) ?? d.NamePictures,
+            Click: ParseEnum(w?["clickMode"], ClickModeNames, d.Click),
+            KeysListenFirst: Bool(w?["keysListenFirst"]) ?? d.KeysListenFirst,
+            ListenShiftKeys: Bool(w?["listenShiftKeys"]) ?? d.ListenShiftKeys,
+            ListenButton: Bool(w?["listenButton"]) ?? d.ListenButton).Validated();
     }
 
     private static T ParseEnum<T>(JsonNode? n, IReadOnlyDictionary<T, string> names, T def) where T : struct

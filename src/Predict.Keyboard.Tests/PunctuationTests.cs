@@ -640,7 +640,40 @@ public class AppRulesTests
 
     [Theory] [InlineData("WINWORD", true)] [InlineData("winword", true)] [InlineData("notepad", false)] [InlineData("msedge", false)]
     [InlineData("soffice.bin", false)] [InlineData(null, false)] [InlineData("", false)]
-    public void Word_Spaces_Punctuation_Itself(string? process, bool expected) => Assert.Equal(expected, AppRules.AppSpacesPunctuation(process));
+    public void Word_Spaces_Punctuation_Itself_And_Is_Read_Back(string? process, bool expected) => Assert.Equal(expected, AppRules.ReadsBackSpacing(process));
+
+    /// <summary>0.11.0: LibreOffice spaces ; : ! ? itself too (no read-back: its text cannot be read).</summary>
+    [Theory] [InlineData("WINWORD", true)] [InlineData("soffice.bin", true)] [InlineData("soffice", true)] [InlineData("swriter", true)]
+    [InlineData("notepad", false)] [InlineData("msedge", false)] [InlineData(null, false)]
+    public void Apps_That_Space_Punctuation_Themselves(string? process, bool expected) => Assert.Equal(expected, AppRules.AppSpacesPunctuation(process));
+
+    [Theory] [InlineData((int)PunctuationSpacing.French)] [InlineData((int)PunctuationSpacing.FrenchNbsp)] [InlineData((int)PunctuationSpacing.None)]
+    public void In_LibreOffice_No_Space_Of_Ours_Before_High_Punctuation(int setting)
+    {
+        var mode = AppRules.Effective((PunctuationSpacing)setting, "soffice.bin");
+        Assert.Equal(PunctuationSpacing.None, mode);
+        var st = new AutoSpaceState();
+        // ; : ! ? → Backspace + the sign alone: Writer's AutoCorrect puts its single U+00A0 (owner Q4), never ours as well
+        foreach (var c in ";:!?")
+        {
+            st.Arm(5, Fg, mode);
+            var d = st.OnChar(c, 5, Fg, (PunctuationSpacing)setting);
+            Assert.Equal((AutoSpaceFix.Replace, c.ToString()), d);
+            Assert.DoesNotContain(d.Text, ch => AppRules.IsSpaceLike(ch));
+        }
+        // the D22 « take back our space » before , . … ) stays as everywhere
+        foreach (var c in ",.…)")
+        {
+            st.Arm(5, Fg, mode);
+            Assert.Equal((AutoSpaceFix.Replace, c.ToString()), st.OnChar(c, 5, Fg, (PunctuationSpacing)setting));
+        }
+        // a second space is still absorbed once
+        st.Arm(5, Fg, mode);
+        Assert.Equal(AutoSpaceFix.Absorb, st.OnChar(' ', 5, Fg, (PunctuationSpacing)setting).Fix);
+        // Notepad keeps our U+202F (the setting applies)
+        st.Arm(5, Fg, AppRules.Effective(PunctuationSpacing.French, "notepad"));
+        Assert.Equal((AutoSpaceFix.Replace, " !"), st.OnChar('!', 5, Fg, PunctuationSpacing.French));
+    }
 
     [Fact]
     public void Effective_Spacing()

@@ -70,17 +70,27 @@ jobs:
           $pack = (Get-Content src/Data.Build/data-pack.lock.json -Raw | ConvertFrom-Json).pack.version
           python -I src/Data.Build/fetch_data_release.py --cache "$env:RUNNER_TEMP/data-cache" --only "pepite-data-$pack.zip"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Mots exclus (out/exclusions from the committed, reviewed list; plan offensive-words)
+        shell: pwsh
+        run: |
+          python -I src/Data.Build/exclusions/build_exclusions.py ship --out-dir src/Data.Build/out/exclusions `
+            --db src/Data.Build/out/prediction.sqlite --grammar src/Data.Build/out/grammar.sqlite
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Build
         run: dotnet build Pepite.sln -c Release -nologo
       # the tests marked [Trait("Category", "Timing")] (background threads, timeouts, wall-clock bounds) do not run on the
       # shared runner (owner, 2026-11-18): the export gate runs every test locally before each push (BUILD.md § 2a)
       - name: .NET tests
+        # the tests on the real data (word base, grammar, mots exclus) fail instead of skipping when a file is missing
+        env:
+          PEPITE_REQUIRE_DATA: '1'
         run: dotnet test Pepite.sln -c Release --no-build -nologo --filter "Category!=Timing"
       - name: Python suites and help lint
         shell: pwsh
         run: |
           $suites = @(@('src/Data.Build/corpus/tests', 'test*.py'), @('src/Data.Build', 'test_*.py'),
-                      @('src/Data.Build/pepite-noms/tests', 'test*.py'), @('installer/tests', 'test_*.py'))
+                      @('src/Data.Build/pepite-noms/tests', 'test*.py'), @('src/Data.Build/exclusions/tests', 'test*.py'),
+                      @('installer/tests', 'test_*.py'))
           foreach ($s in $suites) {
             Push-Location $s[0]
             python -I -m unittest discover -s . -p $s[1]
@@ -132,6 +142,12 @@ jobs:
         shell: pwsh
         run: |
           python -I src/Data.Build/fetch_data_release.py --cache "$env:RUNNER_TEMP/data-cache"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Mots exclus (out/exclusions from the committed, reviewed list; plan offensive-words)
+        shell: pwsh
+        run: |
+          python -I src/Data.Build/exclusions/build_exclusions.py ship --out-dir src/Data.Build/out/exclusions `
+            --db src/Data.Build/out/prediction.sqlite --grammar src/Data.Build/out/grammar.sqlite
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Visual C++ runtime (app-local)
         shell: pwsh

@@ -239,3 +239,29 @@ each rate, the agreements that hold only because our bits allow every value: gen
 **Test sets** (`build_grammar_sets.py`, test text only, in `<work>/grammar-sets/`, never committed): see
 [evaluation.md](../development/evaluation.md) § Grammar.
 
+
+## 9. Mots exclus (`src/Data.Build/exclusions/` → `exclusions/fr.txt`, plan offensive-words, 0.11.0, D35)
+
+```
+ exclusions.lock.json (pins) ──► Wiktionnaire extraction (kaikki.org, CC BY-SA 4.0 + GFDL), LDNOOBW fr (CC BY 4.0)
+ find_candidates.py ──► <work>/exclusions/candidates.tsv (labels only; never committed) ──► owner review (review.html,
+   text batches) ──► build_exclusions.py decisions ──► lemmas.tsv (committed: every candidate, decision, reason)
+ lemmas.tsv + prediction.sqlite + grammar.sqlite ──forms──► forms.tsv (committed, sorted, byte-reproducible)
+ forms.tsv + lemmas.tsv ──ship──► out/exclusions/fr.txt + SOURCE.txt (git-ignored; copied next to the database)
+```
+
+- **What it is**: the words Pépite never offers (slurs, sexual words, a few insults and drug-slang words; owner policy in
+  BUILD.md § 1b4). A pupil who types one writes it normally. Candidates come from Wiktionnaire's own usage labels; every
+  proposed exclusion was reviewed by the maintainer; the « keep » rows of `lemmas.tsv` are the reviewed allow-list.
+- **Forms**: a form is excluded only when every lemma it has in both lexicons is excluded (homograph guard); owner `form+` /
+  `form-` rows (id `Qnn`, the row they answer for in their reason) add or remove one spelling; fold twins only when they
+  are true spelling variants. **Only the forms of `prediction.sqlite`** (Lexique 3.83, CC BY-SA 4.0) are written; the
+  inflections French.lex alone knows (MPL-2.0) are added by the engine at load from the excluded lemmas (`#lemmas`).
+- **Shipped file**: `fr.txt` = header, `#categories` counts, one base64 form per line, `#lemmas` and the lemmas — encoded so
+  a child browsing the install folder does not read a list of slurs; it is not a secret. `SOURCE.txt` gives the credits,
+  the review date, the SHA-256 of `forms.tsv` and of the two lexicon databases. Licence: CC BY-SA 4.0 (derived from
+  Wiktionnaire), a separate data file of the GPL-3.0-or-later program (one-way compatible, Creative Commons 2015-10-08).
+- **No data-pack change**: `prediction.sqlite` and `grammar.sqlite` are untouched (no flag column: a new 156 MB pack and
+  rehash would not cover the teacher's list of Phase B anyway); the list is a small separate file (≈ 5 KB).
+- **Checks**: `release_lint.py` fails a publish without `exclusions\fr.txt` (with its header) or `SOURCE.txt`;
+  `scan_dumps.py` reports listed forms in Eval logs, dumps and texts by id only (exit 1 on a hit); no script prints a word.

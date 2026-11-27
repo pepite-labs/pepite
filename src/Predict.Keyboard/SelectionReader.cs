@@ -63,7 +63,10 @@ internal sealed class SelectionReader : IDisposable
         if (pid == (uint)Environment.ProcessId) return Fail(ReadStatus.Unavailable, "own");
         var gi = new Native.GUITHREADINFO { cbSize = Marshal.SizeOf<Native.GUITHREADINFO>() };
         IntPtr focus = Native.GetGUIThreadInfo(tid, ref gi) ? gi.hwndFocus : IntPtr.Zero;
-        var r = focus != IntPtr.Zero && string.Equals(PasswordProbe.ClassOf(focus), "Edit", StringComparison.OrdinalIgnoreCase)
+        // 0.11.0: LibreOffice gives UIA no selection: Unavailable at once (straight to the Ctrl+C fallback when allowed;
+        // its password check still runs right before the copy)
+        var r = HostApps.UiaTextUnavailable(fg) ? Fail(ReadStatus.Unavailable, "skip")
+            : focus != IntPtr.Zero && string.Equals(PasswordProbe.ClassOf(focus), "Edit", StringComparison.OrdinalIgnoreCase)
             ? ReadWin32(focus) : ReadUia(pid, _log);
         if (r.Status == ReadStatus.Ok && r.Selected is { Length: > 0 } sel)
         {
@@ -90,6 +93,12 @@ internal sealed class SelectionReader : IDisposable
                 _log?.Invoke($"selection: Ctrl+C fallback skipped (terminal: {image} / {fgClass})");
                 return r;
             }
+            // 0.11.0 (owner 2026-11-27): never in Calc, whatever the setting (Enter would paste the clipboard into the sheet)
+            if (HostApps.ModuleOf(fg) == LibreOfficeModule.Calc)
+            {
+                _log?.Invoke("selection: clipboard fallback refused: Calc");
+                return r;
+            }
             // one Run at a time in the process (a replaced, slow worker must never overlap a new one on the clipboard)
             if (!Monitor.TryEnter(RunLock))
             {
@@ -99,7 +108,7 @@ internal sealed class SelectionReader : IDisposable
             (string? text, string outcome) res;
             // a plain read is « stuck » after 2 s; a fallback Run may take up to WorstMs: the limit is raised only meanwhile
             _queue.StuckMsOverride = ClipboardCopy.WorstMs + 1000;
-            try { res = ClipboardCopy.Run(new Win32Clipboard(_clipboardWindow, fg), () => PasswordProbe.Check(fg)); }
+            try { res = ClipboardCopy.Run(new Win32Clipboard(_clipboardWindow, fg), () => PasswordProbe.Check(fg), ClipboardCopy.WaitFor(image)); }
             finally { _queue.StuckMsOverride = 0; Monitor.Exit(RunLock); }
             var (text, outcome) = res;
             _log?.Invoke($"selection: Ctrl+C fallback: {outcome}");   // never the text

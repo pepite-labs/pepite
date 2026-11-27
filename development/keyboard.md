@@ -25,10 +25,21 @@ Pepite.exe --render-bar <out.png> [--dpi 96|144|192] [--pictos <p>] [--no-pictur
   Réglages · Aide · OK); a second `--autostart` copy exits silently. `--no-welcome` (scripted tests) shows nothing.
 - Type in any app (Notepad, Word, a browser…). A bar appears **at the text caret** (or docked / where you
   dragged it, see Réglages) with up to 8 words.
-- **F1–F8** insert word 1–8 (only while the bar is visible and « Touches F1 à F8 » is on; otherwise F-keys go
+- **F1–F8** choose word 1–8 (only while the bar is visible and « Touches F1 à F8 » is on; otherwise F-keys go
   to the app as usual).
-  **Click** a word to insert it; **right-click** to hear it (Windows' built-in SAPI 5 voice, French if
-  installed). **Esc** hides the bar.
+  **Click** (or tap) a word to hear it, **double-click** or **right-click** it to insert it (by default since
+  2026-11-25; Windows' built-in SAPI 5 voice or Piper). **Esc** hides the bar.
+- **Listen before inserting** (2026-11-25), two independent settings in Réglages → « Barre et voix »:
+  « **Clic sur un mot** » — *Clic : écouter ; double-clic ou clic droit : insérer* (default, the usual convention of
+  other word-prediction tools: no ring, the double click writes the word at once without cutting the voice), *1er clic :
+  écouter, 2e clic : insérer* (white ring), or *Insérer tout de suite* (right-click listens); « **Touches F1–F8** » —
+  *1er appui : écouter, 2e : insérer* (default: the first F*n* **says** the word and rings it, the same key again
+  **inserts** it without saying it again) or *Insérer tout de suite*. A UI Automation **Invoke** on a word (Narrateur,
+  Accès vocal, switch tools) follows « Touches F1–F8 », even with the F-keys off. Any other key, a click in the text or a
+  new bar cancels a ring. « Maj + F1…F8 : écouter le mot » (off) makes Shift+F*n* say word *n*; « Bouton haut-parleur sous
+  chaque mot » (off) adds a speaker band under each word — a click on it says the word, and a click on the word then
+  inserts at once whatever the click setting (the list is greyed). Design:
+  [keyboard-design.md §5e](../design/keyboard-design.md).
 - Colours: **blue** = completion of what you typed, **green** = same sound (phonetic spelling),
   **orange** = letters swapped / typo.
 - After a word and a space the bar shows **next-word** predictions (from up to three previous words).
@@ -40,11 +51,18 @@ Pepite.exe --render-bar <out.png> [--dpi 96|144|192] [--pictos <p>] [--no-pictur
 - **Punctuation after an inserted word** (D22): the space we added is taken back when you type `, . … ) ' -`
   (`maison,`); before `; : ! ?` it becomes a narrow no-break space (French typography, `Bonjour !`) — or nothing
   with « Espace avant ; : ! ? » = Aucune in Réglages; an extra space you type is absorbed (no double space). Only
-  right after an insertion: text you typed yourself is never changed.
+  right after an insertion: text you typed yourself is never changed. Word and LibreOffice space `; : ! ?` themselves
+  (their French AutoCorrect): there the sign is sent alone after taking our space back — Word is then read back and
+  fixed (adaptive), LibreOffice's single U+00A0 is accepted as is (0.11.0).
 - **After you move the caret** (click, arrows, Home/End, PgUp/PgDn, Tab, Ctrl+V / Ctrl+Z / Ctrl+Backspace,
   switching window) the app **reads the text around the caret** and predicts from there: click after
   `il fait ` → next-word bar; click inside `mai|son` → completions of `mai`. Notepad (Win32 `Edit`) and
   Edge/Word (UI Automation) are supported; elsewhere it silently falls back to what you type.
+- **LibreOffice Writer** (0.11.0 quick fix, until the IA2 adapter of `development/studies/libreoffice-support.md`):
+  keys only — no read after a jump, the bar at the mouse (no caret), a ≈ correction inserted next to the word (never
+  replaced); Pépite does not even ask UI Automation there (`HostApps.UiaTextUnavailable`: the failed lookups cost
+  ≈ 110 ms per bar and slowed Writer); selection reading works through the Ctrl+C fallback, **on by default in
+  Writer windows** (never in Calc: a copy there leaves Calc's copy mode and Enter would paste); one U+00A0 (LibreOffice's) before `; : ! ?`.
 - **Inside a word, the whole word is replaced**: `la mai|zon est` + F1 (`maison`) → `la maison est`
   (Delete the part after the caret, Backspace the part before).
 - **Space rule**: a space is added after the inserted word only if the next character is not a space,
@@ -65,7 +83,8 @@ Pepite.exe --render-bar <out.png> [--dpi 96|144|192] [--pictos <p>] [--no-pictur
   sont lus »). A word cut by the selection is read whole, and the `. ! ? …` ending the sentence is added on the last
   tile (D26; the selection itself is not changed). Typing, Esc, or a click elsewhere → back to predictions. Never in a
   password field. Réglages « Lecture »: on / off, pictures, and « Copier la sélection par Ctrl+C si l'application ne la
-  donne pas » (off by default; the clipboard is put back, also after a late copy, and our restored copy is kept out of
+  donne pas », three positions (« Dans LibreOffice Writer seulement », the default, `null`; « Partout », `true`;
+  « Jamais », `false`; never in LibreOffice Calc); the clipboard is put back, also after a late copy, and our restored copy is kept out of
   the clipboard history — but the copy the application itself makes may appear in Windows+V's history; never in a
   console). See [keyboard-design.md §5d](../design/keyboard-design.md).
 - **Pictures** (ARASAAC): above each word, a 64 × 64 picture on a white tile; an empty slot of the same size
@@ -125,6 +144,10 @@ Pepite.exe --render-bar <out.png> [--dpi 96|144|192] [--pictos <p>] [--no-pictur
   (S 16 · M 22 · L 28 · XL 36, pictures 48 / 64 / 80 / 96); **font** of the words: Segoe UI, OpenDyslexic,
   Lexend, Andika (each shown in its own font; « (police absente) » greyed when its folder is missing);
   **letter spacing** Normal / Plus large / Très large (+0 / +0.10 / +0.18 em); pictures on/off; F1–F8 on/off;
+  « Clic sur un mot » (*Clic : écouter ; double-clic ou clic droit : insérer* by default, *1er clic : écouter, 2e clic :
+  insérer*, *Insérer tout de suite*; greyed while the speaker band is on), « Touches F1–F8 » (*1er appui : écouter, 2e :
+  insérer* by default, *Insérer tout de suite*; greyed while F1–F8 are off), « Maj + F1…F8 : écouter le mot » (off, needs
+  F1–F8), « Bouton haut-parleur sous chaque mot » (off; the bar gets taller: band S 24 / M 26 / L 30 / XL 36 DIP);
   **position** next to the caret, docked at the top or bottom of the screen (centred, hidden when there is no
   suggestion), or **free** (drag the bar by the dotted grip at its left; it stays there, also after a restart);
   **speech**: read the inserted word, each word after a space, the sentence at `. ! ?` (all three on by default since
@@ -1107,11 +1130,55 @@ the W-G1 bars unchanged, « il et » → F3 « il est », « ils son » → sont
 order): « le maître nous a » → `avons, a, …`, « celui qui nous a » → `a, attend, …`, « la maîtresse vous a » → `avez,
 allez, a, …`.
 
+## Listen before inserting — to test (owner request 2026-11-25)
+
+Implemented and unit-tested (`ListenFirstTests`: the pending tile and the heard tile, the F-key matrix (held keys
+included), every click mode × keyboard mode × band, the right-click and ring rules, the settings (defaults, round trip,
+mistyped values, layering, machine locks on `words.clickMode` / `words.keysListenFirst`), the non-interrupting speech
+of a confirmation, tooltips / UIA help, the band geometry and the caret placement of the taller bar; D-off render sheets byte-identical to the
+previous build at S/M/L/XL × 96/144 dpi; `Predict.Eval --select-cost`: KSS_0 and the dumps identical to the previous
+build). **VM checks pending** (`predict-test-win11`, Notepad from the desktop, Word if installed, Edge textarea; no audio
+device → `speak Manual` / `speak Inserted` log lines; D15 screenshots under `test-runs\listen-before-insert\`):
+
+L1–L15 were written for the first version; with the 2026-11-25 addendum the click scenarios L6, L7, L15 and the C-off /
+lock ones L11, L13 run with « Clic sur un mot : 1er clic : écouter, 2e clic : insérer » or as rewritten below; L16–L22
+cover the default click mode (3) and the separate keyboard setting; L23 checks a held F-key (also under Filter Keys) and
+the key-state premise of the hook (review of 238c58b).
+
+| # | Scenario | Expected |
+|---|---|---|
+| L1 | defaults, `la mai`, F1; F1 again | `listen F1 … armed` + `speak Manual`, ring on tile 1, text unchanged; then `la maison `, no second `speak Inserted` |
+| L2 | F1 then F2 | the ring moves to tile 2, word 2 spoken |
+| L3 | F1, type `s` | `listen cancelled (key)`, ring gone |
+| L4 | F1, click in the text | cancelled (`hidden`) |
+| L5 | F1 held down | one speak, no insertion |
+| L6 | click mode *1er clic* : click tile 2; again after the double-click time; a double click | speak; insert; speak only |
+| L7 | right-click tile 3, then F3 | speak + armed; insert |
+| L8 | option A on: Shift+F3; Word, Shift+F3 with the bar hidden | speak, nothing typed; change case works |
+| L9 | option D on: the band; a click on the word; F1 | speak; inserts at once; F1 still listens first; screenshots S/M/L/XL at 100 % / 150 %; the bar never covers the typed line (caret near the screen bottom) |
+| L10 | ≈ list via F9, F1, F1 | F1 speaks, F1 again replaces the finished word |
+| L11 | « Touches F1–F8 : Insérer tout de suite », click mode *Insérer tout de suite*: F1; a click; right-click | inserts at once; inserts at once; speaks (no ring) |
+| L12 | reading mode: F1; Space / F9 | F1 passes to the app; Space / F9 play |
+| L13 | machine lock `words.keysListenFirst=false` and `words.clickMode="insert"` | both lists disabled « Réglé par l'administrateur »; F1 and a click insert at once |
+| L14 | profile switch while a tile is ringed | cancelled (`switch`) |
+| L15 | touch (`InjectTouchInput`), click mode *1er clic*: tap twice; press-and-hold | speak then insert; right-click → speak |
+| L16 | defaults (mode 3), `la mai`, click tile 1 | `listen click 'maison'` + `speak Manual`, **no ring**, text unchanged |
+| L17 | mode 3: click tile 1 then, within the double-click time, click it again (a double click) | `listen confirm double click`, `la maison ` written at once, **no** `speak Inserted`, the Manual utterance not cancelled (no `speech cancelled` line) |
+| L18 | mode 3: `les ` then double-click « amis » | `speak Manual 'amis'`, then `speak Inserted 'les amis'` **after** `speech done` (queued, not interrupting) |
+| L19 | mode 3: right-click tile 2 (no click before); click tile 3 then right-click tile 3 | inserts word 2, said (`speak Inserted`); word 3 spoken, then inserted without being said again |
+| L20 | mode 3 with « Touches F1–F8 » default: click tile 1, then F1; F1 again | the click speaks (no ring); F1 speaks again and rings (not a confirmation); F1 again inserts |
+| L21 | mode 3 + option D on | list greyed with its note; a click on the word inserts at once; right-click and the band speak |
+| L22 | « Touches F1–F8 : Insérer tout de suite » + mode 3 (defaults otherwise) | F1 inserts at once; a click still only speaks; the keys list is greyed when « Touches F1 à F8 » is unticked |
+| L23 | defaults (« 1er appui : écouter »), `la mai`: hold F1 ≈ 3 s; then the same under Filter Keys (« Touches filtres », repeat delay 2 s, `HKCU\Control Panel\Accessibility\Keyboard Response` or Settings → Accessibility → Keyboard); then F9 ≈ list, F1, F1 (correction), and hold F1 again with the bar hidden; Win+L while holding F2, unlock, press F2 with no bar | one `listen F1` / `speak Manual`, **no** insertion and **no** app F1 help (Notepad help not opened); the log's `F1 down: isDown=… held=Press -> Swallow` lines confirm the record decides (note the `isDown` value seen for a swallowed key); after the correction the held F1 is swallowed; after the unlock F2 reaches the app (`held=-`, `-> Pass`) |
+| L24 | UI Automation Invoke (owner 2026-11-25), defaults, `la mai`: Narrateur on a tile (its primary action, Verr. maj + Entrée; Verr. maj + Espace only toggles scan mode), then Accès vocal « cliquer maison » twice; then « Touches F1–F8 : Insérer tout de suite » and « cliquer maison » once; then F-keys unticked (« Touches F1 à F8 » off, keys list back to « 1er appui ») and « cliquer maison » twice; also with the ≈ list (F9 or a click on ≈) | 1st Invoke: `tile 1 invoked (uia, listen first)`, `listen uia 'maison' armed`, `speak Manual`, white ring, Narrateur reads the item status « Écouté — encore une fois pour insérer », text unchanged, the bar does not keep the foreground (BUG-1: an Invoke or a SetFocus activates it for a moment — log `bar activated from outside (UI Automation): foreground given back`, never `foreground is ours`; the text window stays in front); 2nd Invoke: `listen confirm uia`, `la maison ` written, no `speak Inserted`; « Insérer tout de suite »: one Invoke inserts (`tile 1 invoked (uia, insert)`); F-keys off: same as the default (listen, then insert); ≈ list: listen then replace; no `tile click ignored` / `double click` line after an Invoke (not taken for a mouse click). If Accès vocal clicks with the mouse instead of Invoke, the log shows `listen click` (mode 3): note which one it uses. Also: Invoke with the bar hidden (Esc, or a password field) → `tile N invoked: ignored, bar hidden` (or no log: the peer refuses a hidden tile), nothing spoken nor typed; with the F-keys off, a settings change made in Réglages hides the bar and cancels the Invoke ring (`listen cancelled (hidden)`) like any own window — **by design** (owner 2026-11-26): the next Invoke listens again, the one after inserts, never a blind insert |
+
+Every run checks the `hook: … max=` lines (< 1 ms) and `listen … (x ms)` (press → speak ≤ 30 ms on the UI thread).
+
 ## Known limitations / next steps
 
 - **D22 in Word**: after a read-back fix the first Ctrl+Z undoes our narrow space; overtype mode is not handled;
-  Outlook (Word editor, process `OUTLOOK`) is not covered and would get a double space before `; : ! ?` — with
-  LibreOffice Writer, a future per-app rule. See [keyboard-design.md §5b](../design/keyboard-design.md).
+  Outlook (Word editor, process `OUTLOOK`) is not covered and would get a double space before `; : ! ?` — a future
+  per-app rule (LibreOffice has one since 0.11.0). See [keyboard-design.md §5b](../design/keyboard-design.md).
 - **KI-1:** no visible feedback at start-up and no single-instance guard — a second start looks like 'nothing
   happens'; see [known-issues.md](known-issues.md).
 

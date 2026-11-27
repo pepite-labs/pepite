@@ -337,6 +337,25 @@ public class Release083Tests : IDisposable
         finally { SoundAlikeCorrection.KeysOnlyHosts.Clear(); }
     }
 
+    /// <summary>0.11.0: one LibreOffice list (HostApps) for every rule; UIA is never asked there (Unavailable at once).</summary>
+    [Fact]
+    public void LibreOffice_Host_Classification()
+    {
+        foreach (var p in HostApps.LibreOffice)
+        {
+            Assert.True(HostApps.IsLibreOffice(p), p);
+            Assert.True(HostApps.UiaTextUnavailable(p), p);
+            Assert.True(SoundAlikeCorrection.RewritesWords(p), p);   // keys-only replacement stays denied
+        }
+        Assert.True(HostApps.IsLibreOffice("SOFFICE.BIN"));
+        foreach (var p in new[] { "notepad", "WINWORD", "chrome", "msedge", "soffice.exe", "office", "", null })
+        {
+            Assert.False(HostApps.IsLibreOffice(p), p ?? "null");
+            Assert.False(HostApps.UiaTextUnavailable(p), p ?? "null");
+        }
+        Assert.Null(HostApps.ProcessNameOf(IntPtr.Zero));
+    }
+
     [Theory]
     [InlineData("xterm-helper-textarea", null, true)]                 // VS Code / xterm.js: the class name
     [InlineData(null, "xterm-helper-textarea", true)]                 // or the automation id

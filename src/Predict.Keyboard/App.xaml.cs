@@ -25,7 +25,7 @@ namespace Predict.Keyboard;
 ///        Pepite.exe --quit   (asks the running instance to exit normally; for scripted tests)
 ///        Pepite.exe --render-bar &lt;out.png&gt; [--dpi 96|144|192] [--pictos &lt;pack&gt;] [--no-pictures]
 ///                           [--size S|M|L|XL] [--no-keys] [--font segoe-ui|opendyslexic|lexend|andika]
-///                           [--spacing normal|wider|widest] word1 word2 …
+///                           [--spacing normal|wider|widest] [--listen-button] [--listening N] word1 word2 …
 ///                           (draws the bar into a PNG and exits; installs no hook, injects nothing)
 ///        Pepite.exe --speech-bench &lt;outDir&gt; [--profile normal|2core] [--audio device|null] [--voices &lt;dir&gt;]
 ///                           [--sentences &lt;file&gt;] [--volume 0..100] [--voice siwis|pierre] [--switch]
@@ -229,6 +229,10 @@ public partial class App : Application
         // 0.8.3: a database without the spelling reference marks every lexicon form ✓ (the 0.8.2 behaviour): say which
         log?.Invoke(_engine.UnlistedCount > 0 ? $"spelling reference: {_engine.UnlistedCount} unlisted" : "spelling reference: absent");
         if (_engine.SpellingProblem is { } sp) log?.Invoke("spelling reference: " + sp);
+        // 0.11.0 (plan offensive-words): the « mots exclus » — counts and the file's SHA-256 only, never a word; no switch
+        log?.Invoke(_engine.Excluded.Sha256.Length > 0
+            ? FormattableString.Invariant($"exclusions: {_engine.Excluded.Describe()}, {_engine.ExclusionsLoadMs:0.0} ms")
+            : "exclusions: absent" + (_engine.ExclusionsProblem is { } xp ? " - " + xp : ""));
         // the synthesizers are created on the speech thread; the Piper voice (plan 08a) loads after startup (StartVoiceLoad)
         var speaker = _speaker = new Speaker(cur.Speech, log, () => PiperSynth.Scan(AppContext.BaseDirectory, log,
                                                                                     Option(args, "--audio") == "null"));
@@ -259,7 +263,10 @@ public partial class App : Application
             if (t.Result is { } np) wordPics.SetPack(np.Pictures);
         }), System.Threading.Tasks.TaskScheduler.Default);
         // plan 11 (10D-1): the morphology table for grammatical prediction (worker thread; the bar ranks as 0.8.3 until it is in)
-        _ = GrammarPack.LoadAsync(FindGrammar(Option(args, "--grammar")), eng, args.Contains("--no-grammar"), log);
+        // once it is in, the teacher's banned words are rebuilt on the UI thread so that they bring their lemma's forms
+        GrammarPack.LoadAsync(FindGrammar(Option(args, "--grammar")), eng, args.Contains("--no-grammar"), log)
+            .ContinueWith(t => { if (t.IsCompletedSuccessfully && t.Result != null) Dispatcher.BeginInvoke(() => _words?.RefreshExcluded("grammar")); },
+                          System.Threading.Tasks.TaskScheduler.Default);
         var win = new SuggestionWindow { Pictures = _pictures, WordPictures = wordPics, Log = log };
         win.Configure(LookOf(cur, fonts), cur.Position, FreeOf(cur));
         log?.Invoke($"bar warm-up: {win.WarmUp()} ms ({AppSettings.FontNames[win.Look!.Font.Font]}, {AppSettings.SpacingNames[cur.Spacing]}, size {cur.Size})");
@@ -299,8 +306,10 @@ public partial class App : Application
         Func<string?> activeName = () => mode.Enabled ? profiles.Active.Profile.Name : null;
         // plan 10A: the personal words of the active profile (Classe ∪ own lists), swapped into the engine
         var engine = _engine;
+        // 0.11.0 (plan offensive-words B3): « Classe »'s « Mots à ne jamais proposer » ∪ the machine's join the exclusions
         var words = _words = new WordListService(new WordListStore(profiles.ProfilesDir, log, profiles.InMemory), profiles, lex => engine.User = lex, log,
-                                                post: act => Dispatcher.BeginInvoke(act));
+                                                post: act => Dispatcher.BeginInvoke(act))
+        { MachineExclus = machine.MotsExclus, ApplyExcluded = WordListService.EngineExclusions(engine, log) };
         profileSvc.Words = words;
         // plan 10C: the pictures of the active profile's names lists follow its words
         words.Applied += () =>
@@ -310,7 +319,8 @@ public partial class App : Application
         };
         words.Rebuild("start");
         var wordsCtx = new WordsContext(words, w => engine.Knows(w), () => engine.MostFrequent300, speaker,
-                                        id => mode.Enabled ? profiles.Get(id)?.Profile.Name : null, log);
+                                        id => mode.Enabled ? profiles.Get(id)?.Profile.Name : null, log,
+                                        () => mode.Enabled && profiles.Policy.PinToEdit);
         Tray? trayRef = null;
         PupilsSection? pupils = null;
         // Réglages → Démarrage « … au prochain démarrage » reads and clears the app-level flag (not a profile setting)
@@ -395,8 +405,8 @@ public partial class App : Application
         {
             switch (code)
             {
-                case SessionWatcher.WtsSessionLock: log?.Invoke("session: locked"); DoSession(_sessionPolicy.OnLock(SessionCtx())); break;
-                case SessionWatcher.WtsSessionUnlock: log?.Invoke("session: unlocked"); DoSession(_sessionPolicy.OnUnlock(SessionCtx())); break;
+                case SessionWatcher.WtsSessionLock: log?.Invoke("session: locked"); _ctl?.ForgetHeldKeys(); DoSession(_sessionPolicy.OnLock(SessionCtx())); break;
+                case SessionWatcher.WtsSessionUnlock: log?.Invoke("session: unlocked"); _ctl?.ForgetHeldKeys(); DoSession(_sessionPolicy.OnUnlock(SessionCtx())); break;
                 case SessionWatcher.WtsSessionLogoff: log?.Invoke("session: logoff notification"); SessionEnds("logoff notification"); break;
             }
         };
@@ -501,7 +511,7 @@ public partial class App : Application
     }
 
     private static BarLook LookOf(AppSettings s, FontCatalog fonts) =>
-        new(BarMetrics.For(s.Size), s.Pictures, s.Keys == KeyMode.F1F8, fonts.Resolve(s.Font), s.Spacing);
+        new(BarMetrics.For(s.Size), s.Pictures, s.Keys == KeyMode.F1F8, fonts.Resolve(s.Font), s.Spacing, s.Click, s.KeysListenFirst, s.ListenButton);
 
     private static PointI? FreeOf(AppSettings s) => s.FreeX is int x && s.FreeY is int y ? new PointI(x, y) : null;
 
@@ -595,16 +605,21 @@ public partial class App : Application
             var notes = new List<string>();
             var fonts = new FontCatalog(FontCatalog.FindFontsDir(), m => { notes.Add(m); log?.Invoke(m); });
             var rf = fonts.Resolve(font);
-            var look = new BarLook(BarMetrics.For(size), store != null, !args.Contains("--no-keys"), rf, spacing);
+            // 2026-11-25 (listen before inserting): --listen-button draws option D's speaker band under each word,
+            // --listening N the ring of tile N (1 = the F1 tile) whose word was heard and waits for its second press
+            bool band = args.Contains("--listen-button");
+            int? listening = int.TryParse(Option(args, "--listening"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var ln) && ln >= 1 ? ln - 1 : null;
+            var look = new BarLook(BarMetrics.For(size), store != null, !args.Contains("--no-keys"), rf, spacing, ListenButton: band);
             var t = Environment.TickCount64;
-            var (w, h, dip, fallbacks) = SuggestionWindow.RenderBar(words, store, look, dpi, outPng, mark);
+            var (w, h, dip, fallbacks) = SuggestionWindow.RenderBar(words, store, look, dpi, outPng, mark, listening);
             var with = store is null ? 0 : words.Count(x => store.Has(x));
             var test = Strings.GlyphTest + Strings.GlyphTest.ToUpperInvariant() + "'-’";
             var sb = new StringBuilder();
             sb.AppendLine(FormattableString.Invariant(
                 $"render-bar: {words.Count} words ({with} with a picture), {w}x{h} px at {dpi} dpi ({dip.Width:0.#}x{dip.Height:0.#} DIP), {Environment.TickCount64 - t} ms -> {outPng}"));
             sb.AppendLine($"look: size {size} font {AppSettings.FontNames[font]} -> {AppSettings.FontNames[rf.Font]} ({rf.Family.Source}, weight {rf.Weight}, file {Path.GetFileName(rf.FontFile ?? "?")}) " +
-                          $"spacing {AppSettings.SpacingNames[spacing]} keys {(look.ShowKeys ? "on" : "off")} marker {mark}");
+                          $"spacing {AppSettings.SpacingNames[spacing]} keys {(look.ShowKeys ? "on" : "off")} marker {mark}" +
+                          (band || listening != null ? $" listen-button {(band ? "on" : "off")} listening {(listening is int li ? li + 1 : 0)}" : ""));
             sb.AppendLine($"missing glyphs: {FontCatalog.MissingGlyphs(rf.Glyphs, test)}");
             if (rf.Glyphs is { } g)
                 sb.AppendLine(FormattableString.Invariant($"metrics: line height {g.Height:0.###} em ({g.Height * BarMetrics.For(size).WordPt:0.#} DIP at {BarMetrics.For(size).WordPt} pt), baseline {g.Baseline:0.###} em, family line spacing {rf.Family.LineSpacing:0.###}"));

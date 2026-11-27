@@ -7,10 +7,44 @@ using System.Text.Json.Nodes;
 namespace Predict.Keyboard;
 
 /// <summary>The read-only machine layer (D11): <c>%PROGRAMDATA%\Pepite-Prediction\settings.json</c> =
-/// <c>{ "schema": 1, "defaults": {…partial…}, "locked": {…partial…} }</c>.</summary>
+/// <c>{ "schema": 1, "defaults": {…partial…}, "locked": {…partial…} }</c>. 0.11.0 (plan offensive-words B2):
+/// <c>locked.motsExclus</c> = an array of words never offered on this PC, added to the « Classe » « Mots à ne jamais
+/// proposer » (union); it is taken out of <see cref="Locked"/> (no setting has that name) into <see cref="MotsExclus"/>.</summary>
 internal sealed record MachineLayer(JsonObject? Defaults, JsonObject? Locked)
 {
     public static readonly MachineLayer None = new(null, null);
+
+    /// <summary>The key of <c>locked</c> that holds the machine's banned words.</summary>
+    public const string MotsExclusKey = "motsExclus";
+
+    /// <summary>The machine's « Mots à ne jamais proposer » (the word entry rule, unique ignoring case, at most
+    /// <see cref="WordBook.MaxExclus"/>); empty without the key.</summary>
+    public IReadOnlyList<string> MotsExclus { get; init; } = Array.Empty<string>();
+
+    /// <summary>The entries of <c>locked.motsExclus</c> left out (not a word, over the limit); <c>--check-config</c> says how many.</summary>
+    public int MotsExclusIgnored { get; init; }
+
+    /// <summary>« , motsExclus N words (M ignored) » for the load log and <c>--check-config</c> — counts only.</summary>
+    internal string MotsExclusSummary =>
+        MotsExclus.Count == 0 && MotsExclusIgnored == 0 ? ""
+        : $", motsExclus {MotsExclus.Count} words" + (MotsExclusIgnored > 0 ? $" ({MotsExclusIgnored} ignored)" : "");
+
+    /// <summary><c>locked.motsExclus</c> read with the limits of the « Classe » list: invalid entries dropped (counted in
+    /// <paramref name="dropped"/>), the first <see cref="WordBook.MaxExclus"/> kept. Never logs a word.</summary>
+    internal static IReadOnlyList<string> ReadMotsExclus(JsonNode? node, out int dropped)
+    {
+        dropped = 0;
+        var o = new List<string>();
+        if (node is not JsonArray a) { if (node != null) dropped = 1; return o; }
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var n in a)
+        {
+            var s = n is JsonValue v && v.TryGetValue<string>(out var str) ? str : null;
+            if (s is null || WordBook.Check(s) != null || o.Count >= WordBook.MaxExclus) { dropped++; continue; }
+            if (seen.Add(WordBook.Clean(s))) o.Add(WordBook.Clean(s));
+        }
+        return o;
+    }
 
     /// <summary>Where the machine file is looked for, in order (D29): <c>%PROGRAMDATA%\Pepite-Prediction\settings.json</c>,
     /// then the file of an older install, <c>%PROGRAMDATA%\PredictKeyboard\settings.json</c>. The first <b>trusted</b> one
@@ -78,7 +112,7 @@ internal sealed record MachineLayer(JsonObject? Defaults, JsonObject? Locked)
             foreach (var part in new[] { m.Defaults, m.Locked })
                 if (VoiceId.MigrateJson(part) is { } migrated) log?.Invoke($"machine settings: speech.voice read as {migrated}");
             log?.Invoke($"machine settings: {path} (owner {file!.OwnerSid}), defaults [{string.Join(", ", Json.LeafPaths(m.Defaults))}], " +
-                        $"locked [{string.Join(", ", Json.LeafPaths(m.Locked))}]");
+                        $"locked [{string.Join(", ", Json.LeafPaths(m.Locked))}]" + m.MotsExclusSummary);
             return m;
         }
         catch (Exception ex)
@@ -116,7 +150,15 @@ internal sealed record MachineLayer(JsonObject? Defaults, JsonObject? Locked)
         foreach (var key in new[] { "defaults", "locked" })
             if (o[key] is { } part && part is not JsonObject) { error = $"\"{key}\" is not an object"; return null; }
         error = null;
-        return new MachineLayer(o["defaults"] as JsonObject, o["locked"] as JsonObject);
+        var locked = o["locked"] as JsonObject;
+        IReadOnlyList<string> exclus = Array.Empty<string>();
+        int ignored = 0;
+        if (locked != null && locked.ContainsKey(MotsExclusKey))
+        {
+            exclus = ReadMotsExclus(locked[MotsExclusKey], out ignored);
+            locked = Json.Without(locked, new[] { MotsExclusKey });
+        }
+        return new MachineLayer(o["defaults"] as JsonObject, locked) { MotsExclus = exclus, MotsExclusIgnored = ignored };
     }
 
     /// <summary>Reads every object and array once, so that a duplicate key anywhere fails in <see cref="Parse"/>.</summary>
@@ -144,7 +186,8 @@ internal sealed record MachineLayer(JsonObject? Defaults, JsonObject? Locked)
         }
         if (Parse(text, out var error) is { } m)
         {
-            message = $"valid: defaults [{string.Join(", ", Json.LeafPaths(m.Defaults))}], locked [{string.Join(", ", Json.LeafPaths(m.Locked))}]";
+            message = $"valid: defaults [{string.Join(", ", Json.LeafPaths(m.Defaults))}], locked [{string.Join(", ", Json.LeafPaths(m.Locked))}]" +
+                      m.MotsExclusSummary;
             return CheckValid;
         }
         message = "invalid: " + error;

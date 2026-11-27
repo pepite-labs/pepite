@@ -17,6 +17,8 @@ namespace Predict.Core;
 /// spellers mix é / è / ai / eu), but a final <c>e</c> is dropped only when it is a real mute e — a written unaccented
 /// « e » on its own (« pomme », « parle »), Lexique's schwa <c>°</c> — never a sounded one: « fè », « fais » (/fɛ/),
 /// « été », « feu » keep it (« fè » → <c>fe</c>; it was <c>f</c>, too short for the sound pass).</para>
+/// <para>0.11.0 (plan dys-sound-tolerance): /ʃ/ <c>C</c> and /ʒ/ <c>j</c> — and the other voicing pairs — stay apart in the
+/// key (bouge ≠ bouche); a pupil's voicing confusions are bridged on the query side by <see cref="Variants"/>, per profile.</para>
 /// </summary>
 public static class PhoneticKey
 {
@@ -202,5 +204,45 @@ public static class PhoneticKey
         }
 
         return Finish(o);
+    }
+
+    /// <summary>
+    /// 0.11.0 (plan dys-sound-tolerance): the keys a pupil who confuses the <paramref name="pairs"/> may have meant —
+    /// <paramref name="key"/> with 1 to <paramref name="maxSwaps"/> of its swappable symbols replaced by their partner
+    /// (<see cref="SoundPairsInfo.Partner"/>: « CardE » → « jardE » for ch/j). Only the first <paramref name="maxPositions"/>
+    /// swappable positions count, left to right; single swaps first by position, then the pairs of positions in lexicographic
+    /// order (and so on). Never <paramref name="key"/> itself; empty for <see cref="SoundPairs.None"/> or nothing swappable.
+    /// The variants keep the key's length, so a variant of a typed prefix is a prefix of the meant word's key (the fold is
+    /// symbol by symbol): the engine looks them up in its existing sound index, no new index. At most 4 + 6 = 10 keys with the
+    /// defaults.
+    /// </summary>
+    public static IReadOnlyList<string> Variants(string key, SoundPairs pairs, int maxSwaps = 2, int maxPositions = 4)
+    {
+        if (pairs == SoundPairs.None || string.IsNullOrEmpty(key) || maxSwaps <= 0 || maxPositions <= 0) return Array.Empty<string>();
+        Span<int> pos = stackalloc int[Math.Min(maxPositions, 16)];
+        int n = 0;
+        for (int i = 0; i < key.Length && n < pos.Length; i++)
+            if (SoundPairsInfo.Partner(key[i], pairs) != '\0') pos[n++] = i;
+        if (n == 0) return Array.Empty<string>();
+        var o = new List<string>(n * (n + 1) / 2);
+        Span<int> pick = stackalloc int[n];
+        var buf = key.ToCharArray();
+        for (int size = 1; size <= Math.Min(maxSwaps, n); size++)
+        {
+            // the combinations of `size` positions among n, in lexicographic order
+            for (int j = 0; j < size; j++) pick[j] = j;
+            while (true)
+            {
+                for (int j = 0; j < size; j++) buf[pos[pick[j]]] = SoundPairsInfo.Partner(key[pos[pick[j]]], pairs);
+                o.Add(new string(buf));
+                for (int j = 0; j < size; j++) buf[pos[pick[j]]] = key[pos[pick[j]]];
+                int t = size - 1;
+                while (t >= 0 && pick[t] == n - size + t) t--;
+                if (t < 0) break;
+                pick[t]++;
+                for (int j = t + 1; j < size; j++) pick[j] = pick[j - 1] + 1;
+            }
+        }
+        return o;
     }
 }

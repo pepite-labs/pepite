@@ -121,6 +121,58 @@ internal static class KeyboardPolicy
         return b.Tile == a.Tile || Math.Abs(b.X - a.X) <= cx / 2 && Math.Abs(b.Y - a.Y) <= cy / 2;
     }
 
+    /// <summary>
+    /// F1…F8 in the hook (owner 2026-11-25, listen before inserting). <paramref name="index"/> = 0 for F1. A fresh plain key
+    /// with a word under it: <see cref="FKeyAct.Press"/> with « Touches F1–F8 : 1er appui : écouter, 2e : insérer »
+    /// (<paramref name="keysListenFirst"/>, the default), else <see cref="FKeyAct.Insert"/>. Shift alone with option A on:
+    /// <see cref="FKeyAct.Listen"/>. Anything else (keys off, Ctrl, Alt, Shift without A, no word under the key):
+    /// <see cref="FKeyAct.Pass"/>.
+    /// <paramref name="first"/> non-null = the key is still held and this is an auto-repeat of a down already decided
+    /// (<see cref="HeldFirst"/>): only that first action repeats (review of 238c58b). A passed down stays passed (a released
+    /// Ctrl / Shift never turns the repeats of Ctrl+F1 / Shift+F3 into inserts); a plain « insérer tout de suite » insert
+    /// inserts again while a word is under the key and no modifier is held, as before; everything else is swallowed whatever
+    /// the bar shows now (review of bcf6442: a held confirm key must not auto-repeat into the application after a correction
+    /// or a bar without that index). Pure, O(1).
+    /// </summary>
+    public static FKeyAct FKeyAction(int index, bool ctrl, bool alt, bool shift, bool keysOn, bool listenShift, bool keysListenFirst,
+                                     int suggCount, FKeyAct? first)
+    {
+        bool word = keysOn && index >= 0 && index < suggCount;
+        switch (first)
+        {
+            case FKeyAct.Pass: return FKeyAct.Pass;
+            case FKeyAct.Insert: return word && !ctrl && !alt && !shift ? FKeyAct.Insert : FKeyAct.Swallow;
+            case not null: return FKeyAct.Swallow;
+        }
+        if (!word || ctrl || alt) return FKeyAct.Pass;
+        if (shift) return listenShift ? FKeyAct.Listen : FKeyAct.Pass;
+        return keysListenFirst ? FKeyAct.Press : FKeyAct.Insert;
+    }
+
+    /// <summary>
+    /// The first action of a held F-key, or null when this down is a new press. <paramref name="held"/> /
+    /// <paramref name="first"/>: the hook's per-key record (<see cref="FKeyHolds"/>: the action of the key's first down,
+    /// cleared at its key-up). Third review of 238c58b: for a down the hook <b>swallowed</b> the record alone decides — an
+    /// event a low-level hook eats probably never reaches the asynchronous key state, so <c>GetAsyncKeyState</c> would call
+    /// every auto-repeat of a swallowed F1 a new press (listen, insert, listen…; after a correction the repeat would reach
+    /// the app's F1 help). Only for a down that was <b>passed</b> (its state is updated by Windows) does
+    /// <paramref name="keyWasDown"/> (the state read in the hook, before Windows updates it: down = already down) tell a
+    /// repeat from a new press. No timer: Filter Keys (« Touches filtres ») repeat delays of 1.5–2 s and more stay
+    /// repeats. A swallowed key's lost key-up is handled by resetting the records where key-ups go missing
+    /// (<see cref="FKeyHolds"/>). Pure, O(1).
+    /// </summary>
+    public static FKeyAct? HeldFirst(bool held, FKeyAct first, bool keyWasDown) =>
+        held && (first != FKeyAct.Pass || keyWasDown) ? first : null;
+
+    /// <summary>Is the key-up of an F-key whose first down took <paramref name="first"/> swallowed? Yes when the hook handled
+    /// that down (its down was swallowed: the application must not see a lone key-up); no when it was passed.</summary>
+    public static bool SwallowFKeyUp(FKeyAct first) => first != FKeyAct.Pass;
+
+    /// <summary>Shift, Ctrl, Alt (left / right), Caps Lock, Num Lock and the Windows keys: held or toggled on their own they
+    /// never cancel a word heard on the bar (2026-11-25, listen before inserting). The same keys the hook lets through
+    /// untracked.</summary>
+    public static bool IsModifierOrLock(uint vk) => vk is 0x10 or 0x11 or 0x12 or 0x14 or 0x5B or 0x5C or 0x90 or (>= 0xA0 and <= 0xA5);
+
     /// <summary>Plan 10B (final re-review): the finished word an update may mark. A word finished by a line break is marked
     /// only for the tracker version the line-end check accepted (<paramref name="acceptedVersion"/>); any later state — a
     /// space typed after a chat sent its line on Enter — never marks it.</summary>
@@ -149,7 +201,39 @@ internal static class KeyboardPolicy
             };
         return (AutoSpaceFix.Keep, "");
     }
+
+    /// <summary>BUG-1 (VM run 2026-11-26): a UI Automation call from another process (an Invoke, a SetFocus — Narrateur,
+    /// Accès vocal, a test script) makes the no-activate bar the foreground for a moment, before the tile's own Invoke
+    /// runs. That is not the user going to one of our windows: counted as « own » it hid the bar, so the Invoke found no
+    /// tile (ElementNotAvailable). The bar is therefore classified first: no jump, the foreground is given back, the text
+    /// window stays the target. Our other windows (tray menu, À propos, Réglages, the reading window) stay « own ».</summary>
+    /// <param name="fg">the new foreground window.</param>
+    /// <param name="last">the foreground the controller tracks (the text window).</param>
+    /// <param name="bar">the bar's window handle (zero before it exists).</param>
+    /// <param name="shellOrOwn"><see cref="Native.IsShellOrOwn"/> of <paramref name="fg"/>.</param>
+    public static ForegroundMove ClassifyForeground(IntPtr fg, IntPtr last, IntPtr bar, bool shellOrOwn)
+    {
+        if (fg == last) return ForegroundMove.Same;
+        if (bar != IntPtr.Zero && fg == bar) return ForegroundMove.Bar;
+        return shellOrOwn ? ForegroundMove.Own : ForegroundMove.Other;
+    }
+
+    /// <summary>Where the bar gives the foreground back when something activated it (<see cref="ClassifyForeground"/>),
+    /// in the order to try: the window it took it from (WM_ACTIVATE's <paramref name="deactivated"/>), then the window
+    /// the controller tracks (the next one is tried when a window is gone or refuses — a window closing as the
+    /// activation moved). Never the bar itself, never zero, no duplicate; empty = nothing to give back to.</summary>
+    public static IntPtr[] GiveBackTargets(IntPtr deactivated, IntPtr tracked, IntPtr bar)
+    {
+        bool usable(IntPtr h) => h != IntPtr.Zero && h != bar;
+        if (!usable(deactivated)) return usable(tracked) ? new[] { tracked } : Array.Empty<IntPtr>();
+        return usable(tracked) && tracked != deactivated ? new[] { deactivated, tracked } : new[] { deactivated };
+    }
 }
+
+/// <summary>See <see cref="KeyboardPolicy.ClassifyForeground"/>. <c>Same</c>: no change; <c>Bar</c>: the bar was
+/// activated from outside (not a jump); <c>Own</c>: our other windows or the taskbar / tray (Keep, bar hidden);
+/// <c>Other</c>: another application (a leave).</summary>
+internal enum ForegroundMove { Same, Bar, Own, Other }
 
 /// <summary>See <see cref="KeyboardPolicy.AfterAutoSpace"/>.</summary>
 internal enum AutoSpaceFix { Keep, Absorb, Replace }
@@ -173,8 +257,9 @@ internal enum SpacingCheck
 /// <c>; : ! ?</c> — only when that AutoCorrect option is on and the text's proofing language is French. In Word we
 /// therefore take our automatic space back and send the punctuation alone (or, when this window was seen not to add
 /// one, our space + the punctuation), then read back what Word produced and add or remove one space (controller,
-/// <see cref="Check"/>). Everywhere else the setting applies directly. Only Word for now; LibreOffice Writer (also
-/// autocorrects French punctuation) is the next candidate.
+/// <see cref="Check"/>). LibreOffice (0.11.0): our space is taken back too and the punctuation sent alone — its own
+/// AutoCorrect puts one U+00A0 in French text — but nothing is read back (no text to read there). Everywhere else the
+/// setting applies directly.
 /// </summary>
 /// <summary>A click on a bar tile: its input message's time (32-bit tick count), the tile, the screen point.</summary>
 internal readonly record struct TileClick(int Time, int Tile, int X, int Y);
@@ -201,10 +286,19 @@ internal static class AppRules
         _ => KeyboardPolicy.NarrowNbsp,
     };
 
-    /// <summary>Processes whose own autocorrection spaces <c>; : ! ?</c> (name without .exe, case-insensitive).</summary>
+    /// <summary>Processes whose own autocorrection spaces <c>; : ! ?</c> and that we can read back (name without .exe,
+    /// case-insensitive): the adaptive rule (<see cref="ReadsBackSpacing"/>).</summary>
     private static readonly string[] SpacesHighPunctuationItself = { "WINWORD" };
 
-    public static bool AppSpacesPunctuation(string? process) =>
+    /// <summary>The app spaces <c>; : ! ?</c> itself: Word (adaptive, read back) and LibreOffice (0.11.0, owner Q4 of the
+    /// LibreOffice study: its French AutoCorrect deletes the spaces before the sign and puts one U+00A0 — a U+202F of ours
+    /// was kept next to it, a double space; LibreOffice cannot be read back, so its U+00A0 is accepted as is and its options
+    /// are never changed).</summary>
+    public static bool AppSpacesPunctuation(string? process) => ReadsBackSpacing(process) || HostApps.IsLibreOffice(process);
+
+    /// <summary>Word only: after the punctuation, read back what the app produced and add / remove one space (D22 adaptive).
+    /// LibreOffice gives no text to read (keyboard-design § 5b): no read-back there.</summary>
+    public static bool ReadsBackSpacing(string? process) =>
         !string.IsNullOrEmpty(process) &&
         Array.Exists(SpacesHighPunctuationItself, n => string.Equals(n, process, StringComparison.OrdinalIgnoreCase));
 
@@ -242,4 +336,44 @@ internal sealed class AutoSpaceState
         else Disarm();
         return d;
     }
+}
+
+/// <summary>
+/// The hook's record of F1…F8 held down (third review of 238c58b; hook thread only, fixed array, no allocation, O(1)).
+/// Each key keeps the action of its first down until its key-up (<see cref="KeyboardPolicy.HeldFirst"/>). Where key-ups
+/// really go missing the records are dropped: a foreground change (WinEvent or seen at a key-down: an elevated or secure
+/// window takes the key-up), Pause / Reprendre (key-ups are not followed while paused),
+/// a session lock / unlock (Win+L: the key-up goes to the secure desktop) — signalled by a generation counter the UI
+/// thread increments and the hook compares at the next F-key down — and the hook install (a new instance).
+/// </summary>
+internal sealed class FKeyHolds
+{
+    private readonly (bool Held, FKeyAct First)[] _keys = new (bool, FKeyAct)[8];
+    private long _seenGeneration;
+
+    /// <summary>At a down of key <paramref name="index"/> (0 = F1): the first action of that key still held, or null for a
+    /// new press. All records are dropped first when <paramref name="generation"/> moved (a session lock / unlock).</summary>
+    public FKeyAct? Held(int index, bool keyWasDown, long generation)
+    {
+        if (generation != _seenGeneration) { _seenGeneration = generation; Clear(); }
+        var h = _keys[index];
+        return KeyboardPolicy.HeldFirst(h.Held, h.First, keyWasDown);
+    }
+
+    /// <summary>The action this down took (the first one of the hold is kept by the caller: <c>first ?? act</c>).</summary>
+    public void Record(int index, FKeyAct first) => _keys[index] = (true, first);
+
+    /// <summary>The key-up: the record ends. True = swallow it (its down was handled), false = pass it.</summary>
+    public bool Up(int index)
+    {
+        var h = _keys[index];
+        _keys[index] = default;
+        return h.Held && KeyboardPolicy.SwallowFKeyUp(h.First);
+    }
+
+    /// <summary>A down passed untouched (our own window, a private host): no record, so its key-up passes too.</summary>
+    public void Forget(int index) => _keys[index] = default;
+
+    /// <summary>A foreground change: every key-up may have gone to another (elevated, secure) window.</summary>
+    public void Clear() => Array.Clear(_keys);
 }

@@ -1,9 +1,13 @@
 <Application x:Class="Predict.Keyboard.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Predict.Keyboard"
              ShutdownMode="OnExplicitShutdown">
   <Application.Resources>
-    <!-- one suggestion of the bar (SuggestionWindow, settings preview, render sheets); see BarBuilder -->
+    <!-- one suggestion of the bar (SuggestionWindow, settings preview, render sheets); see BarBuilder.
+         2026-11-25 (listen before inserting): the outer « Ring » border of the template lies in the tile's 3 DIP margin
+         (Margin -3, BorderThickness 3: the button's layout and pixels are unchanged; no brush = not drawn, not
+         hit-testable); white while the tile's word was heard and waits for its second press (BarBuilder.Listening) -->
     <Style x:Key="Sugg" TargetType="Button">
       <Setter Property="Focusable" Value="False"/>
       <Setter Property="Foreground" Value="White"/>
@@ -13,8 +17,69 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="B" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+            <Border x:Name="Ring" Margin="-3" BorderThickness="3" CornerRadius="9" BorderBrush="{x:Null}">
+              <Border x:Name="B" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                <ContentPresenter HorizontalAlignment="Center"/>
+              </Border>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="B" Property="Opacity" Value="0.8"/>
+              </Trigger>
+              <Trigger Property="local:BarBuilder.Listening" Value="True">
+                <Setter TargetName="Ring" Property="BorderBrush" Value="White"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <!-- option D (speaker band under the word): the ring around the two parts of a tile -->
+    <Style x:Key="SuggRing" TargetType="Border">
+      <Setter Property="BorderThickness" Value="3"/>
+      <Setter Property="CornerRadius" Value="9"/>
+      <Setter Property="BorderBrush" Value="{x:Null}"/>
+      <Style.Triggers>
+        <Trigger Property="local:BarBuilder.Listening" Value="True">
+          <Setter Property="BorderBrush" Value="White"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <!-- option D: the word part (top corners rounded) -->
+    <Style x:Key="SuggWord" TargetType="Button">
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="Padding" Value="12,3,12,6"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="B" Background="{TemplateBinding Background}" CornerRadius="6,6,0,0" Padding="{TemplateBinding Padding}">
               <ContentPresenter HorizontalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="B" Property="Opacity" Value="0.8"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <!-- option D: the speaker band, full width under the word (bottom corners rounded), the tile colour darkened by 25 % -->
+    <Style x:Key="SuggBand" TargetType="Button">
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="B" Background="{TemplateBinding Background}" CornerRadius="0,0,6,6">
+              <Border Background="#40000000" CornerRadius="0,0,6,6">
+                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">

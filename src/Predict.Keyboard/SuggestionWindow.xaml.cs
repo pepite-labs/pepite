@@ -24,7 +24,17 @@ namespace Predict.Keyboard;
 public partial class SuggestionWindow : Window
 {
     public event Action<int>? Picked;
+    /// <summary>Owner 2026-11-25: a UI Automation Invoke on tile <c>index</c>'s word (screen reader, voice access, switch
+    /// tools) — not a mouse click: it follows « Touches F1–F8 » (<see cref="ListenFirst.InvokeAction"/>), never reaches
+    /// <see cref="Picked"/> nor its double-click detection. UI thread.</summary>
+    public event Action<int>? Invoked;
+    /// <summary>The spelling marker's word is to be spoken (its right-click). UI thread.</summary>
     public event Action<string>? SpeakRequested;
+    /// <summary>Owner 2026-11-25: listen to tile <c>index</c> without inserting it — its right-click (or a touch
+    /// press-and-hold) <c>"right-click"</c>, or option D's speaker band <c>"button"</c>. The controller speaks it (and arms
+    /// the tile when a confirming press exists) — or, for a right-click in « Clic sur un mot : clic : écouter ; double-clic
+    /// ou clic droit : insérer », inserts it. UI thread.</summary>
+    public event Action<int, string>? ListenRequested;
     /// <summary>Plan 10B: the spelling marker was clicked (or invoked through UI Automation). UI thread.</summary>
     public event Action<SpellingMark>? MarkerClicked;
     /// <summary>The user dropped the bar at a new place (physical px, top-left). UI thread.</summary>
@@ -39,6 +49,7 @@ public partial class SuggestionWindow : Window
         SourceInitialized += (_, _) =>
         {
             _hwnd = new WindowInteropHelper(this).Handle;
+            _hwndShared = _hwnd;
             long ex = Native.GetWindowLongPtr(_hwnd, -20).ToInt64();
             ex |= 0x08000000 /*NOACTIVATE*/ | 0x00000080 /*TOOLWINDOW*/ | 0x00000008 /*TOPMOST*/;
             Native.SetWindowLongPtr(_hwnd, -20, new IntPtr(ex));
@@ -108,10 +119,45 @@ public partial class SuggestionWindow : Window
         HideBar();
     }
 
-    private static IntPtr WndProc(IntPtr h, int msg, IntPtr w, IntPtr l, ref bool handled)
+    private IntPtr WndProc(IntPtr h, int msg, IntPtr w, IntPtr l, ref bool handled)
     {
         if (msg == 0x0021) { handled = true; return (IntPtr)3; }   // WM_MOUSEACTIVATE -> MA_NOACTIVATE
+        // WM_ACTIVATE, WA_ACTIVE / WA_CLICKACTIVE: see GiveBackForeground (BUG-1)
+        if (msg == 0x0006 && (w.ToInt64() & 0xFFFF) != 0)
+        {
+            var from = l;
+            // posted at Send priority: out of the activation sequence, yet before the UI Automation call that caused it
+            // reaches the tile (WPF runs it at Send priority too, after this; the tile then posts its Invoke at Input)
+            Dispatcher.BeginInvoke(DispatcherPriority.Send, new Action(() => GiveBackForeground(from)));
+        }
         return IntPtr.Zero;
+    }
+
+    /// <summary>The bar's window handle (zero until shown once); read by the hook thread.</summary>
+    internal IntPtr BarHwnd => _hwndShared;
+    private volatile IntPtr _hwndShared;
+
+    /// <summary>The window the controller tracks as the text window (hook thread's last foreground), the fallback when
+    /// WM_ACTIVATE does not say which window lost the activation.</summary>
+    internal Func<IntPtr>? TrackedForeground { get; set; }
+
+    /// <summary>BUG-1 (VM 2026-11-26): the bar is no-activate for the mouse and the system, but a UI Automation client's
+    /// Invoke or SetFocus (Narrateur, Accès vocal, a script) makes it the foreground window anyway, before the tile's
+    /// Invoke runs. Then the keys would go to the bar, not to the text. So the bar gives the foreground straight back to
+    /// the window it took it from (we are the foreground process, so <c>SetForegroundWindow</c> is allowed) and the
+    /// controller does not count the change as a jump (<see cref="KeyboardPolicy.ClassifyForeground"/>). UI thread.</summary>
+    /// <param name="from">the window that lost the activation (WM_ACTIVATE's lParam), or zero.</param>
+    /// <returns>false when the bar is still the foreground window (no window left to give it to, or all refused): the
+    /// caller must then not type anything (the keys would go to the bar).</returns>
+    internal bool GiveBackForeground(IntPtr from = default)
+    {
+        if (_hwnd == IntPtr.Zero || Native.GetForegroundWindow() != _hwnd) return true;   // not ours (already given back)
+        var targets = KeyboardPolicy.GiveBackTargets(from, TrackedForeground?.Invoke() ?? IntPtr.Zero, _hwnd);
+        bool ok = false;
+        foreach (var to in targets)   // a window closing as the activation moved: the tracked text window next
+            if (Native.IsWindow(to) && Native.SetForegroundWindow(to)) { ok = true; break; }
+        Log?.Invoke($"  bar activated from outside (UI Automation): foreground {(ok ? "given back" : targets.Length == 0 ? "not given back (no window to give it to)" : "NOT given back (refused)")}");
+        return ok;
     }
 
     // thread-safe mirror of visibility/rect, read by the hook thread
@@ -136,6 +182,7 @@ public partial class SuggestionWindow : Window
     private string? _markWord;                                                     // UI thread: its word (right-click: say it)
     private PointI? _lastCaret;                                                    // UI thread
     private readonly HashSet<string> _fallbackLogged = new();                      // UI thread
+    private int? _listening;                                                       // UI thread: the ringed tile (listen before inserting)
 
     private bool SlotsOn => Pictures != null && (Look?.Pictures ?? true);
 
@@ -162,6 +209,7 @@ public partial class SuggestionWindow : Window
         _last = s;
         _slots.Clear();
         Bar.Children.Clear();
+        _listening = null;   // new tiles: the controller rings the pending one again if it is still there
         SetMarker(mark, markWord);
         List<string>? wanted = null;
         int cached = 0, named = 0;
@@ -287,7 +335,8 @@ public partial class SuggestionWindow : Window
             var root = new StackPanel { Orientation = Orientation.Horizontal };
             var style = (Style)FindResource("Sugg");
             root.Children.Add(BarBuilder.MakeMarker(SpellingMark.SoundsLike, look with { Pictures = SlotsOn }, style));   // plan 10B
-            for (int i = 0; i < WarmWords.Length; i++) root.Children.Add(BarBuilder.MakeButton(i, WarmWords[i], look, style, out _, out _));
+            var styles = BarStyles.From(this);
+            for (int i = 0; i < WarmWords.Length; i++) root.Children.Add(BarBuilder.MakeTile(i, WarmWords[i], look, styles, out _, out _).Root);
             var host = new Border { Background = Background, Child = root };
             host.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             host.Arrange(new Rect(host.DesiredSize));
@@ -310,9 +359,10 @@ public partial class SuggestionWindow : Window
     /// with their pictures loaded synchronously and save it as a PNG at <paramref name="dpi"/>.</summary>
     /// <returns>pixel size, DIP size of the bar, and the words that fell back to a TextBlock.</returns>
     /// <param name="mark">plan 10B: the spelling marker drawn left of the words (render sheets of the three states).</param>
+    /// <param name="listening">2026-11-25: the tile drawn with the « heard, press again » ring (0-based), or null.</param>
     internal static (int W, int H, Size Dip, List<string> Fallbacks) RenderBar(IReadOnlyList<string> words, PictureStore? store,
                                                                               BarLook look, double dpi, string outPng,
-                                                                              SpellingMark mark = SpellingMark.None)
+                                                                              SpellingMark mark = SpellingMark.None, int? listening = null)
     {
         var w = new SuggestionWindow { Pictures = store };
         w.Look = look;
@@ -320,6 +370,7 @@ public partial class SuggestionWindow : Window
         if (store != null) foreach (var word in words) store.GetNow(word);
         w.SetMarker(mark, null);
         var fallbacks = w.FillBar(words.Select((x, i) => new Suggestion(x, 0, kinds[i % 3])).ToList());
+        w.SetListening(listening);
         var root = (FrameworkElement)w.Content;
         w.Content = null;
         var host = new Border { Background = w.Background, Child = root, UseLayoutRounding = true };
@@ -350,6 +401,25 @@ public partial class SuggestionWindow : Window
     }
 
     public void HideBar() { _shown = false; if (IsVisible) Hide(); }
+
+    /// <summary>Owner 2026-11-25: ring tile <paramref name="index"/> (its word was heard, a second press inserts it), or
+    /// none. The ring changes no geometry (the template's border is always there, only its brush changes); the word button
+    /// gets the UI Automation item status « Écouté — encore une fois pour insérer ». UI thread.</summary>
+    internal void SetListening(int? index)
+    {
+        if (index is int n && (n < 0 || n >= Bar.Children.Count)) index = null;
+        if (_listening == index) return;
+        if (_listening is int old && old < Bar.Children.Count) Ring(Bar.Children[old], false);
+        _listening = index;
+        if (index is int i) Ring(Bar.Children[i], true);
+    }
+
+    private static void Ring(UIElement tile, bool on)
+    {
+        BarBuilder.SetListening(tile, on);
+        if (BarBuilder.WordButtonOf(tile) is { } word)
+            System.Windows.Automation.AutomationProperties.SetItemStatus(word, on ? Strings.ListenArmedStatus : "");
+    }
 
     /// <summary>The bar (suggestions or reading view) is shown; any thread.</summary>
     internal bool Shown => _shown;
@@ -469,17 +539,24 @@ public partial class SuggestionWindow : Window
         FreeMoved?.Invoke(r.Left, r.Top);
     }
 
-    private Button MakeButton(int i, Suggestion s, out (Border Slot, Image Img)? slot, List<string>? fallbacks = null)
+    private BarStyles? _styles;
+
+    /// <summary>One tile (<see cref="BarBuilder.MakeTile"/>): a click on the word picks it; a right-click (a touch
+    /// press-and-hold) on any part, or a click on option D's speaker band, asks to listen (<see cref="ListenRequested"/>).
+    /// The band and the word are siblings, so a band click never reaches the word's Click.</summary>
+    private FrameworkElement MakeButton(int i, Suggestion s, out (Border Slot, Image Img)? slot, List<string>? fallbacks = null)
     {
         var look = (Look ?? BarLook.Default(new FontCatalog(null, null))) with { Pictures = SlotsOn };
-        var b = BarBuilder.MakeButton(i, s, look, (Style)FindResource("Sugg"), out slot, out bool fb);
+        var t = BarBuilder.MakeTile(i, s, look, _styles ??= BarStyles.From(this), out slot, out bool fb);
         if (fb)
         {
             fallbacks?.Add(s.Word);
             if (_fallbackLogged.Add(s.Word)) Log?.Invoke($"  font '{AppSettings.FontNames[look.Font.Font]}' lacks a character of '{s.Word}': plain text");
         }
-        b.Click += (_, _) => Picked?.Invoke(i);
-        b.MouseRightButtonUp += (_, e) => { SpeakRequested?.Invoke(s.Word); e.Handled = true; };
-        return b;
+        t.Word.Click += (_, _) => Picked?.Invoke(i);
+        t.Word.AutomationInvoked += (_, _) => Invoked?.Invoke(i);   // UIA Invoke: not a click (the band's Invoke stays its Click)
+        t.Root.MouseRightButtonUp += (_, e) => { ListenRequested?.Invoke(i, "right-click"); e.Handled = true; };
+        if (t.Band is { } band) band.Click += (_, e) => { ListenRequested?.Invoke(i, "button"); e.Handled = true; };
+        return t.Root;
     }
 }

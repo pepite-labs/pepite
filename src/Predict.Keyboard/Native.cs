@@ -95,6 +95,10 @@ internal static class Native
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetClassNameW")]
     public static extern int GetClassName(IntPtr hWnd, StringBuilder name, int max);
+
+    /// <summary>A top-level window of another process: its stored title, no message sent (never hangs).</summary>
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetWindowTextW")]
+    public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int max);
     /// <summary>Each cross-process message is bounded: a hung app costs at most the timeout.</summary>
     [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "SendMessageTimeoutW", SetLastError = true)]
     public static extern IntPtr SendMessageTimeout(IntPtr h, int msg, IntPtr w, IntPtr l, uint flags, uint ms, out IntPtr result);
@@ -148,6 +152,7 @@ internal static class Native
     [DllImport("user32.dll")] public static extern int GetSystemMetricsForDpi(int index, uint dpi);
     [DllImport("user32.dll")] public static extern uint GetDpiForSystem();
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr hWnd);
     [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint attach, uint to, bool on);
     [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
     public const uint MF_STRING = 0x0, MF_GRAYED = 0x1, MF_SEPARATOR = 0x800;

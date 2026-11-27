@@ -13,7 +13,7 @@ UI Automation `TextPattern` first where the application supports it, with the Wi
 | The user's app must **keep focus** | bar is a non-activating window (`WS_EX_NOACTIVATE`, `MA_NOACTIVATE`) |
 | **Never lose or delay a keystroke** | hooks on their own thread, never wait for prediction or UI |
 | French AZERTY, AltGr, dead keys (`^` + `e` = `ê`) | layout-aware translation that does not disturb the dead-key state |
-| Accessible: big targets, colour + keys, hear the word | 1–8 large buttons (S–XL), F1–F8, click, right-click = speech (SAPI 5), speech echo |
+| Accessible: big targets, colour + keys, hear the word | 1–8 large buttons (S–XL), F1–F8, click, right-click = speech (SAPI 5), speech echo; listen before inserting (2026-11-25, §5e): by default a click speaks the word and a double click / right-click inserts it; F*n* speaks it the first time and inserts it the second |
 | Dyslexia-friendly reading (D16) | font choice (OpenDyslexic, Lexend, Andika bundled privately) + letter spacing |
 | Per-account settings, school-lockable (D8, D11) | `settings.json` in `%APPDATA%` + read-only admin-owned machine layer |
 | Install-free | self-contained publish, DB next to the exe |
@@ -56,8 +56,9 @@ UI Automation `TextPattern` first where the application supports it, with the Wi
   ├── SettingsGate       PinReason, ISettingsGate, PinGate (pure: the teacher's switches, 5-minute grace; AddWord never
   │                      protected, plan 10 Q3)
   ├── WordBook           pure (plan 10A, WordList.cs): one profile's mots.json — lists (« Mes mots », lessons), « Mes
-  │                      fautes », hidden class words; entry rules, limits, tolerant parse; WordLayering (Classe ∪ own −
-  │                      hidden; Rebase for imports); WordTextFile (.txt lists, UTF-8 / Windows-1252)
+  │                      fautes », hidden class words, « Classe »'s « Mots à ne jamais proposer » (Exclus, 0.11.0);
+  │                      entry rules, limits, tolerant parse; WordLayering (Classe ∪ own − hidden; Exclus untouched;
+  │                      Rebase for imports); WordTextFile (.txt lists, UTF-8 / Windows-1252)
   ├── WordListStore      one JsonFileStore per profiles\<id>\mots.json (no file until a change)
   ├── WordListService    UI thread: the active profile's UserLexicon snapshot → engine.User (start, switch, edit,
   │                      import; last two snapshots reused); add (tray, Q3), erase all (backup -mots first)
@@ -89,6 +90,9 @@ UI Automation `TextPattern` first where the application supports it, with the Wi
   │                      worker at start → engine.Grammar (one swap; the bar ranks as 0.8.3 until then or without the
   │                      file); one compacting GC after; logs `grammar: N forms, M lemmas, loaded in T ms` / `grammar:
   │                      absent`; `--grammar <path>`, `--no-grammar` (test switch only: always on, no setting, owner Q2)
+  │                      0.11.0: then the « mots exclus » grammar forms (ExcludedWords.ReadGrammarForms, swapped in
+  │                      through engine.UpdateExcluded, which keeps the other parts); logs `exclusions: +N grammar forms
+  │                      (M in all), T ms` / `exclusions: grammar expansion failed (<type>); the listed forms stay in force`
   ├── Tray               NotifyIcon (own icon, grey while paused) + native popup menu on left/right click
   ├── TrayPromotion      first-run IsPromoted=1 under HKCU\Control Panel\NotifyIconSettings (once per exe path)
   ├── AboutWindow        version, ARASAAC attribution + licence, Lexique credit, OFL font credits (links → browser),
@@ -184,11 +188,13 @@ UI Automation `TextPattern` first where the application supports it, with the Wi
  ┌─ hook thread ─────────────┐ Echo(ev, fg)  ┌─ echo-guard (MTA) ───────────┐ Say   ┌─ speech (MTA, BelowNormal) ─────┐
  │ lock{tracker; echo.Type}  │ ────────────► │ fg changed? → drop           │ ────► │ BlockingCollection of commands  │
  │ after the lock: enqueue   │ lock + event  │ PasswordProbe(fg): Edit      │       │ SpeechQueue policy (interrupt / │
- │ (Word / Sentence only)    │               │  ES_PASSWORD, else UIA       │       │  append ≤2 words / sentence)    │
- └───────────────────────────┘               │  IsPassword → drop + log     │       │ SAPI SpeakAsync / CancelAll     │
- ┌─ UI thread ───────────────┐ Say(Inserted, │ > 300 ms → drop; stuck > 2 s │       │ owns the SpeechSynthesizer      │
- │ Insert → Say(Inserted)    │  Manual) ─────┼──────────────────────────────┼─────► │ (created, voices, audio device  │
- │ right-click → Manual      │  (no guard)   └──────────────────────────────┘       │  opened here, never on the UI)  │
+ │ (Word / Sentence only)    │               │  ES_PASSWORD, else UIA       │       │  append ≤2 words / sentence /   │
+ └───────────────────────────┘               │  IsPassword → drop + log     │       │  After: queued, never cuts)     │
+ ┌─ UI thread ───────────────┐ Say(Inserted, │ > 300 ms → drop; stuck > 2 s │       │ SAPI SpeakAsync / CancelAll     │
+ │ Insert → Say(Inserted)    │  Manual) ─────┼──────────────────────────────┼─────► │ owns the SpeechSynthesizer      │
+ │ listen (click, 1st press, │  (no guard)   └──────────────────────────────┘       │ (created, voices, audio device  │
+ │  right-click, Maj+Fn) →   │                                                      │  opened here, never on the UI)  │
+ │  Manual (§5e)             │                                                      │                                 │
  │ « Écouter » → Preview     │                                                      └─────────────────────────────────┘
  └───────────────────────────┘     log-writer (BelowNormal): --log lines are enqueued, appended by one thread
 
@@ -274,8 +280,9 @@ and a new one started; the old one never delivers its result.
 | dead key (`^`, `¨`) | translation returns nothing; dead-key state preserved (flag 4) | — | yes |
 | `VK_PACKET` (0xE7) | Unicode char from an on-screen keyboard/IME → `tracker.Type` | — | yes |
 | Backspace | `tracker.Backspace` (back across a separator: the previous word is the prefix again, from the kept text) | after a `Lost` Backspace, or a crossing where reads work (a check): 50 ms (`bksp`) | yes |
-| F1–F8 with bar visible, F-keys on, *n* ≤ words shown, no modifier | insert suggestion *n*; **key-down and key-up swallowed** | — | **no** |
-| F1–F8 otherwise | ignored | — | yes |
+| F1–F8 with bar visible, F-keys on, *n* ≤ words shown, no modifier | « Touches F1–F8 : insérer tout de suite »: insert suggestion *n* (auto-repeat inserts again, as before); « 1er appui : écouter, 2e : insérer » (default, §5e): the first press speaks the word and rings the tile, a second press on the same tile inserts it, an auto-repeat is swallowed without acting; a held key repeats only its first down's action (an insert at once inserts again, a passed down stays passed, anything else is swallowed even when the bar changed under it); **key-down and key-up swallowed** | — | **no** |
+| Shift+F1–F8, option A on (« Maj + F1…F8 : écouter le mot »), bar visible, F-keys on, *n* ≤ words shown | speak word *n* (and arm it when a confirming press exists: `Rings`, §5e); **swallowed** | — | **no** |
+| F1–F8 otherwise (Ctrl / Alt, Shift without A, no word under the key, reading mode) | ignored (cancels a ringed tile, forgets a heard word); its auto-repeats and its key-up pass too, even once the modifier is released | — | yes |
 | arrows, Home/End, PgUp/Dn, Tab, Ins/Del | `Reset` + hide (caret moved) | after 50 ms (`nav`; with Shift: `shift`, plan 07) | yes |
 | Ctrl+key (paste, undo…), Ctrl+Backspace | `Reset` + hide (unknown edit) | after 120 ms (`ctrl`) | yes |
 | Esc | `Reset` + hide (reading mode: leaves it, the selection is « dismissed », §5d) | no | yes |
@@ -429,8 +436,16 @@ version, so it disarms by itself; a window change too.
      user); every decision is logged (`punct check '!' 14 ms: before=[…] Missing: … U+202F inserted`).
   With « Aucune » we only take our space back and Word's AutoCorrect may still add its U+00A0 — that is Word's
   option, we never change it. Limits: Word's language auto-detection can switch the proofing language while typing;
-  a read-back that fails (UIA error, > 150 ms) does nothing; LibreOffice Writer is not covered yet.
-  More limits of the Word rule:
+  a read-back that fails (UIA error, > 150 ms) does nothing.
+- **LibreOffice: let its AutoCorrect act** (0.11.0, owner 2026-11-26, answer Q4 of `development/studies/libreoffice-support.md`;
+  processes of `HostApps.LibreOffice`: `soffice.bin` and its launchers). Its French AutoCorrect (on by default, French
+  text) deletes the spaces before `; : ! ?` and inserts **one U+00A0**; a U+202F of ours was kept next to it (phase 0
+  probe: `maison` U+202F U+00A0 `!`). `AppRules.AppSpacesPunctuation` is true there, so the punctuation typed after our
+  space is sent alone (Backspace + the sign, whatever the setting) and LibreOffice puts its own U+00A0. Writer gives no
+  text to read (§ 7b), so there is **no read-back** (`AppRules.ReadsBackSpacing` = Word only): AutoCorrect off or a
+  non-French paragraph → no space, as in Word with its option off; LibreOffice's options are never changed. The D22
+  « take back our space » before `, . … ) ' -` and the absorbed second space are unchanged.
+- More limits of the Word rule:
   - **Undo order**: a read-back fix is a separate edit (Left, U+202F, Right — or Left, Backspace, Right); the first
     Ctrl+Z in Word undoes our U+202F (or brings back the removed space), and the Left/Right split Word's undo group
     of the typing around it.
@@ -667,7 +682,8 @@ source application is never touched.
 - **Selection triggers and the Ctrl+C fallback**: a left button-up after a drag (> 4 px) or a double / triple click, Shift
   + navigation and Ctrl+A mark the tracker version as a « selection gesture » (hook, O(1)). When the window's own read
   finds no text pattern (`Unavailable`) after such a gesture and the setting « Copier la sélection par Ctrl+C… » is on
-  (**off by default**), `ClipboardCopy` runs on the selection thread, the flag carried by that request: never in a
+  (three positions since 0.11.0, `SelectionPolicy.Fallback`: **not set = LibreOffice Writer windows only**, `true` =
+  everywhere, `false` = nowhere; **never in Calc** — see « LibreOffice » below), `ClipboardCopy` runs on the selection thread, the flag carried by that request: never in a
   console or terminal — by window class (`ConsoleWindowClass`, `CASCADIA_HOSTING_WINDOW_CLASS`, PuTTY, mintty,
   `VirtualConsoleClass`, `org.wezfurlong.wezterm`…) or by process image (WindowsTerminal, OpenConsole, conhost, putty,
   kitty, mintty, wezterm-gui, alacritty, Hyper, Tabby, MobaXterm, SecureCRT…) — Ctrl+C there is an interrupt; one Run at a
@@ -695,17 +711,180 @@ source application is never touched.
   Ctrl+C handler) cannot be hidden: it may appear in the history (Windows+V) — said in the setting's tooltip. Log:
   `selection: Ctrl+C fallback: copied in N ms, K format(s) restored[ (try n)]` or `… a late copy after N ms, … restored`
   (never the text).
+- **LibreOffice** (0.11.0 quick fix, owner 2026-11-26; until IA2 selection reading, phase 1 of
+  `development/studies/libreoffice-support.md`): Writer gives UI Automation no selection, so the reading mode read nothing
+  there (user feedback « la lecture d'un texte sélectionné ne fonctionne pas »). The phase 0 probe (LibreOffice 26.8.3) showed
+  the fallback works for a drag, a double click, Shift+Ctrl+→ and Ctrl+A (0.7–0.9 s after the gesture, clipboard restored
+  identically, document unchanged), hence on by default in **Writer** windows. The caret and selection
+  reads skip UIA in every LibreOffice window (`HostApps.UiaTextUnavailable`: `Unavailable` at once, source `skip`), so the
+  fallback starts without the failed UIA round trip. Limits: with the clipboard source there is no context, so D26 cannot
+  complete a word cut by a drag (« hat dort dan » is read as selected); Writer's own copy may appear in the clipboard
+  history (as everywhere).
+  **Which window** (`HostApps.ModuleOf`, owner 2026-11-27): every module runs in `soffice.bin` and every frame has the class
+  `SALFRAME`, so the frame's untranslated title suffix decides — « … — LibreOffice Writer » / « … LibreOffice Calc » /
+  Impress / Draw (26.8 fr and en, « Sans nom 1 — LibreOffice Writer » for a new document; any separator); the title is
+  read without a message, an IA2 role would cost a COM round trip into LibreOffice per gesture. A dialog in front is
+  « Other » (no default copy). **Never in Calc** (`ClipboardFallback.RefusedCalc`, log `selection: clipboard fallback
+  refused: Calc`, checked by the controller and again by the selection reader): the review VM run showed that after our
+  Ctrl+C Calc stays in its copy mode and the next Enter pastes the (restored) clipboard into the sheet. No selection read
+  is even requested there, so nothing waits on the password probe (≈ 2.2 s in Calc). Impress / Draw: only with « Partout ».
+  Any title ending « Calc » after the Writer check counts as Calc (LibreOfficeDev, Collabora, OpenOffice). Accepted for
+  the bêta: a Calc sheet edited in place inside a Writer document keeps the Writer title (rare); Writer/Web and master
+  documents fall to « Other » (no default copy: safe).
+  **The setting** `reading.clipboardFallback`, three positions in Réglages (a list, lockable by the machine layer):
+  « Dans LibreOffice Writer seulement » = absent / JSON null (the default), « Partout » = `true`, « Jamais » = `false`.
+  Each is an explicit choice of the profile: over a machine or class default the chosen position is written (« Writer
+  seulement » as a JSON null); choosing the baseline's own value removes the key (`NewUserLayer`). An existing file without
+  the key (every profile so far: the user layer stores only differences from the defaults) gets « Writer seulement »;
+  `true` / `false` keep their meaning. A machine lock still wins over everything.
+  **Wait**: in LibreOffice the copy is waited for 800 ms instead of 300 (`ClipboardCopy.WaitFor`; the VM run saw Writer
+  answer the first double click of a session after 650 ms — the late copy was undone and nothing shown); the worker's
+  « stuck » limit (`WorstMs`) includes it.
 - **Character limit**: the reader takes at most 20 000 characters; a longer selection (fewer than 1000 words is possible
   with long words) is cut at its last space, marked cut, and the « Texte trop long… » message is shown.
-- **Settings** (`reading.*`): `enabled` (true), `clipboardFallback` (false), `pictures` (absent = follow `words.pictures`),
-  `window {x, y, w, h}`; Réglages section « Lecture » (three check boxes, lockable by the machine layer). The wrap width
+- **Settings** (`reading.*`): `enabled` (true), `clipboardFallback` (absent = LibreOffice Writer only, `true` everywhere, `false` never; never in Calc — 0.11.0), `pictures` (absent = follow `words.pictures`),
+  `window {x, y, w, h}`; Réglages section « Lecture » (two check boxes and the Ctrl+C list, lockable by the machine layer). The wrap width
   and scroll height come from the work area of the monitor the bar goes to; a font / spacing / size change re-warms the
   reading tiles too.
-- **Log** (`--log` only): `selection read <reason> src=<win32|uia|clipboard> status=… N ms (C chars)`, `reading shown: W
+- **Log** (`--log` only): `selection read <reason> src=<win32|uia|skip|clipboard> status=… N ms (C chars)`, `reading shown: W
   words, T tiles, S sentences, … show X ms (model+pictures+caret, tiles, WPF Show(), other, place), Y ms after the selection gesture`,
   `reading view bar|window: …`, `reading: state …`, `reading: play/pause (Space|F9|button|large window key) -> …`,
   `reading: sentence n id=i (c chars from offset o)`, `reading progress id=… pos=… len=… audio=… ms wall=… ms engine='…'
   tile=t '…' highlight +x ms`, `reading: exit (<why>)`; the speech thread's `speak Reading '…'` has the sentence.
+
+## 5e. Écouter avant d'insérer — listen before inserting (owner 2026-11-25, D17 amendment)
+
+The pupil hears a word of the bar before it goes into the text — keyboard, mouse or touch. Four settings of the profile
+(layered, lockable, flat `words.*` keys; no schema bump); the click and the keyboard settings are **independent**:
+
+| Setting | Key | Default | Effect |
+|---|---|---|---|
+| « Clic sur un mot » | `words.clickMode` | **`listenDouble`** (also for a profile / « Classe » that never set it) | `listenDouble`: a click / tap speaks the word (no ring), a double click (Windows double-click time) or a right-click (touch press-and-hold) inserts it — the usual convention of other word-prediction tools (one click listens, a double click inserts); `listenFirst`: 1st click speaks + ring, 2nd click on the same tile inserts; `insert`: a click inserts at once, a right-click listens |
+| « Touches F1–F8 » | `words.keysListenFirst` | **true** | true: first F*n* = speak + ring, second press on the same tile = insert; false: F*n* inserts at once |
+| A « Maj + F1…F8 : écouter le mot » | `words.listenShiftKeys` | off (needs the F-keys) | Shift+F*n* speaks word *n* and is swallowed (it no longer reaches the app while the bar is shown) |
+| D « Bouton haut-parleur sous chaque mot » | `words.listenButton` | off | a full-width speaker band under the word, inside the tile; **a click / tap on the word then inserts at once whatever the click mode** (Réglages greys « Clic sur un mot » with a note) |
+
+The first version's `words.listenFirst` (one box for keys and clicks) was never released: replaced without migration.
+
+```
+  ring (« Touches F1–F8 : 1er appui », or « Clic sur un mot : listenFirst »)
+             listen gesture (F-key 1st press, listenFirst click, right-click, Shift+Fn, speaker band)
+  [Idle] ───────────────────────────────────────────────► [Armed(i, word, version, fg)]  white ring on tile i, word spoken
+    ▲                                                          │  plain press on the SAME tile (F(i+1) or a listenFirst
+    │   cancel: other key, typing, caret jump / click outside, │  click) and word / version / fg unchanged → INSERT
+    │   focus change, Esc, bar hidden or rebuilt with another   │  (not said again)
+    │   word at i, F9 / ≈ list, profile switch, pause, reading  ▼
+    └──────────────────────────────────────────────────── [Idle]
+
+  no ring (« Clic sur un mot : listenDouble », the default)
+  click on tile i ──► speak (Manual), remember (i, word, version, fg) as heard ──► double click (2nd click within the
+  Windows double-click time) or right-click on tile i ──► INSERT at once; the heard word is not said again and is not
+  cut; a different group (« les amis », « l'école ») is queued after it
+```
+
+- **State**: `ListenFirst` (pure, UI thread) holds the pending tile (index, word, tracker version, foreground window) and
+  the last heard tile (`LastHeard`, set by every listen gesture, ringed or not). A press that finds any of them changed is
+  a new first press — it speaks the word now under that key, never a blind insert. No timeout (owner). A bar rebuilt
+  without a cancelling event (picture, settings change, field-probe answer, a read that re-seeded the tracker) keeps the
+  ring and the heard tile when the same word is still at the same index (their version re-stamped), else drops them —
+  each on its own: a rebuild with no ring keeps `LastHeard` (review of 238c58b). Any other key (not a modifier / lock), a
+  jump, a hidden bar and an insertion forget both (`ListenFirst.Cancel`), so a much later insertion of that tile is never
+  taken for a confirmation.
+- **Hook** (`KeyboardPolicy.FKeyAction`, O(1), volatile flags only): Pass / Insert / Press / Listen / Swallow. Each
+  F-key has a record (`FKeyHolds`, hook thread only, a fixed array: the action of its first down, cleared at its
+  key-up); `KeyboardPolicy.HeldFirst` turns it into the first action of a held key, or null for a new press. No timer
+  (Filter Keys / « Touches filtres » set repeat delays of 1.5–2 s and more: a timer took the first repeat for a second
+  press). **A down the hook swallowed is decided by its record alone**: an event a low-level hook eats is probably
+  never applied to the asynchronous key state (as a swallowed Caps Lock never toggles), so `GetAsyncKeyState` would
+  call every repeat of a swallowed F1 a new press (listen, insert, listen…; after a correction, the app's F1 help). Only
+  a **passed** down uses the key state, read in the hook before Windows updates it (« down » = already down = a
+  repeat). Since a swallowed key's record cannot be checked against the key, it is dropped where key-ups really go
+  missing: a foreground change (WinEvent or seen at a key-down, in `FocusJump`: an elevated or secure window takes the
+  key-up), Pause / Reprendre (key-ups are not followed while paused: the same generation bump), a session lock /
+  unlock (`ForgetHeldKeys` from the session watcher bumps a volatile generation the hook compares at the next F-key
+  down; the array stays hook-thread only), a down passed untouched (our own window, a private host) and a hook
+  install. **Not verified on hardware yet**: that a swallowed key's async state stays up, that a passed key's
+  reads down at its repeats, and the lock / elevated-window resets — the `--log` line `F<n> down: isDown=… held=… ->
+  <act>` at every F-key down (no word) lets the VM run confirm them (scenario L23, `development/keyboard.md`); a key-up
+  lost in another way (the system removing a timed-out hook) would leave one stale record until the next foreground
+  change or lock. A held key repeats only that first action
+  (review of 238c58b): a passed down (Ctrl+F1, Shift+F3 without A) stays passed even once the modifier is released, and
+  its key-up passes too (`SwallowFKeyUp`); a plain « insérer tout de suite » insert inserts again while a word is under
+  the key, as before; anything else is swallowed whatever the bar shows now — a held confirm key never auto-repeats into
+  the app after a correction or a bar without that index (review of bcf6442). Any other key except modifiers and locks
+  (`KeyboardPolicy.IsModifierOrLock`) posts a cancel while a tile is ringed or a word heard (`_listenArmed`,
+  `_wordHeard`); it first increments `_keySeq` (a full fence), and `Heard` publishes the flags, fences, then compares
+  `_keySeq` with its value when the gesture began — a key typed while the flags were still false cancels too. Jumps
+  cancel through the bar hide. Nothing waits in the hook.
+- **Mouse / touch** (`ListenFirst.ClickAction`, `RightClickInserts`, `Rings` — the one place for these rules):
+  `listenDouble` click → Listen (speak, no ring; a ring on another tile is dropped), its second click of a double click →
+  Insert only when the word under it is the one just heard on that tile (`ListenFirst.WasHeard`), else Listen — a bar
+  rebuilt under the click, an adjacent tile inside the double-click rectangle, click → right-click → click: never a blind
+  insert (review of 238c58b; that listen is a Manual say, so it cuts the first word: expected, not a regression) —
+  right-click → Insert; the Windows double-click time is read at each click, so a change
+  of the setting applies at once; `listenFirst` click → Press (the second
+  click of a double click is ignored: one press, it speaks); `insert` click → Insert (second click of a double ignored,
+  0.8.3); **with D on, a click on the word inserts at once whatever the mode** (owner answer 4) and the right-click
+  listens. Right-click (when it listens), Maj+F*n* and the band arm the tile only when a confirming press exists
+  (`Rings`: the F-keys in « 1er appui », or a `listenFirst` click without D); on the ringed tile they re-speak and it
+  stays ringed. A `listenDouble` click never arms: a click then F3 is not a confirmation, F3 follows the keyboard
+  setting. In `listenFirst`, armed by F3, a click on tile 3 inserts, and vice versa. Any insertion at once (click, double
+  click, right-click, F*n* in « insérer tout de suite ») of the tile just heard counts as a confirmation.
+- **Speech**: listening = `Speaker.Say(word, Manual)` (interrupts, word voice, no echo guard — the bar never shows in a
+  password or unproven field). At a confirming insertion `SayInserted` is skipped when the insertion says what was heard
+  (`ListenFirst.SayAtInsert`, case-insensitive); when the group differs — a liaison (« les amis ») or an elision /
+  compound group (« l'école » after « école »; d', j', qu', n', s', « peut-être ») — it is said, **queued after** the word
+  being spoken (`SpeechItem.After`: appended, never interrupting; `SpeechQueue.Enqueue`), so mode 3's quick double click
+  writes the text at once while the voice finishes the word. The echo and the D23 session count the heard word as said,
+  in `InsertWord` and in the ≈ list's `ApplyCorrection` alike (the confirm goes through `Correct`; « heard just before,
+  not said again » is logged in both).
+- **Look**: the ringed tile has a white 3 DIP ring in the tile's margin (`Sugg` template border `Ring`, Margin −3: the
+  geometry and the pixels of a tile without the ring are unchanged; ≈ 14:1 on the bar background, a shape not only a colour)
+  and the UI Automation item status « Écouté — encore une fois pour insérer ». Option D: a ring border around two
+  **sibling** buttons (the word, then the band; never nested, so a band click never reaches the word's Click), band height
+  S 24 · M 26 · L 30 · XL 36 DIP (`BarMetrics.ListenBandDip`), the tile colour darkened by 25 %, a vector speaker (a third
+  wave while ringed), AutomationId `Listen{n}`, name « Écouter {mot} ». The bar gets taller, never wider; at the caret it
+  still goes under the caret line, or entirely above it near the screen bottom. The tile tooltip and UIA help text follow
+  the two settings (`Strings.TipActionsFor`, `Strings.TileHelp`).
+- **Réglages** (« Barre et voix »): a list « Clic sur un mot » (3 values, greyed with a note while D is on) and a list
+  « Touches F1–F8 » (2 values, greyed while the F-keys are off), then the A and D boxes; machine locks on every path.
+- **Reading mode**: no suggestion tiles (`_suggCount` 0): F-keys and Shift+F-keys pass; entering it cancels.
+- **Log**: `listen F3 'maison' armed (0.4 ms)`, `listen click 'maison' (0.3 ms)`, `listen uia 'maison' armed`,
+  `tile 1 invoked (uia, listen first|insert)`, `listen confirm double click|right-click|click|F3|uia`,
+  `listen cancelled (key|hidden|bar|marker|reading|switch|pause|setting|listen elsewhere)`; the word only when typed text
+  is loggable (as `typed=`).
+- **UI Automation Invoke** (owner 2026-11-25; screen reader, voice access « cliquer maison », switch tools that go
+  through UIA rather than a simulated mouse): an Invoke on a tile's word follows **« Touches F1–F8 »**, not « Clic sur un
+  mot » (`ListenFirst.InvokeAction`): « 1er appui : écouter » (default) → Press — the 1st Invoke speaks, rings the tile and
+  sets its item status « Écouté — encore une fois pour insérer », a 2nd Invoke on the same tile (same identity rules as
+  the F-key confirm: index, word, tracker version, foreground window) inserts; « Insérer tout de suite » → Insert at once.
+  The click mode, option D, the F-keys being off (an Invoke is no key: the ring is set even then) and the ≈ list (its
+  tiles are tiles; the confirm goes through `Correct`) change nothing. The word button is a `TileButton` whose automation
+  peer re-implements `IInvokeProvider.Invoke`: it posts `AutomationInvoked` (Input priority, like WPF's own Invoke) instead
+  of raising `Click`, so the mouse path and its double-click detection (`PickedByMouse`, input message time / point) never
+  see it; the controller also forgets the last tile click, so a real click after an Invoke is never the second half of a
+  double click. The peer raises `InvokePatternOnInvoked` (as `Button.OnClick` does) and refuses a hidden tile
+  (`ElementNotAvailableException`); the controller ignores an Invoke when the bar is hidden or the index is beyond the
+  words shown (`tile N invoked: ignored, bar hidden`) — a bar hidden for a password field or a private host keeps its old
+  `_sugg`, which must never be spoken nor typed. A settings change drops a ring that no gesture can confirm any more
+  (`Rings`), except a ring set by an Invoke while « Touches F1–F8 » stays « 1er appui » (the next Invoke confirms it, even
+  with the F-keys off) — a settings change that does not hide the bar. Owner 2026-11-26: a change made in **Réglages**
+  does hide it (an own window, below) and so cancels an Invoke ring like any own window (`listen cancelled (hidden)`),
+  F-keys on or off; by design, the next Invoke listens again and the one after inserts (never a blind insert). The
+  speaker band's Invoke is its `Click` (listen). The bar is no-activate for the mouse, but a UI Automation call from
+  another process — an Invoke, or a SetFocus such as a screen reader moving its focus — makes it the **foreground
+  window** for a moment, before the tile's Invoke runs (BUG-1, VM 2026-11-26: counted as « our window », that hid the
+  bar and the Invoke found no tile). The hook thread classifies the bar apart (`KeyboardPolicy.ClassifyForeground` →
+  `Bar`: no jump, no hide, the tracked text window unchanged, so its return is « the same window »): that keeps the bar
+  shown. For the keys and the insertion target, the bar gives the foreground straight back on its `WM_ACTIVATE`, to the
+  window that lost it, else the controller's tracked window (`KeyboardPolicy.GiveBackTargets`: the next one is tried
+  when a window is gone or refuses; log `bar activated from outside (UI Automation): foreground given back`), and again
+  in the controller before acting on an Invoke — if the bar is still in front then, the Invoke is ignored (`tile N
+  invoked: ignored, bar in front`: SendInput would type into the bar). Our other windows (tray menu, À propos, Réglages,
+  the reading window) still hide the bar as before. The tile's UIA help text ends with the Invoke part (`Strings.TileHelp`: « activer : écouter, puis encore une
+  fois : insérer » / « activer : insérer », owner-approved 2026-11-25).
+- **Measure** (`Predict.Eval --select-cost C`): KSS_c, where choosing a word costs c keys (« 1er appui » = c 1 for the
+  F-keys).
 
 ## 6. The bar window
 
@@ -837,6 +1016,8 @@ Up to 0.6.1 the user layer was `%APPDATA%\PredictKeyboard\settings.json`; 0.7.0 
   `words.spacing` `normal|wider|widest`, `bar.position` `caret|top|bottom|free`, `bar.free {x, y}` (physical px),
   `text.punctuationSpace` `french|none` (+ hidden `french-nbsp`, D22),
   `words.spellingIndicator` (plan 10B, on by default),
+  `words.clickMode` (`listenDouble` by default), `words.keysListenFirst` (true), `words.listenShiftKeys`,
+  `words.listenButton` (off; owner 2026-11-25, §5e),
   `speech.{speakInserted, speakWords, speakSentences, voice, rate −10..10, volume 0..100}` (the three echoes on by
   default — `speakWords` / `speakSentences` since 0.8.3, owner 2026-11-15), `lock.{enabled, pin}`
   (0.6 only, unused; the migration moves a `lock.pin` to `teacher.json`);
@@ -1188,7 +1369,8 @@ the « ? » of the spelling indicator (0.8.1, §6h).
   import, `-mots`), and a deleted profile's words are flushed and forgotten before its folder goes (no write recreates it).
   Once read, a file's JSON tree is dropped (the book is the model). An export without word lists is a version 1 file.
 - **File** `mots.json` = `{ schema: 1, listes: [ { id, nom, active, type: perso|lecon, mots: [ { w, src: manuel|lecon|import,
-  ajoute: "2026-11-14" } ] } ], fautes: [ { ecrit, mot } ], masques: [ … ] }` — a day, never a time; unknown keys kept.
+  ajoute: "2026-11-14" } ] } ], fautes: [ { ecrit, mot } ], masques: [ … ], exclus: [ … ] }` — a day, never a time;
+  unknown keys kept; `exclus` only in « Classe »'s file (a pupil's file drops the key).
   The default list `mes-mots` is « Mes mots » (« Mots de la classe » for « Classe »).
 - **Rules**: 1–40 characters, letters (any case, accents, œ æ ç), an inner `-` or `'` (`’` is stored as `'`); unique per
   list as stored (« Pierre » and « pierre » may both exist, Q13). Limits (Q15): 5 000 words for a pupil, 10 000 for
@@ -1218,6 +1400,32 @@ the « ? » of the spelling indicator (0.8.1, §6h).
   sentence start keeps it (« Vésuve »). Only the ticked words are stored: **the text itself is never stored**.
   « Importer une liste (.txt)… » / « Exporter la liste (.txt)… »: one word per line, UTF-8 (BOM or not; a file that is not
   UTF-8 is read as Windows-1252), ≤ 1 MB.
+- **« Mots à ne jamais proposer » (0.11.0, plan offensive-words Phase B, D35)**: `WordBook.Exclus`, « Classe » only — at
+  most 500 words, the word entry rule (1–40 characters, letters, an inner `-` or `'`), unique ignoring case. Shown in the
+  « Classe » word editor, left column under « Mots de la classe », with Ajouter… / Retirer — always in the Espace
+  enseignant → Mots, and in Réglages of « Classe » → Mots only when Réglages asks for the PIN (management on and « Code
+  requis pour modifier le profil » ticked; `WordLayering.ShowsExclus`, `WordsContext.SettingsProtected`). A single-user
+  install reaches the list only by turning the Espace enseignant on, or through the machine file. A pupil's editor has no
+  such section, `AddExclu` refuses a pupil's book (`WordProblem.ClassOnly`), `WordListStore.Set` and « Dupliquer » drop the
+  key for any profile but « Classe », so a pupil can neither see, hide (`masques` do not apply) nor remove one; a banned
+  word is also left out of the pupil's read-only « Mots de la classe » and marked « (jamais proposé) » in « Classe »'s own
+  list. The machine file adds its own: `locked.motsExclus` (an array, same limits; taken out of `Locked`, it is no
+  setting; `--check-config` reports the count and the ignored entries), in union with « Classe »'s and shown in the list
+  greyed, « <mot> — Réglé par l'administrateur », not removable. `WordListService` hands « Classe » ∪ machine to the
+  engine at the start of every `Rebuild` (start, profile switch, edit, import: the machine words at once, whatever the
+  snapshot does), again when a snapshot brings « Classe »'s list read from its file (whatever the « Classe » profile's
+  state) and once the grammar pack is in (`RefreshExcluded("grammar")`, posted to the UI thread by `App` after
+  `GrammarPack.LoadAsync`): `engine.UpdateExcluded(c => c.WithExtra(ExcludedWords.TeacherForms(words, engine), engine))`
+  replaces the teacher part only (the file's forms and the grammar forms kept, compare-and-swap). `TeacherForms`: each
+  word; with the grammar, a noun or adjective brings its other number only (same lemma, same part of speech, same or
+  epicene gender: a feminine never brings the masculine), a verb is expanded only from its infinitive (a conjugated form
+  or participle stays alone), a noun / verb homograph gets its noun plural; every added form has no lemma beyond the
+  banned word's own (the homograph guard); without the grammar the word alone. A typed banned word stays ✓ and is
+  inserted normally. « Effacer tous les mots de la classe… » keeps the list (its confirmation says so). The `.pepite`
+  export carries « Classe »'s `exclus` in `classe.mots`; « Remplacer la classe de ce poste » takes the file's list,
+  otherwise this PC's list stays (a pupil never gets a copy). The Réglages window never outgrows the work area: the Mots
+  tab scrolls. Logs, counts only: `exclusions: teacher list N classe + M machine words applied (<reason>)`,
+  `exclusions: N teacher words -> F forms (+X new), T in all`, the machine file's `motsExclus N words (M ignored)`.
 - **Erase**: « Effacer tous mes mots… » (« … de la classe… » for « Classe ») after a confirmation: a profiles backup
   `profils-<stamp>-mots.zip` first (none possible → nothing erased), then the profile's lists, « Mes fautes » and hidden
   words go; « Classe »'s words stay (unless « Classe » is the profile erased).
@@ -1322,6 +1530,12 @@ has the state, never the word.
   word filled in and editable, « Oui » / « Non ») with the PIN rule of the tray's « Ajouter un mot… » (Q3:
   `PinGate.AddWordReason` — a pupil never needs the PIN, « Classe » with management on asks the Edit PIN). Right-click =
   say the word. ✓ has no click action.
+- **≈ in two tiers (0.11.0, plan dys-sound-tolerance, owner Q5)**: with the engine's sound confusions on
+  (`PredictionEngine.Tolerance`, predict-core-design § 5h), a word whose only sound-alikes are one voicing swap away is ≈
+  too (« chardin␣ » ≈ jardin, not ?). `SpellingCheck.Tolerant` counts those candidates, always last; `OnMarker` passes it
+  to `RankCorrections`, which orders the exact sound-alikes by the context first, then the confusions among themselves —
+  a confusion never goes ahead of an exact one. `Tolerant` = 0 is the 0.10.2 list. Phase 1: the engine default is ch/j for
+  every profile (no keyboard setting yet; the per-profile « Sons que l'élève confond » comes in Phase 2).
 - **Setting**: `words.spellingIndicator` (on by default, Q7), Réglages → « Mots » → « Indicateur d'orthographe » (saved by
   Enregistrer like the other settings, with a hint line), per profile and « Classe » (layered), lockable by the machine
   file (`"locked":{"words":{"spellingIndicator":false}}` → the checkbox disabled with « Réglé par l'administrateur »).
@@ -1513,6 +1727,10 @@ gives his e-mail, written « nom @ domaine » and turned into a link by `contact
 | 2 | UI Automation `TextPattern.GetSelection()` → bounding rectangle | modern apps exposing TextPattern (Word, browsers, WinUI) |
 | 3 | mouse position + 20 px | last resort |
 
+Step 2 is not tried in a host that never answers it (`HostApps.UiaTextUnavailable`, 0.11.0: LibreOffice, no system caret
+and no UIA text): the failed lookup cost ≈ 110 ms per bar update (median, phase 0 probe) and raised Writer's CPU per key
+from ≈ 3 to 11–23 ms. The bar goes to the mouse there until IA2's caret rectangle (phase 1).
+
 ## 7b. Reading the text at the caret
 
 | | Win32 path (class `Edit`: Notepad, classic dialogs) | UIA path (everything else: Edge/Chromium, Word) |
@@ -1546,6 +1764,11 @@ just faster.
   it the text end looked like `\n` (no space added) and other fields' text entered the window.
 - **Emoji** before the caret count as separators (as when typed), never shift the indices: verified with
   10 emoji + ZWJ sequences + a decomposed accent before `mai‸son` (E-emoji).
+- **LibreOffice** (0.11.0): no text pattern and no caret through UIA (the IA2 bridge exposes MSAA / IA2 only): the caret
+  read and the selection read return `Unavailable` (source `skip`) without asking UIA (`HostApps.UiaTextUnavailable`,
+  processes `soffice.bin` and its launchers). Consequences: keys only (no D23 re-read, ≈ correction inserted, never
+  replaced — `NeverKeysOnly`), selection reading through the Ctrl+C fallback (on by default in Writer, never in Calc, §5d), D22 punctuation
+  left to LibreOffice's AutoCorrect (§5b). Password fields are still checked by `PasswordProbe` before any copy.
 - **Word** (input-free probe on the host, COM-placed caret): the document pane `_WwG` gives correct windows (cold 44 ms, warm 3–7 ms). A paragraph mark `\r` inside the text is a sentence end and, as NextChar, means no space; the **final** paragraph mark lies outside `DocumentRange`, so after clamping the document end reads as end of text (space added, as in Notepad).
 
 ## 8. Security & privacy
@@ -1557,6 +1780,10 @@ just faster.
   switched off (`DisableTelemetryEvents`) before the session exists; no network code. The Piper log lines carry timings
   and counts only (`speech: piper first audio X ms (synth S ms, N sentences)`, `piper: word map fallback (W, U)`), never
   text; the only text remains the existing `speak <kind> '…'` line.
+- **Mots exclus (plan offensive-words, 0.11.0, D35)**: at start the log gets `exclusions: <n> forms, <m> lemmas (<e> lexicon
+  entries), <p> pack names exempt, categories R … G …, sha256 <hex>, <t> ms` (or `exclusions: absent[ - <reason>]`), then
+  the grammar-forms line above: counts and the file's hash only, **never a word**. The list is local, has no switch, and
+  sends nothing anywhere.
 - **Grammatical prediction (plan 11, 0.9.0)**: local only; the new log lines are `grammar: <n> forms, <m> lemmas, loaded in
   <t> ms` and `grammar: absent` (or `grammar: off (--no-grammar)`): no text, no form, no rule hit is logged, nothing new is
   spoken. The rules read the three context words the bar already had. Before it is loaded the voice pack gets an

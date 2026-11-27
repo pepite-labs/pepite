@@ -1,0 +1,89 @@
+NOUVEAU DANS LA 0.11.0 : ÉCOUTER UN MOT AVANT DE L'ÉCRIRE
+  - Un clic sur un mot de la barre le lit à voix haute ; un
+    double-clic ou un clic droit l'écrit dans le texte.
+  - Avec les touches F1 à F8 : un premier appui lit le mot, un
+    second appui l'écrit.
+  - Avec le Narrateur : activer un mot le lit, l'activer encore
+    l'écrit, et ton texte reste au premier plan. Avec l'Accès vocal,
+    cela devrait marcher pareil : dis-nous si ce n'est pas le cas
+    (T2).
+  - Attention, c'est un changement : choisir un mot demande
+    maintenant un geste de plus. Pour retrouver l'ancien
+    fonctionnement (le mot s'écrit tout de suite), ouvre
+    Réglages -> Barre et voix et choisis « Insérer tout de suite »
+    pour le clic et pour les touches.
+  - Pour les adultes, tous les choix expliqués, avec des images :
+    https://pepite-labs.github.io/pepite/nouveautes/ecouter-avant-d-inserer/
+
+NOUVEAU DANS LA 0.11.0 : LES SONS « CH » ET « J »
+  - Si tu confonds « ch » et « j » (ou « g », « ge »), Pépite
+    retrouve quand même le mot : « le chard » propose « jardin »,
+    « mon jien » propose « chien », en vert, après les mots qui se
+    prononcent pareil.
+  - Quand tu finis « chardin », le rond devient ≈ (et non plus ?) ;
+    F9 propose « jardin ».
+  - Pour les adultes, ce qui change et pourquoi :
+    https://pepite-labs.github.io/pepite/nouveautes/sons-confondus/
+
+NOUVEAU DANS LA 0.11.0 : LIRE UN TEXTE DANS LIBREOFFICE
+  - Dans LibreOffice Writer, la lecture d'un texte sélectionné marche
+    maintenant d'office : Pépite copie la sélection (comme Ctrl+C), la
+    lit, puis remet le presse-papiers comme avant.
+  - Le réglage « Copier la sélection par Ctrl+C… » a maintenant trois
+    choix : « Dans LibreOffice Writer seulement » (au départ),
+    « Partout » ou « Jamais ».
+  - Jamais dans LibreOffice Calc, même avec « Partout » : la feuille
+    n'est jamais modifiée.
+  - Un mot coupé par la sélection à la souris est lu coupé :
+    sélectionne des mots entiers.
+
+NOUVEAU DANS LA 0.11.0 : DES MOTS JAMAIS PROPOSÉS
+  - Pépite ne propose jamais certains mots blessants ou grossiers ;
+    si tu en tapes un, il s'écrit normalement.
+  - Pour les adultes : dans l'Espace enseignant (onglet Mots,
+    « Classe »), la liste « Mots à ne jamais proposer » ajoute vos
+    propres mots, pour tous les élèves du poste.
+    Un élève ne la voit pas et ne peut pas la changer. Le fichier de
+    l'établissement peut en ajouter aussi (« motsExclus », voir
+    DEPLOIEMENT.txt). La liste est gardée dans le fichier .pepite.
+
+CORRIGÉ DANS LA 0.11.0
+  - LibreOffice : après un mot choisi dans la barre, « ! ? : ; »
+    n'a plus deux espaces devant (celle de Pépite et celle de
+    LibreOffice) : seule celle de LibreOffice reste.
+  - LibreOffice est beaucoup moins ralenti : la barre suit la frappe
+    sans retard. Elle s'affiche près de la souris (LibreOffice ne dit
+    pas où est le curseur).
+
+À TESTER (merci de noter ce qui ne va pas)
+  T1. Avec le Narrateur : tape « la mai » dans le Bloc-notes, mets le
+      Narrateur sur « maison » dans la barre et appuie sur Verr. maj +
+      Entrée : le mot est-il lu sans être écrit ? Refais-le : « la
+      maison » s'écrit-il ? Le Bloc-notes reste-t-il au premier plan ?
+  T2. Avec l'Accès vocal : dis « cliquer maison » deux fois. La
+      première fois le mot est-il lu, la deuxième fois écrit ?
+  T3. Dans le Bloc-notes, tape « le chard » : « jardin » est-il
+      proposé en vert ? Tape « chardin » puis une espace : le rond
+      est-il ≈, et F9 remplace-t-il le mot par « jardin » ?
+  T4. Tape « mon jien » : « chien » est-il proposé ? Tape « bouche »
+      puis une espace : le rond reste-t-il ✓ ?
+  T5. Dans LibreOffice Writer, sélectionne une phrase à la souris,
+      puis un mot par un double-clic, puis tout avec Ctrl+A : la barre
+      de lecture apparaît-elle à chaque fois, et ▶ la lit-il ? Après,
+      Ctrl+V colle-t-il toujours ce que tu avais copié avant ?
+  T6. Dans Writer, tape « Bonj », choisis « Bonjour » dans la barre,
+      puis tape « ! » : n'y a-t-il qu'une seule espace devant « ! » ?
+      Dans le Bloc-notes, la même chose donne-t-elle aussi une seule
+      espace (fine) ?
+  T7. Dans LibreOffice Calc, même avec « Partout » : sélectionne des
+      cellules (Maj + flèches, puis à la souris), puis appuie sur
+      Entrée. Rien n'est-il collé, et n'y a-t-il aucun cadre
+      clignotant de copie ? (Pépite ne copie jamais dans Calc.)
+  T8. Dans l'Espace enseignant -> Mots -> « Classe », ajoute d'abord
+      un mot inventé (par exemple « zorblate ») à « Mots de la
+      classe ». Dans le Bloc-notes, tape « zorb » : le mot est-il
+      proposé ? Ajoute-le ensuite à « Mots à ne jamais proposer » et
+      tape encore « zorb » : n'est-il plus proposé ? Tape-le en
+      entier : s'écrit-il normalement ? Dans le profil d'un élève, la
+      liste « Mots à ne jamais proposer » est-elle absente, et le mot
+      a-t-il disparu de « Mots de la classe » ?

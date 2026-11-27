@@ -121,6 +121,11 @@ foreach ($f in @('prediction.sqlite', 'prediction-SOURCES.txt', 'spelling.sqlite
                  'espeak\SOURCE.txt', 'vcruntime\vcruntime140.dll', 'vcruntime\SOURCE.txt', 'voices\siwis\voice.json')) {
   if (-not (Test-Path (Join-Path $out $f))) { throw "missing pinned data: src\Data.Build\out\$f (fetch_data_release.py: development\BUILD.md section 0)" }
 }
+# 0.11.0 (plan offensive-words): the « mots exclus » are built from the committed list, not fetched; without them the app
+# would offer every word (release_lint.py also fails the stage)
+foreach ($f in @('exclusions\fr.txt', 'exclusions\SOURCE.txt')) {
+  if (-not (Test-Path (Join-Path $out $f))) { throw "missing src\Data.Build\out\$f (build_exclusions.py ship: development\BUILD.md section 1b4)" }
+}
 if ($Private -and -not (Test-Path (Join-Path $out 'voices\pierre\voice.json'))) { Write-Warning 'private build without voices\pierre' }
 if (-not $NoForbiddenList -and -not (Test-Path $Forbidden)) { throw "release-lint word list not found: $Forbidden (kept outside the repository; -NoForbiddenList for a CI build)" }
 if ($EspeakSourceArchive -and -not (Test-Path $EspeakSourceArchive)) { throw "espeak-ng source archive not found: $EspeakSourceArchive" }

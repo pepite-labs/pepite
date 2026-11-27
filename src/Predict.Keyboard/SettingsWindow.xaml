@@ -106,6 +106,35 @@
         <CheckBox x:Name="Keys" VerticalAlignment="Center" AutomationProperties.AutomationId="Keys" Content="{x:Static local:Strings.KeysOn}"/>
         <TextBlock x:Name="LockKeys" Style="{StaticResource Locked}"/>
       </StackPanel>
+      <!-- 2026-11-25 owner: listen before inserting — « Clic sur un mot » (default: click listens, double click or
+           right-click inserts) and « Touches F1–F8 » (default: 1st press listens, 2nd inserts), independent; A and D off -->
+      <StackPanel Style="{StaticResource Row}">
+        <Label Padding="0" VerticalAlignment="Center" Target="{Binding ElementName=ClickModeBox}" Content="{x:Static local:Strings.ClickModeLabel}"/>
+        <ComboBox x:Name="ClickModeBox" Width="360" Margin="10,0,0,0" AutomationProperties.AutomationId="ClickMode"
+                  AutomationProperties.HelpText="{x:Static local:Strings.ClickModeHint}"/>
+        <TextBlock x:Name="LockClickMode" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <TextBlock x:Name="ClickBandNote" Margin="22,2,0,0" Opacity="0.75" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"
+                 Visibility="Collapsed" Text="{x:Static local:Strings.ClickBandNote}"/>
+      <TextBlock Margin="22,2,0,0" Opacity="0.75" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left" Text="{x:Static local:Strings.ClickModeHint}"/>
+      <StackPanel Style="{StaticResource Row}">
+        <Label Padding="0" VerticalAlignment="Center" Target="{Binding ElementName=KeysModeBox}" Content="{x:Static local:Strings.KeysModeLabel}"/>
+        <ComboBox x:Name="KeysModeBox" Width="300" Margin="10,0,0,0" AutomationProperties.AutomationId="KeysMode"
+                  AutomationProperties.HelpText="{x:Static local:Strings.KeysModeHint}"/>
+        <TextBlock x:Name="LockKeysMode" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="ListenShiftBox" VerticalAlignment="Center" AutomationProperties.AutomationId="ListenShift" Content="{x:Static local:Strings.ListenShiftLabel}"
+                  AutomationProperties.HelpText="{x:Static local:Strings.ListenShiftHint}"/>
+        <TextBlock x:Name="LockListenShift" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <TextBlock Margin="22,2,0,0" Opacity="0.75" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left" Text="{x:Static local:Strings.ListenShiftHint}"/>
+      <StackPanel Style="{StaticResource Row}">
+        <CheckBox x:Name="ListenButtonBox" VerticalAlignment="Center" AutomationProperties.AutomationId="ListenButton" Content="{x:Static local:Strings.ListenButtonLabel}"
+                  AutomationProperties.HelpText="{x:Static local:Strings.ListenButtonHint}"/>
+        <TextBlock x:Name="LockListenButton" Style="{StaticResource Locked}"/>
+      </StackPanel>
+      <TextBlock Margin="22,2,0,0" Opacity="0.75" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left" Text="{x:Static local:Strings.ListenButtonHint}"/>
       <StackPanel Style="{StaticResource Row}">
         <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Text="{x:Static local:Strings.PunctLabel}"/>
         <RadioButton x:Name="PunctFrench" GroupName="Punct" AutomationProperties.AutomationId="PunctFrench" Content="{x:Static local:Strings.PunctFrench}"/>
@@ -198,8 +227,11 @@
         <CheckBox x:Name="ReadingPictures" AutomationProperties.AutomationId="ReadingPictures" Content="{x:Static local:Strings.ReadingPictures}"/>
         <TextBlock x:Name="LockReadingPictures" Style="{StaticResource Locked}"/>
       </StackPanel>
+      <!-- 0.11.0 (owner 2026-11-27): three positions — LibreOffice Writer only (default, not set) / Partout / Jamais -->
+      <Label Padding="0" Margin="0,4,0,2" Target="{Binding ElementName=ReadingClipboard}" Content="{x:Static local:Strings.ReadingClipboard}"/>
       <StackPanel Style="{StaticResource Row}">
-        <CheckBox x:Name="ReadingClipboard" AutomationProperties.AutomationId="ReadingClipboard" Content="{x:Static local:Strings.ReadingClipboard}"
+        <ComboBox x:Name="ReadingClipboard" Width="330" Margin="22,0,0,0" AutomationProperties.AutomationId="ReadingClipboard"
+                  AutomationProperties.HelpText="{x:Static local:Strings.ReadingClipboardHint}"
                   ToolTip="{x:Static local:Strings.ReadingClipboardHint}" ToolTipService.ShowDuration="20000"/>
         <TextBlock x:Name="LockReadingClipboard" Style="{StaticResource Locked}"/>
       </StackPanel>

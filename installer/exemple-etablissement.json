@@ -6,6 +6,7 @@
   },
   "locked": {
     "words": { "spellingIndicator": true },
-    "start": { "welcome": false }
+    "start": { "welcome": false },
+    "motsExclus": [ "abcde", "fghij" ]
   }
 }

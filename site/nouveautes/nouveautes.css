@@ -1,0 +1,8 @@
+/* Pages « Nouveautés » de Pépite — complètent la feuille de style de l'aide (chargée avant celle-ci) ; aucune
+   ressource distante. Licence : CC BY-SA 4.0 (comme l'aide). */
+.petit { font-size: 0.9em; color: var(--encre-douce); }
+figure.capture img { box-shadow: 0 0.15rem 0.4rem rgba(74, 44, 29, 0.18); border: 1px solid #EAD9C2; }
+.nouveautes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr)); gap: 1rem; }
+.nouveautes .carte { margin: 0; }
+table.resume td:first-child { font-weight: 600; }
+ul.sources li { margin-bottom: 0.6em; }

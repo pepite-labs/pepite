@@ -126,7 +126,8 @@ Name: "pepite"; Description: "Ouvrir les fichiers .pepite (profils des élèves)
 Name: "bureau"; Description: "Créer une icône sur le Bureau"; Flags: unchecked
 
 [Files]
-; the fixed part: the exe, the self-contained .NET runtime, prediction.sqlite + prediction-SOURCES.txt, grammar.sqlite + notices, fonts\, noms\,
+; the fixed part: the exe, the self-contained .NET runtime, prediction.sqlite + prediction-SOURCES.txt, grammar.sqlite + notices,
+; exclusions\ (0.11.0: fr.txt + SOURCE.txt, the « mots exclus »; part of the app component, no switch), fonts\, noms\,
 ; espeak-ng, licenses\, COPYING, THIRD-PARTY-NOTICES.txt, LISEZ-MOI.txt (PDBs are in symbols-<ver>.zip, never installed);
 ; ARASAAC-LICENCE.txt too (0.10.2): the help's screenshots show ARASAAC pictograms even when the images component is off,
 ; so their licence is always installed (an upgrade from 0.10.1 with images off adds it)
@@ -140,6 +141,8 @@ Source: "{#StageDir}\voices\pierre\*"; DestDir: "{app}\voices\pierre"; Flags: ig
 [InstallDelete]
 ; the embedded help is replaced as a whole at an upgrade (a page renamed or removed must not stay behind)
 Type: filesandordirs; Name: "{app}\aide"
+; 0.11.0: the « mots exclus » folder too (only the shipped list, never an older one, at an upgrade)
+Type: filesandordirs; Name: "{app}\exclusions"
 ; a component unticked at an upgrade loses its files
 Type: files; Name: "{app}\pictos.sqlite"; Components: not images
 Type: filesandordirs; Name: "{app}\voices\siwis"; Components: not voix\siwis

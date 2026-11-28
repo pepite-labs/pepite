@@ -4,8 +4,9 @@
 Sources (study 10c, owner answers 2026-11-14): INSEE first names (Licence Ouverte 2.0), Statbel first names and REFNIS
 (CC BY 4.0), Unicode CLDR 49 French country names (Unicode License v3), flag-icons 7.6.0 4:3 flags (MIT), Wikidata
 (CC0: towns, French regions / departments, historical figures, French names of Belgian places) and Wikimedia Commons
-flags of the Belgian regions and provinces (public domain / CC0 only). No name is typed by hand: the curated files
-hold only Wikidata identifiers (selection/historiques.tsv). The pack itself is CC BY 4.0.
+flags of the Belgian regions and provinces (public domain / CC0 only), plus Pépite's own drawings (images/*.svg, CC0 1.0,
+owner 2026-11-27: Saint-Nicolas). No name is typed by hand: the curated files hold only Wikidata identifiers
+(selection/historiques.tsv) and the names the drawings go to (names.lock.json « dessins »). The pack itself is CC BY 4.0.
 
 Sub-commands (run with ``python -I``; raw downloads under --raw, default $PEPITE_NOMS_RAW, else ../out/raw-noms):
 
@@ -56,6 +57,8 @@ HOME_COUNTRIES = {"BE", "FR", "LU", "CH", "NL", "DE", "CA"}   # ISO 3166 codes (
 TOP_PLACES = {"continent", "pays", "region-be", "province-be", "region-fr"}   # 0.8.3: above the towns in the places band
 IMAGE_LICENCES = {"MIT", "domaine public", "CC0 1.0"}   # the pack stays CC BY 4.0: no share-alike, never NC / ND
 THUMB_W, THUMB_H = 128, 96             # 4:3, the bar's picture slot (bar height unchanged, Q18)
+DRAWING_BOX = (128, 128)               # Pépite's own square drawings: the ARASAAC pictures' 128 px (1:1 for M at 200 %)
+DRAWING_SOURCE = "pepite"              # the sources-table id of Pépite's own drawings
 
 # CLDR codes that are not countries or territories a pupil writes (macro-regions, exceptional reservations)
 CLDR_SKIP = {"EU", "EZ", "UN", "QO", "XA", "XB", "ZZ", "AC", "CP", "CQ", "DG", "EA", "IC", "TA"}
@@ -580,6 +583,34 @@ def public_entries(entries):
     return [{k: v for k, v in e.items() if not k.startswith("_")} for e in entries]
 
 
+def apply_drawings(entries, lock, here=HERE):
+    """Pépite's own drawings (lock « dessins », owner 2026-11-27): each goes to the entry of its « nom », which must exist,
+    must not be restricted and must not already have a picture; the committed SVG must match its pinned SHA-256 and its
+    licence be allowed. With « variantes »: false the entry gets « image_variantes »: false (the picture stays off its
+    variants: « Saint-Nicolas » is pictured, « Sint-Niklaas » is not). The entry's source, licence and author become the
+    drawing's, as for a flag. Returns [(entry, svg path)] to render."""
+    by = {e["nom"]: e for e in entries}
+    out = []
+    for d in lock.get("dessins", {}).get("files", []):
+        e = by.get(d["nom"])
+        if e is None:
+            raise SystemExit("drawing %s: no entry « %s » in the pack" % (d["file"], d["nom"]))
+        if e.get("restreint"):
+            raise SystemExit("drawing %s: « %s » is a restricted figure (never a picture)" % (d["file"], d["nom"]))
+        if "image" in e or "svg" in e:
+            raise SystemExit("drawing %s: « %s » already has a picture" % (d["file"], d["nom"]))
+        if d.get("licence") not in IMAGE_LICENCES:
+            raise SystemExit("drawing %s: licence %r not allowed" % (d["file"], d.get("licence")))
+        if not re.match(r"^images/pepite/[a-z0-9-]+\.png$", d.get("image", "")):
+            raise SystemExit("drawing %s: bad image path %r" % (d["file"], d.get("image")))
+        svg = checked(os.path.join(here, *d["file"].split("/")), d.get("sha256"))
+        e.update(image=d["image"], source=DRAWING_SOURCE, licence=d["licence"], auteur=d["auteur"])
+        if d.get("variantes") is False and e.get("variantes"):
+            e["image_variantes"] = False
+        out.append((e, svg))
+    return out
+
+
 def diff_report(prev, cur, edition):
     """Markdown: names added / removed per category against the previous edition (owner Q10: reviewed before shipping);
     since 2026.2 also the names that became predicted and the names whose rang changed."""
@@ -614,6 +645,16 @@ def diff_report(prev, cur, edition):
         lines.append("Passés au niveau prédit (%d) : %s%s" % (len(promoted), ", ".join(promoted[:300]), " …" if len(promoted) > 300 else ""))
         if demoted:
             lines.append("Passés au niveau reconnu (%d) : %s%s" % (len(demoted), ", ".join(demoted[:300]), " …" if len(demoted) > 300 else ""))
+    pic_added = sorted((e for a, e in both if "image" in e and "image" not in a), key=lambda x: x["nom"])
+    pic_removed = sorted(e["nom"] for a, e in both if "image" in a and "image" not in e)
+    if pic_added or pic_removed:
+        lines += ["", "## Images"]
+        if pic_added:
+            lines.append("Image ajoutée (%d) : %s" % (len(pic_added), ", ".join(
+                e["nom"] + (" (pas sur ses variantes : %s)" % ", ".join(e.get("variantes", [])) if e.get("image_variantes") is False else "")
+                for e in pic_added)))
+        if pic_removed:
+            lines.append("Image retirée (%d) : %s" % (len(pic_removed), ", ".join(pic_removed)))
     changed = [(a, e) for a, e in both if a.get("rang") != e.get("rang")]
     if changed:
         lines += ["", "## Rang changé", "", "| catégorie | noms |", "|---|---|"]
@@ -640,6 +681,9 @@ def sources_table(lock):
     t["wikidata"] = {"titre": "Wikidata", "licence": lock["wikidata"]["licence"], "url": "https://www.wikidata.org"}
     t["commons"] = {"titre": "Wikimedia Commons", "licence": "domaine public ou CC0 1.0 (voir SOURCES.md)",
                     "url": "https://commons.wikimedia.org"}
+    if lock.get("dessins", {}).get("files"):
+        t[DRAWING_SOURCE] = {"titre": "Pépite, dessins originaux", "licence": "CC0 1.0",
+                             "url": "https://github.com/pepite-labs/pepite"}
     return t
 
 
@@ -652,6 +696,8 @@ def attribution(lock):
             lines.append("• " + i["attribution_fr"])
     lines.append("• " + lock["wikidata"]["attribution_fr"])
     lines.append("• " + lock["commons_attribution_fr"])
+    if lock.get("dessins", {}).get("files"):
+        lines.append("• " + lock["dessins"]["attribution_fr"])
     lines.append("Statbel et l'Insee ne cautionnent pas Pépite ni l'usage fait de leurs données.")
     return "\n".join(lines) + "\n"
 
@@ -722,16 +768,17 @@ def flag_icons_codes(zpath):
         return {os.path.basename(n)[:-4] for n in z.namelist() if "/flags/4x3/" in n and n.endswith(".svg")}
 
 
-def render(svg_bytes, resvg, out_png):
-    """SVG → PNG at THUMB_W px wide (resvg), fitted into THUMB_W × THUMB_H, palette PNG (Pillow)."""
+def render(svg_bytes, resvg, out_png, box=(THUMB_W, THUMB_H)):
+    """SVG → PNG at twice the box width (resvg), fitted into the box (flags: THUMB_W × THUMB_H; drawings: DRAWING_BOX),
+    palette PNG (Pillow)."""
     from PIL import Image   # build-time only
     with tempfile.TemporaryDirectory() as td:
         src, dst = os.path.join(td, "in.svg"), os.path.join(td, "out.png")
         with open(src, "wb") as f:
             f.write(svg_bytes)
-        subprocess.run([resvg, "--width", str(THUMB_W * 2), src, dst], check=True, capture_output=True)
+        subprocess.run([resvg, "--width", str(box[0] * 2), src, dst], check=True, capture_output=True)
         im = Image.open(dst).convert("RGBA")
-    im.thumbnail((THUMB_W, THUMB_H), Image.LANCZOS)
+    im.thumbnail(box, Image.LANCZOS)
     pal = im.quantize(colors=128, method=Image.FASTOCTREE)
     os.makedirs(os.path.dirname(out_png), exist_ok=True)
     pal.save(out_png, optimize=True)
@@ -816,6 +863,10 @@ def cmd_build(a):
             render(svg, resvg, os.path.join(pack, e["image"].replace("/", os.sep)))
     for e in entries:
         e.pop("image_source", None)
+    drawings = apply_drawings(entries, lock)
+    for e, svg_path in drawings:
+        with open(svg_path, "rb") as f:
+            render(f.read(), resvg, os.path.join(pack, e["image"].replace("/", os.sep)), DRAWING_BOX)
 
     # checks
     names = [e["nom"] for e in entries]
@@ -840,7 +891,7 @@ def cmd_build(a):
     with open(os.path.join(pack, "ATTRIBUTION-fr.txt"), "w", encoding="utf-8", newline="\n") as f:
         f.write(attribution(lock))
     write_licence(pack, raw, lock)
-    write_sources(pack, lock, image_rows, entries)
+    write_sources(pack, lock, image_rows, entries, drawings)
 
     # diff report against the previous edition
     prev = []
@@ -921,13 +972,27 @@ def write_licence(pack, raw, lock):
             "Ce paquet est construit à partir de données ouvertes ; leurs auteurs et licences sont dans ATTRIBUTION-fr.txt et",
             "SOURCES.md. Les avis ci-dessous accompagnent les données reprises.", "",
             "=" * 78, "Noms des pays : Unicode CLDR 49 — Unicode License v3", "=" * 78, unicode_lic.strip(), "",
-            "=" * 78, "Drapeaux des pays : flag-icons 7.6.0 — licence MIT", "=" * 78, mit.strip(), "",
+            "=" * 78, "Drapeaux des pays : flag-icons 7.6.0 — licence MIT", "=" * 78, mit.strip(), ""] + drawing_notice(lock) + [
             "=" * 78, "Creative Commons Attribution 4.0 International — texte juridique", "=" * 78, ccby.strip(), ""]
     with open(os.path.join(pack, "LICENCE.txt"), "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(text))
 
 
-def write_sources(pack, lock, image_rows, entries):
+def drawing_notice(lock):
+    """The LICENCE.txt section of Pépite's own drawings (CC0 1.0 requires no notice: the dedication is stated)."""
+    files = lock.get("dessins", {}).get("files", [])
+    if not files:
+        return []
+    out = ["=" * 78, "Dessins de Pépite — CC0 1.0 Universel (domaine public)", "=" * 78]
+    for d in files:
+        out.append("%s (%s) : %s." % (d["titre"], d["image"], d["auteur"]))
+    out += ["Dans la mesure permise par la loi, leurs auteurs renoncent à tous leurs droits d'auteur et droits voisins sur ces",
+            "dessins (CC0 1.0 Universel, https://creativecommons.org/publicdomain/zero/1.0/legalcode.fr) : ils peuvent être",
+            "copiés, modifiés et diffusés, même à des fins commerciales, sans autorisation ni mention.", ""]
+    return out
+
+
+def write_sources(pack, lock, image_rows, entries, drawings=()):
     lines = ["# Sources du paquet « %s », édition %s" % (lock["pack"]["titre"], lock["pack"]["edition"]), "",
              "| entrée | version | licence | URL | SHA-256 |", "|---|---|---|---|---|"]
     for i in lock["inputs"]:
@@ -946,6 +1011,16 @@ def write_sources(pack, lock, image_rows, entries):
     lines += ["", "Outil de construction (jamais livré) : %s, %s, %s, SHA-256 `%s`." % (tool["version"], tool["licence"], tool["url"], tool["sha256"]),
               "", "Drapeaux des pays : flag-icons 7.6.0, dossier `flags/4x3`, licence MIT (voir LICENCE.txt) ; %d images." %
               sum(1 for e in entries if e.get("source") == "flag-icons")]
+    if drawings:
+        files = {d["nom"]: d for d in lock["dessins"]["files"]}
+        lines += ["", "Dessins de Pépite (dessins originaux, aucune œuvre de tiers ; source SVG dans `pepite-noms/images/`, rendu",
+                  "par resvg en PNG 128 × 128) :", "",
+                  "| nom | dessin | fichier | licence | auteur | sur les variantes | SHA-256 du SVG |", "|---|---|---|---|---|---|---|"]
+        for e, _ in sorted(drawings, key=lambda x: x[0]["nom"]):
+            d = files[e["nom"]]
+            lines.append("| %s | %s | %s | %s | %s | %s | `%s` |" % (
+                e["nom"], d["titre"], d["file"], d["licence"], d["auteur"],
+                "non (%s)" % ", ".join(e.get("variantes", [])) if e.get("image_variantes") is False else "oui", d["sha256"]))
     with open(os.path.join(pack, "SOURCES.md"), "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
 

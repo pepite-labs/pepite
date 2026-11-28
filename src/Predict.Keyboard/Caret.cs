@@ -8,9 +8,13 @@ namespace Predict.Keyboard;
 /// <summary>
 /// Finds the text caret of the foreground application, in physical screen pixels. Order:
 /// 1) GetGUIThreadInfo (Win32 caret — Notepad, classic edit controls),
-/// 2) UI Automation TextPattern (modern apps: browsers, Word, WinUI) — not asked in a host that never gives one
+/// 2) LibreOffice phase 1: IAccessible2 in a Writer window where IA2 answers (<see cref="LibreOfficeText.IsLive"/>) —
+///    the lookup runs on the <c>lo-caret</c> worker and this (UI) thread waits at most
+///    <see cref="LibreOfficeText.CaretWaitMs"/> (source <c>ia2</c>), else the last point of the same paragraph younger than
+///    1 s (<c>ia2-late</c>), else the mouse; this thread never makes a COM call,
+/// 3) UI Automation TextPattern (modern apps: browsers, Word, WinUI) — not asked in a host that never gives one
 ///    (<see cref="HostApps.UiaTextUnavailable(IntPtr)"/>: LibreOffice),
-/// 3) the mouse position (last resort).
+/// 4) the mouse position (last resort).
 /// </summary>
 internal static class Caret
 {
@@ -24,6 +28,9 @@ internal static class Caret
             var p = new Native.POINT { X = gi.rcCaret.Left, Y = gi.rcCaret.Bottom };
             if (Native.ClientToScreen(gi.hwndCaret, ref p)) return (p.X, p.Y, "win32");
         }
+
+        if (LibreOfficeText.Shared is { } lo && lo.IsLive(fg) && lo.CaretPointBounded(fg) is { } l)
+            return (l.X, l.Y, l.From switch { LibreOfficeText.CaretFrom.Late => "ia2-late", LibreOfficeText.CaretFrom.Recent => "ia2-recent", _ => "ia2" });
 
         // 0.11.0: LibreOffice has no system caret and gives UIA none: the lookup only cost ≈ 110 ms (phase 0 probe)
         if (!HostApps.UiaTextUnavailable(fg) && FromUia() is { } u) return (u.X, u.Y, "uia");

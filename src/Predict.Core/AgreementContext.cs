@@ -237,6 +237,34 @@ public static class AgreementContext
 
     public static bool IsDeterminer(string? w) => w is not null && Determiners.ContainsKey(w);
 
+    /// <summary>0.11.0 (plan negation, R3): the number of a determiner (lowercase), when it is one.</summary>
+    public static bool TryDeterminer(string? w, out uint number)
+    {
+        number = 0;
+        if (w is null || !Determiners.TryGetValue(w, out var d)) return false;
+        number = d.Number;
+        return true;
+    }
+
+    /// <summary>0.11.0 (plan negation, R2): an object or reflexive clitic that may stand between a subject and its verb
+    /// (« je <b>le lui</b> donne », « il <b>s'en</b> va », « nous <b>vous</b> aimons »): the clitics without « ne / n' ».</summary>
+    public static bool IsObjectClitic(string? w) => w is not null && w is not ("ne" or "n") && Clitics.Contains(w);
+
+    /// <summary>0.11.0 (plan negation, R3): the persons a subject pronoun (lowercase) gives its verb — the subject pronouns of
+    /// rule S, and « ça », « cela » (3s), « qui » (any person: « moi qui sais », « ceux qui veulent »).</summary>
+    public static bool TryPersons(string? w, out uint persons)
+    {
+        persons = 0;
+        if (w is null) return false;
+        if (Subjects.TryGetValue(w, out var s)) { persons = s.Persons; return true; }
+        switch (w)
+        {
+            case "ça" or "cela": persons = MorphBits.P3s; return true;
+            case "qui": persons = MorphBits.PersonMask; return true;
+            default: return false;
+        }
+    }
+
     /// <summary>The numerals of the determiner list: after a noun they are adjectives (« un vélo neuf », « page cent »).</summary>
     private static readonly HashSet<string> Numerals = new(StringComparer.Ordinal)
     { "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze",

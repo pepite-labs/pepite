@@ -95,6 +95,7 @@ public partial class AboutWindow : Window
                                                   (VoicesSection, VoicesHeader), (LicencesSection, LicencesHeader) })
             System.Windows.Automation.AutomationProperties.SetName(section, header.Text);
         AppLicenceText.Text = Strings.AboutAppLicence;
+        InteropText.Text = Strings.AboutIa2;
         NoticesLinkText.Text = Strings.AboutNoticesLink;
         CloseButton.Content = Strings.AboutClose;
         Icon = AppIcon(16);

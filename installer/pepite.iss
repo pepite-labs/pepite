@@ -1,7 +1,7 @@
 ﻿; Pépite — installer script (plan 12, D6, D11, D13, D27 amended, D28). Inno Setup 7.1.1 (innosetup.lock.json).
 ; GPL-3.0-or-later like the rest of Pépite: an installation script is part of the Corresponding Source (GPL-3 § 1).
 ; Built by build_installer.ps1, which passes the defines below; do not compile it by hand without them:
-;   /DVersion=0.10.2 /DStageDir=<stage> /DOutDir=<release> /DTouchDate=YYYY-MM-DD /DTouchTime=HH:MM:SS
+;   /DVersion=0.11.0 /DStageDir=<stage> /DOutDir=<release> /DTouchDate=YYYY-MM-DD /DTouchTime=HH:MM:SS
 ;   [/DPrivate]  (private test build: « -test » suffix, keeps any "public": false voice pack, D28)
 ;   [/DSIGN]     (code signing, prepared, off: Q4 — SignPath later)
 ; No network: no download of any kind; the URLs below are only shown as text.
@@ -103,6 +103,10 @@ WinVersionTooLowError=Pépite fonctionne seulement sous Windows 11. Cette versio
 OnlyOnTheseArchitectures=Pépite s'installe seulement sur un Windows 11 64 bits pour processeur Intel ou AMD (x64). Les ordinateurs à processeur ARM ne sont pas encore pris en charge.
 PrivilegesRequiredOverrideText1=%1 peut être installé pour tous les utilisateurs de cet ordinateur (il faut un compte administrateur ; conseillé dans une école), ou seulement pour vous.
 PrivilegesRequiredOverrideText2=%1 peut être installé seulement pour vous, ou pour tous les utilisateurs de cet ordinateur (il faut un compte administrateur ; conseillé dans une école).
+; the default speaks of « icônes créées sur le Bureau », wrong when that task is left unticked (the default): the Start
+; menu shortcut is always made, the desktop one only on request
+FinishedLabel=L'assistant a terminé l'installation de [name] sur votre ordinateur. Pépite se trouve dans le menu Démarrer.
+FinishedLabelNoIcons=L'assistant a terminé l'installation de [name] sur votre ordinateur.
 
 [Types]
 Name: "complete"; Description: "Installation complète"
@@ -237,7 +241,8 @@ Name: "{autoprograms}\Pépite"; Filename: "{app}\Pepite.exe"; Comment: "Pépite 
 Name: "{autodesktop}\Pépite"; Filename: "{app}\Pepite.exe"; Comment: "Pépite — prédiction de mots"; Tasks: bureau
 
 [Run]
-; never elevated, never after a silent install (users get Pépite at their next logon through the Run key)
+; never elevated by itself (runasoriginaluser), never after a silent install: users get Pépite at their next logon
+; through the Run key; a silent upgrade restarts a copy that was running for this account (RestartAfterSilentInstall)
 Filename: "{app}\Pepite.exe"; Description: "Lancer Pépite"; Flags: postinstall nowait skipifsilent runasoriginaluser
 
 [Code]
@@ -292,6 +297,20 @@ const
 var
   ConfigPage: TInputFileWizardPage;
   ConfigFailed: Boolean;
+  { plan installer-upgrade: the installed version (uninstall entry DisplayVersion), read in InitializeSetup }
+  PrevVersion: String;
+  { the tasks of the previous install (« Inno Setup: Selected Tasks » of the uninstall entry): the tasks list is only
+    filled when its page is reached, so WizardIsTaskSelected says nothing on the upgrade page (VM, 2026-11-27) }
+  PrevTasks: String;
+  PrevTasksKnown: Boolean;
+  { the tasks page was shown: from then on its ticks are the truth (Back to the upgrade page after a change) }
+  TasksPageSeen: Boolean;
+  IsUpgrade, IsRepair: Boolean;
+  UpgradePage: TWizardPage;
+  UpgradeText: TNewStaticText;
+  ChangeChoices: TNewCheckBox;
+  { a Pépite of this session was running when the install began (R6) }
+  PepiteWasRunning: Boolean;
 
 { ---------------------------------------------------------------- file-system trust }
 
@@ -375,6 +394,8 @@ begin
     Log('Pepite: not running (' + Why + ')');
     Exit;
   end;
+  if Why = 'install' then
+    PepiteWasRunning := True;
   H := OpenEvent(EVENT_MODIFY_STATE, False, QuitEvent);
   if H <> 0 then
   begin
@@ -397,6 +418,53 @@ end;
 
 { ---------------------------------------------------------------- setup }
 
+{ Plan installer-upgrade (R1, R2): the version already installed in this mode, from the uninstall entry. An older one
+  -> an upgrade (its own page, two clicks); the same -> a repair; a newer one -> refused before any change (exit 1,
+  owner 2026-11-26: going back = uninstall first, the data is kept). A version that cannot be read is not compared. }
+function CheckInstalledVersion(): Boolean;
+var
+  Root, Cmp: Integer;
+  P, N: Int64;
+  Msg: String;
+begin
+  Result := True;
+  if IsAdminInstallMode then Root := HKLM64 else Root := HKCU;
+  IsUpgrade := RegKeyExists(Root, UninstallKey);
+  IsRepair := False;
+  PrevVersion := '';
+  if not IsUpgrade then
+  begin
+    Log('install: Pepite {#Version}, no earlier install in this mode');
+    Exit;
+  end;
+  RegQueryStringValue(Root, UninstallKey, 'DisplayVersion', PrevVersion);
+  PrevTasksKnown := RegQueryStringValue(Root, UninstallKey, 'Inno Setup: Selected Tasks', PrevTasks);
+  PrevVersion := Trim(PrevVersion);
+  if not (StrToVersion(PrevVersion, P) and StrToVersion('{#Version}', N)) then
+  begin
+    Log('upgrade: previous version unreadable (''' + PrevVersion + ''') -> {#Version}');
+    PrevVersion := '';
+    Exit;
+  end;
+  Cmp := ComparePackedVersion(P, N);
+  if Cmp > 0 then
+  begin
+    Log('downgrade refused: installed ' + PrevVersion + ', this setup {#Version}');
+    Msg := 'Pépite ' + PrevVersion + ' est déjà installé sur cet ordinateur : c''est une version plus récente que celle ' +
+      'de cette installation ({#Version}).' + #13#10 + 'L''installation s''arrête sans rien changer.' + #13#10#13#10 +
+      'Pour revenir à la version {#Version} : désinstallez d''abord Pépite (Paramètres > Applications) en répondant ' +
+      '« Non » à la question sur les réglages, ils sont gardés. Puis relancez cette installation.';
+    if not WizardSilent then
+      MsgBox(Msg, mbError, MB_OK);
+    Result := False;
+  end else if Cmp = 0 then
+  begin
+    IsRepair := True;
+    Log('repair: Pepite ' + PrevVersion + ' reinstalled');
+  end else
+    Log('upgrade: ' + PrevVersion + ' -> {#Version}');
+end;
+
 function InitializeSetup(): Boolean;
 var
   Other: Boolean;
@@ -404,6 +472,7 @@ var
 begin
   Result := True;
   ConfigFailed := False;
+  PepiteWasRunning := False;
   { other-mode guard: one install per PC, per-user OR all-users }
   if IsAdminInstallMode then
   begin
@@ -419,11 +488,74 @@ begin
     if not WizardSilent then
       MsgBox(Msg, mbError, MB_OK);
     Result := False;
+    Exit;
   end;
+  Result := CheckInstalledVersion();
+end;
+
+{ the upgrade page's subtitle (R1) }
+function UpgradeSubtitle(): String;
+begin
+  if IsRepair then
+    Result := 'Pépite {#Version} est déjà installé : il sera réinstallé (réparation).'
+  else if PrevVersion <> '' then
+    Result := 'Pépite ' + PrevVersion + ' est déjà installé : il sera mis à jour en {#Version}.'
+  else
+    Result := 'Pépite est déjà installé : il sera mis à jour en {#Version}.';
+end;
+
+{ Next on the upgrade page: « Mettre à jour » goes straight to the installation (R4); with « Modifier les choix » the
+  usual pages come back, so it is « Suivant » }
+procedure UpdateUpgradeNextButton();
+begin
+  if (UpgradePage = nil) or (WizardForm.CurPageID <> UpgradePage.ID) then
+    Exit;
+  if ChangeChoices.Checked then
+    WizardForm.NextButton.Caption := SetupMessage(msgButtonNext)
+  else if IsRepair then
+    WizardForm.NextButton.Caption := 'Réinstaller'
+  else
+    WizardForm.NextButton.Caption := 'Mettre à jour';
+end;
+
+procedure ChangeChoicesClick(Sender: TObject);
+begin
+  UpdateUpgradeNextButton();
 end;
 
 procedure InitializeWizard();
 begin
+  { High DPI (owner 2026-11-18, reproduced in the VM at 150 % and 200 %, 2026-11-27): in Inno Setup 7.1.1,
+    TNewCheckListBox takes the check box width from LoadBitmap(OBM_CHECKBOXES) — the 96 DPI size, 13 px — but draws
+    the themed box at its real size (26 px at 200 %), placed from a text rectangle computed with 13 px: a top-level
+    box starts at 13 + Offset + 2 - 26 = -9 px at 200 % and looks cut to half its width (children are indented,
+    hence whole; tasks only -1 px at 150 %). Same with WizardStyle=classic. Workaround: widen the gap (Offset) by 8
+    scaled pixels. Upstream: commit 5b4c39b6 (Inno Setup 7.2.0-preview-1) removes the LoadBitmap call — at 7.2.0
+    final, test and drop this workaround (TODO). Not reported upstream: already fixed there (owner 2026-11-27). }
+  WizardForm.ComponentsList.Offset := WizardForm.ComponentsList.Offset + ScaleX(8);
+  WizardForm.TasksList.Offset := WizardForm.TasksList.Offset + ScaleX(8);
+  WizardForm.RunList.Offset := WizardForm.RunList.Offset + ScaleX(8);
+  if IsUpgrade then
+  begin
+    UpgradePage := CreateCustomPage(wpWelcome, 'Mise à jour de Pépite', UpgradeSubtitle());
+    UpgradeText := TNewStaticText.Create(UpgradePage);
+    UpgradeText.Parent := UpgradePage.Surface;
+    UpgradeText.AutoSize := False;
+    UpgradeText.WordWrap := True;
+    UpgradeText.Left := 0;
+    UpgradeText.Top := 0;
+    UpgradeText.Width := UpgradePage.SurfaceWidth;
+    UpgradeText.Height := UpgradePage.SurfaceHeight - ScaleY(36);
+    ChangeChoices := TNewCheckBox.Create(UpgradePage);
+    ChangeChoices.Parent := UpgradePage.Surface;
+    ChangeChoices.Caption := 'Modifier les choix (composants et tâches)';
+    ChangeChoices.Left := 0;
+    ChangeChoices.Width := UpgradePage.SurfaceWidth;
+    ChangeChoices.Height := ScaleY(24);
+    ChangeChoices.Top := UpgradePage.SurfaceHeight - ChangeChoices.Height;
+    ChangeChoices.Checked := False;
+    ChangeChoices.OnClick := @ChangeChoicesClick;
+  end;
   ConfigPage := CreateInputFilePage(wpSelectTasks,
     'Configuration de l''établissement (facultatif)',
     'Des réglages proposés ou imposés à tous les comptes de cet ordinateur.',
@@ -433,9 +565,18 @@ begin
   ConfigPage.Values[0] := CmdValue('CONFIG');
 end;
 
+{ At an upgrade (R4): the information page is never shown again; components, tasks, configuration and the ready page
+  only with « Modifier les choix ». A first install sees no upgrade page. }
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   Result := (PageID = ConfigPage.ID) and not IsAdminInstallMode;
+  if not IsUpgrade then
+    Exit;
+  if PageID = wpInfoBefore then
+    Result := True;
+  if not ChangeChoices.Checked and ((PageID = wpSelectComponents) or (PageID = wpSelectTasks) or
+    (PageID = ConfigPage.ID) or (PageID = wpReady)) then
+    Result := True;
 end;
 
 function TotalRamMB(): Integer;
@@ -448,19 +589,111 @@ begin
     Result := M.ullTotalPhys div (1024 * 1024);
 end;
 
-function UpdateReadyMemo(Space, NewLine, MemoUserInfoInfo, MemoDirInfo, MemoTypeInfo, MemoComponentsInfo,
-  MemoGroupInfo, MemoTasksInfo: String): String;
+{ the low-memory warning of the ready page and of the upgrade page ('' when there is enough) }
+function RamWarning(): String;
 var
   Ram: Integer;
 begin
-  Result := MemoDirInfo + NewLine + NewLine + MemoComponentsInfo + NewLine + NewLine + MemoTasksInfo;
-  if IsAdminInstallMode and (Trim(ConfigPage.Values[0]) <> '') then
-    Result := Result + NewLine + NewLine + 'Configuration de l''établissement :' + NewLine + Space + ConfigPage.Values[0];
+  Result := '';
   Ram := TotalRamMB();
   Log(Format('RAM: %d MB (warning below %d MB)', [Ram, MinRamMB]));
   if (Ram > 0) and (Ram < MinRamMB) then
-    Result := Result + NewLine + NewLine + 'Attention : cet ordinateur a ' + IntToStr(Ram) + ' Mo de mémoire. ' +
+    Result := 'Attention : cet ordinateur a ' + IntToStr(Ram) + ' Mo de mémoire. ' +
       'Pépite demande au moins 4 Go ; il peut être lent ici (l''installation reste possible).';
+end;
+
+procedure AddMemoPart(var Memo: String; const Part, NewLine: String);
+begin
+  if Part = '' then
+    Exit;
+  if Memo <> '' then
+    Memo := Memo + NewLine + NewLine;
+  Memo := Memo + Part;
+end;
+
+{ a task of the previous install (the registry), else the wizard's current state }
+function PrevTaskOn(const Name: String): Boolean;
+begin
+  if PrevTasksKnown and not TasksPageSeen and (CmdValue('TASKS') = '') then
+    Result := Pos(',' + Lowercase(Name) + ',', ',' + Lowercase(PrevTasks) + ',') > 0
+  else
+    Result := WizardIsTaskSelected(Name);
+end;
+
+function UpdateReadyMemo(Space, NewLine, MemoUserInfoInfo, MemoDirInfo, MemoTypeInfo, MemoComponentsInfo,
+  MemoGroupInfo, MemoTasksInfo: String): String;
+var
+  Warn: String;
+begin
+  { the folder line is empty at an upgrade (the folder page is skipped): no blank paragraphs }
+  Result := '';
+  AddMemoPart(Result, MemoDirInfo, NewLine);
+  AddMemoPart(Result, MemoComponentsInfo, NewLine);
+  AddMemoPart(Result, MemoTasksInfo, NewLine);
+  if IsUpgrade then
+  begin
+    if PrevVersion <> '' then
+      Result := 'Mise à jour : Pépite ' + PrevVersion + ' → {#Version}' + NewLine + NewLine + Result
+    else
+      Result := 'Mise à jour : Pépite → {#Version}' + NewLine + NewLine + Result;
+  end;
+  if IsAdminInstallMode and (Trim(ConfigPage.Values[0]) <> '') then
+    Result := Result + NewLine + NewLine + 'Configuration de l''établissement :' + NewLine + Space + ConfigPage.Values[0];
+  Warn := RamWarning();
+  if Warn <> '' then
+    Result := Result + NewLine + NewLine + Warn;
+end;
+
+{ the upgrade page's summary: what is kept, and the current choices (the ticks of the previous install) }
+function UpgradeSummary(): String;
+var
+  Comps, Tasks, Warn: String;
+begin
+  Comps := 'Pépite';
+  if WizardIsComponentSelected('images') then Comps := Comps + ', images des mots';
+  if WizardIsComponentSelected('voix\siwis') then Comps := Comps + ', voix Siwis';
+#ifdef HasPierre
+  if WizardIsComponentSelected('voix\pierre') then Comps := Comps + ', voix Pierre';
+#endif
+  Tasks := '';
+  if PrevTaskOn('demarrage') then Tasks := Tasks + ', démarrer avec Windows';
+  if PrevTaskOn('pepite') then Tasks := Tasks + ', ouvrir les fichiers .pepite';
+  if PrevTaskOn('bureau') then Tasks := Tasks + ', icône sur le Bureau';
+  if Tasks = '' then Tasks := 'aucune' else Tasks := Copy(Tasks, 3, MaxInt);
+  Result := 'Vos réglages, les profils des élèves et leurs mots sont gardés. Pépite sera fermé pendant la mise à jour.' + #13#10#13#10 +
+    'Dossier : ' + WizardDirValue + #13#10 + 'Composants : ' + Comps + #13#10 + 'Tâches : ' + Tasks;
+  if IsAdminInstallMode and (Trim(ConfigPage.Values[0]) <> '') then
+    Result := Result + #13#10 + 'Configuration de l''établissement : ' + ConfigPage.Values[0];
+  Warn := RamWarning();
+  if Warn <> '' then
+    Result := Result + #13#10#13#10 + Warn;
+  Result := Result + #13#10#13#10 + 'Cliquez sur « ';
+  if IsRepair then Result := Result + 'Réinstaller' else Result := Result + 'Mettre à jour';
+  Result := Result + ' » pour garder ces choix, ou cochez la case ci-dessous pour les changer.';
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+var
+  H: Integer;
+begin
+  if CurPageID = wpSelectTasks then
+    TasksPageSeen := True;
+  if IsUpgrade and (CurPageID = UpgradePage.ID) then
+  begin
+    UpgradeText.Caption := UpgradeSummary();
+    UpdateUpgradeNextButton();
+  end;
+  if IsUpgrade and (CurPageID = wpFinished) then
+  begin
+    WizardForm.FinishedHeadingLabel.Caption := 'Mise à jour terminée';
+    if IsRepair then
+      WizardForm.FinishedLabel.Caption := 'Pépite {#Version} a été réinstallé. Vos réglages et les profils sont gardés.'
+    else
+      WizardForm.FinishedLabel.Caption := 'Pépite a été mis à jour en {#Version}. Vos réglages et les profils sont gardés.';
+    { the run list sits below the label: follow its new height }
+    H := WizardForm.AdjustLabelHeight(WizardForm.FinishedLabel);
+    WizardForm.IncTopDecHeight(WizardForm.RunList, H);
+  end;
 end;
 
 { All users: a direct child of Program Files only (owner decision 2026-11-15, plan 12 review). Elsewhere a parent
@@ -625,10 +858,43 @@ begin
   Log('machine config installed: ' + Dst);
 end;
 
+{ R6 (plan installer-upgrade): a silent upgrade closed the Pépite of this session (CloseRunningPepite); start it again,
+  not elevated (ExecAsOriginalUser: the account that ran the setup; already elevated -> as it is, hence /NOLANCER).
+  As SYSTEM the user's copy lives in another session's Local\ namespace: never seen as running, nothing restarted (the
+  Run key starts the new version at the next logon). The exit code never depends on it. }
+procedure RestartAfterSilentInstall();
+var
+  Rc: Integer;
+begin
+  if not WizardSilent or not IsUpgrade then
+    Exit;
+  if not PepiteWasRunning then
+  begin
+    Log('restart: Pepite was not running in this session');
+    Exit;
+  end;
+  if CmdSwitch('NOLANCER') then
+  begin
+    Log('restart: skipped (/NOLANCER)');
+    Exit;
+  end;
+  try
+    if ExecAsOriginalUser(ExpandConstant('{app}\Pepite.exe'), '--autostart', '', SW_SHOWNORMAL, ewNoWait, Rc) then
+      Log('restart: started')
+    else
+      Log(Format('restart: failed %d', [Rc]));
+  except
+    Log('restart: exception ' + GetExceptionMessage);
+  end;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
+  begin
     InstallMachineConfig();
+    RestartAfterSilentInstall();
+  end;
 end;
 
 { exit code 2 = the /CONFIG file was refused (DEPLOIEMENT.txt); Pépite itself is installed }

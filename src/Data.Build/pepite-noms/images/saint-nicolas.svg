@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+ <title>Saint-Nicolas — Buste (dessin original, CC0 1.0)</title>
+ <g stroke="#000000" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+  <path d="M30 300 C34 236 74 204 128 198 C182 204 222 236 226 300 Z" fill="#E33418"/>
+  <path d="M104 206 L94 300" fill="none" stroke="#000000" stroke-width="18"/>
+  <path d="M104 206 L94 300" fill="none" stroke="#F9C340" stroke-width="8"/>
+  <path d="M152 206 L162 300" fill="none" stroke="#000000" stroke-width="18"/>
+  <path d="M152 206 L162 300" fill="none" stroke="#F9C340" stroke-width="8"/>
+  <path d="M250 300 V74 C250 34 290 30 290 56 C290 78 264 80 264 66" fill="none" stroke="#000000" stroke-width="17"/><path d="M250 300 V74 C250 34 290 30 290 56 C290 78 264 80 264 66" fill="none" stroke="#F9C340" stroke-width="8"/><rect x="242" y="88" width="16" height="12" rx="3" fill="#F9C340" stroke-width="4"/>
+  <path d="M198 222 C218 228 236 236 244 248 L232 270 C218 260 206 254 194 248 Z" fill="#E33418"/>
+  <circle cx="248" cy="258" r="15" fill="#FFFFFF"/>
+  <g transform="translate(128 0) scale(1.32) translate(-140 -8)">
+  <ellipse cx="140" cy="118" rx="25" ry="25" fill="#F5E5DF"/>
+  <path d="M114 112 C108 150 122 176 140 182 C158 176 172 150 166 112 C163 126 158 131 153 131 C149 126 145 124 140 128 C135 124 131 126 127 131 C122 131 117 126 114 112 Z" fill="#FFFFFF" stroke="none"/>
+  <path d="M114 112 C108 150 122 176 140 182 C158 176 172 150 166 112" fill="none"/>
+  <path d="M166 112 C163 126 158 131 153 131 C149 126 145 124 140 128 C135 124 131 126 127 131 C122 131 117 126 114 112" fill="none" stroke-width="2.5"/>
+  <path d="M134 139 Q140 143 146 139" fill="none" stroke-width="3.5"/>
+  <circle cx="131" cy="113" r="3.8" fill="#000000" stroke="none"/>
+  <circle cx="149" cy="113" r="3.8" fill="#000000" stroke="none"/>
+  <path d="M137 121 Q140 124 143 121" fill="none" stroke-width="3"/>
+  <path d="M113 102 V62 C113 46 126 32 140 16 C154 32 167 46 167 62 V102 Z" fill="#E33418"/>
+  <rect x="113" y="89" width="54" height="13" fill="#F9C340"/>
+  <path d="M135 42 H145 V54 H155 V64 H145 V80 H135 V64 H125 V54 H135 Z" fill="#F9C340" stroke-width="3"/>
+</g>
+ </g>
+</svg>

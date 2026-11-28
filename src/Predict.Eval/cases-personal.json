@@ -1090,5 +1090,11 @@
   "context": "Tu viens ?",
   "typed": "Je",
   "intended": "je"
+ },
+ {
+  "category": "hyphen-name",
+  "context": "je joue avec Jean-",
+  "typed": "B",
+  "intended": "Jean-Baptiste"
  }
 ]

@@ -459,3 +459,235 @@ function T2Wizard([string]$config = (Join-Path $SETUP 'exemple-etablissement.jso
   $s += Btn '^Terminer' 600
   "T2 wizard: $($s -join ' ; ') | config edit found: $([bool]$edit) | page: $($page.Substring(0, [math]::Min(300, $page.Length)))"
 }
+
+# ================================================================ plan installer-upgrade (U rows)
+# The old setup ($OldSetup, the public 0.10.2) is kept OUT of -Setup; InstTest is the new -test build.
+$global:BACKUPS = Join-Path $env:LOCALAPPDATA 'Pepite-Prediction\sauvegardes'
+function NewestSetupLog { Get-ChildItem $env:TEMP -Filter 'Setup Log *.txt' -EA 0 | Sort-Object LastWriteTime -Descending | Select-Object -First 1 }
+function SetupLogLines([string]$rx, [string]$path = '') { if (-not $path) { $l = NewestSetupLog; if (-not $l) { return @() }; $path = $l.FullName }; @(Select-String -Path $path -Pattern $rx | ForEach-Object Line) }
+# file -> SHA-256 of the data folder (settings.json and .tmp left out: settings.json gets state.lastVersion)
+function DataHashes {
+  $h = @{}
+  if (Test-Path $DATA) {
+    $root = (Resolve-Path $DATA).Path.TrimEnd('\') + '\'
+    foreach ($f in Get-ChildItem $DATA -Recurse -File) {
+      $rel = $f.FullName.Substring($root.Length)
+      if ($rel -eq 'settings.json' -or $rel -like '*.tmp') { continue }
+      $h[$rel] = (Get-FileHash $f.FullName).Hash
+    }
+  }
+  $h
+}
+function SameHashes($a, $b) { if ($a.Count -ne $b.Count) { return $false }; foreach ($k in $a.Keys) { if ($b[$k] -ne $a[$k]) { return $false } }; $true }
+function DiffHashes($a, $b) { @($a.Keys + $b.Keys | Sort-Object -Unique | Where-Object { $a[$_] -ne $b[$_] }) -join ', ' }
+function VersionZips { @(Get-ChildItem $BACKUPS -Filter 'profils-*-mise-a-jour.zip' -EA 0) }
+function ZipEntries([string]$zip) {
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $z = [IO.Compression.ZipFile]::OpenRead($zip)
+  try { @($z.Entries | ForEach-Object FullName) } finally { $z.Dispose() }
+}
+function ActiveProfile { try { (Get-Content (Join-Path $DATA 'profiles\index.json') -Raw | ConvertFrom-Json).active } catch { $null } }
+function LastVersion { try { (Get-Content (Join-Path $DATA 'settings.json') -Raw | ConvertFrom-Json).state.lastVersion } catch { $null } }
+# the value of the first Edit / Document of the setup windows (the ready page's memo)
+function SetupMemo {
+  foreach ($w in SetupWins) {
+    foreach ($e in $w.FindAll($TS::Descendants, [Windows.Automation.Condition]::TrueCondition)) {
+      $t = $e.Current.ControlType
+      if ($t -eq [Windows.Automation.ControlType]::Edit -or $t -eq [Windows.Automation.ControlType]::Document) {
+        try { return $e.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).Current.Value } catch { }
+        try { return $e.GetCurrentPattern([Windows.Automation.TextPattern]::Pattern).DocumentRange.GetText(4000) } catch { }
+      }
+    }
+  }
+  ''
+}
+# tick a check box of the setup windows by name (Toggle pattern)
+function Tick([string]$rx) {
+  foreach ($w in SetupWins) {
+    foreach ($e in $w.FindAll($TS::Descendants, [Windows.Automation.Condition]::TrueCondition)) {
+      if ($e.Current.Name -match $rx) {
+        # Inno's TNewCheckBox: a CheckBox with Toggle, or a plain control: then a click on its box (left edge)
+        try { $e.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern).Toggle(); $how = 'toggle' }
+        catch { $r = $e.Current.BoundingRectangle; [PI12a]::Click([int]($r.X + 8), [int]($r.Y + $r.Height / 2)); $how = 'click' }
+        Start-Sleep -Milliseconds 500
+        return "ticked '$($e.Current.Name)' ($how, $($e.Current.ControlType.ProgrammaticName))"
+      }
+    }
+  }
+  "NO CHECKBOX $rx"
+}
+function WaitSetupText([string]$rx, [int]$sec = 600) { for ($i = 0; $i -lt $sec * 2; $i++) { $t = SetupText; if ($t -match $rx) { return $t }; Start-Sleep -Milliseconds 500 }; '' }
+function WaitPep([int]$sec = 30) { for ($i = 0; $i -lt $sec * 2; $i++) { if (PepProcs) { return $true }; Start-Sleep -Milliseconds 500 }; $false }
+function Cut([string]$s, [int]$n = 300) { if (-not $s) { return '' }; $s.Substring(0, [math]::Min($n, $s.Length)) }
+
+# before U1 / U8: the old version per-user, silent; management on (PIN -> teacher.json, " Classe "), one word in
+# " Mes mots " of the active profile; Pepite left running
+function U1Prep([Parameter(Mandatory)][string]$OldSetup, [string]$dir = '') {
+  $a = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/LOG=`"$OUT12\U1-old-setup.log`"")
+  if ($dir) { $a += "/DIR=`"$dir`"" }
+  $r = RunWatched $OldSetup $a
+  $exe = if ($dir) { "$dir\Pepite.exe" } else { "$PU\Pepite.exe" }
+  PepStart $exe | Out-Null
+  $mg = MgmtOn12 $exe
+  PepQuit $exe; Start-Sleep 1
+  $act = ActiveProfile
+  if ($act) {
+    $mots = '{"schema":1,"listes":[{"id":"mes-mots","nom":"Mes mots","active":true,"type":"perso","mots":[{"w":"Zorglub","src":"manuel","ajoute":"2026-11-27"}]}]}'
+    [IO.File]::WriteAllText((Join-Path $DATA "profiles\$act\mots.json"), $mots)
+  }
+  PepStart $exe | Out-Null
+  "U1Prep: old setup exit $($r.Exit) | $mg | active $act | profiles $(@(Get-ChildItem (Join-Path $DATA 'profiles') -Directory -EA 0).Count) | running $((PepProcs).Count)"
+}
+
+# U1 interactive upgrade, Pepite running: the upgrade page, " Mettre a jour ", " Terminer " (2 clicks)
+function U1([string]$ver = '0.11.0', [string]$dir = '', [string]$tag = 'U1') {
+  $app = if ($dir) { $dir } else { $PU }
+  $hBefore = DataHashes; $zBefore = (VersionZips).Count; $act = ActiveProfile
+  $runBefore = RunValue 'HKCU'; $procsBefore = (PepProcs).Count
+  $m = LogMark
+  Start-Process (InstTest)
+  WaitSetupText 'Mise . jour de P.pite' 120 | Out-Null
+  Start-Sleep 1; Shot "$tag-01-upgrade-page" | Out-Null
+  $first = SetupText
+  $clicks = @()
+  $clicks += Btn '^Mettre . jour$' 30
+  $fin = WaitSetupText 'Terminer' 600
+  Start-Sleep 1; Shot "$tag-02-finished" | Out-Null
+  $clicks += Btn '^Terminer' 30
+  $gone = SetupGone 60
+  $up = WaitPep 60; Start-Sleep 8
+  # the version backup runs during the start-up (before the profiles load): wait for it, up to 60 s
+  for ($i = 0; $i -lt 120 -and (VersionZips).Count -le $zBefore; $i++) { Start-Sleep -Milliseconds 500 }
+  Shot "$tag-03-after-terminer" | Out-Null
+  $elev = PepElev; $cmd = PepCmd
+  $hAfter = DataHashes; $z = VersionZips
+  $entries = if ($z.Count) { ZipEntries ($z | Sort-Object Name | Select-Object -Last 1).FullName } else { @() }
+  $slog = SetupLogLines '(upgrade:|repair:|install:|downgrade|Pepite:|restart:)'
+  $vEsc = [regex]::Escape($ver)
+  @(
+    Verd "$tag-a first page = upgrade page (no privileges / folder page)" ($first -match 'Mise . jour de P.pite' -and $first -notmatch 'seulement pour moi|Dossier de destination') "'$(Cut $first 400)'"
+    Verd "$tag-b subtitle names both versions" ($first -match "mis . jour en $vEsc") ''
+    Verd "$tag-c folder, components, tasks shown" ($first -match [regex]::Escape("Dossier : $app") -and $first -match 'Composants : P.pite, images des mots' -and $first -match 'T.ches : d.marrer avec Windows, ouvrir les fichiers \.pepite') ''
+    Verd "$tag-d 2 clicks" ($clicks.Count -eq 2 -and -not ($clicks -match 'NO BUTTON')) ($clicks -join ' ; ')
+    Verd "$tag-e Pepite closed without a question (quit requested)" ($procsBefore -eq 0 -or @(Lines $m 'quit requested').Count -ge 1) "running before $procsBefore"
+    Verd "$tag-f setup log upgrade line" (@($slog -match "upgrade: .* -> $vEsc").Count -ge 1) ($slog -join ' | ')
+    Verd "$tag-g finished page: mis a jour" ($fin -match "mis . jour en $vEsc" -and $fin -match 'Mise . jour termin.e') "'$(Cut $fin)'"
+    Verd "$tag-h Terminer starts Pepite, not elevated" ($up -and $elev -eq 'no') "elev $elev cmd '$cmd'"
+    Verd "$tag-i same active profile" ((ActiveProfile) -eq $act) "$act -> $(ActiveProfile)"
+    Verd "$tag-j data hash-identical except settings.json" (SameHashes $hBefore $hAfter) "$($hBefore.Count) files; differ: $(DiffHashes $hBefore $hAfter)"
+    Verd "$tag-k one version zip with application/settings.json" ($z.Count -eq $zBefore + 1 -and $entries -contains 'application/settings.json' -and @($entries -match 'profile\.json$').Count -ge 2) "$($z.Count) zips; entries: $($entries -join ', ')"
+    Verd "$tag-l state.lastVersion" ((LastVersion) -eq $ver) "'$(LastVersion)'"
+    Verd "$tag-m Run value unchanged" ((RunValue 'HKCU') -eq $runBefore) "'$(RunValue 'HKCU')'"
+    "$tag setup gone $gone"
+  )
+}
+
+# the version backup's duration: lastVersion removed, a --log start makes the backup again
+function U1Time([string]$exe = "$PU\Pepite.exe") {
+  PepQuit $exe; Start-Sleep 1
+  $p = Join-Path $DATA 'settings.json'
+  $j = Get-Content $p -Raw | ConvertFrom-Json
+  $j.state.PSObject.Properties.Remove('lastVersion')
+  [IO.File]::WriteAllText($p, ($j | ConvertTo-Json -Depth 20))
+  $m = PepStart $exe
+  "U1 timing: $((Lines $m 'version: ') -join ' | ')"
+}
+
+# U1-b the same version again, " Modifier les choix ": Suivant, the previous ticks, the ready page names the repair; Annuler -> 2
+function U1b([string]$ver = '0.11.0') {
+  $p = Start-Process (InstTest) -PassThru
+  $page = WaitSetupText 'Mise . jour de P.pite' 120
+  Shot 'U1b-01-repair-page' | Out-Null
+  $s = @()
+  $s += Tick 'Modifier les choix'
+  Start-Sleep 1; Shot 'U1b-02-ticked' | Out-Null
+  $next = SetupText
+  $s += Btn '^Suivant' 30
+  Start-Sleep 1; Shot 'U1b-03-components' | Out-Null; $comp = SetupText
+  $s += Btn '^Suivant' 30
+  Start-Sleep 1; Shot 'U1b-04-tasks' | Out-Null; $tasks = SetupText
+  $s += Btn '^Suivant' 30
+  Start-Sleep 1; Shot 'U1b-05-ready' | Out-Null; $memo = SetupMemo
+  $s += Btn '^Annuler' 30
+  $s += Btn '^Oui$' 30
+  $p.WaitForExit(60000) | Out-Null
+  $vEsc = [regex]::Escape($ver)
+  @(
+    Verd 'U1b-a repair subtitle' ($page -match 'il sera r.install. \(r.paration\)') "'$(Cut $page)'"
+    Verd 'U1b-b ticked: button Suivant' ($next -match '\| Suivant \| Annuler$') "'$(Cut $next 80)...'"
+    Verd 'U1b-c components page (ticks: see the screenshot, the list items are not in UIA)' ($comp -cmatch 'Composants . installer') ''
+    Verd 'U1b-d tasks page' ($tasks -cmatch 'T.ches suppl.mentaires') ''
+    Verd 'U1b-e ready page: Mise a jour 0.11.0 -> 0.11.0' ($memo -match "Mise . jour : P.pite $vEsc . $vEsc") "'$(Cut $memo 200)'"
+    Verd 'U1b-f Cancel -> exit 2' ($p.ExitCode -eq 2) "exit $($p.ExitCode); $($s -join ' ; ')"
+  )
+}
+
+# U1-c silent upgrade with Pepite running: restarted with --autostart, not elevated; U1-d the same with /NOLANCER
+function U1c([switch]$NoLancer) {
+  $exe = "$PU\Pepite.exe"
+  # a fully started copy (its single-instance mutex exists only once the start-up is done): quit, then start with --log
+  PepQuit $exe; Start-Sleep 1; PepStart $exe | Out-Null
+  $tag = if ($NoLancer) { 'U1d' } else { 'U1c' }
+  $a = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/LOG=`"$OUT12\$tag-setup.log`"")
+  if ($NoLancer) { $a += '/NOLANCER' }
+  $r = RunWatched (InstTest) $a
+  $up = WaitPep 15; Start-Sleep 3
+  Shot "$tag-01-after-silent-upgrade" | Out-Null
+  $slog = SetupLogLines '(restart:|Pepite:)' "$OUT12\$tag-setup.log"
+  if ($NoLancer) {
+    @( Verd 'U1d /NOLANCER: exit 0, Pepite not running' ($r.Exit -eq 0 -and -not $up -and @($slog -match 'restart: skipped \(/NOLANCER\)').Count -ge 1) "exit $($r.Exit) | $($slog -join ' | ')" )
+  } else {
+    @( Verd 'U1c silent: exit 0, Pepite back with --autostart, not elevated' ($r.Exit -eq 0 -and $up -and (PepCmd) -match '--autostart' -and (PepElev) -eq 'no' -and @($slog -match 'restart: started').Count -ge 1) "exit $($r.Exit) | cmd '$(PepCmd)' | elev $(PepElev) | $($slog -join ' | ')" )
+  }
+}
+
+# U6 downgrade: a) the old setup over 0.11.0 (no guard before 0.11.0); b) / c) a fake newer DisplayVersion
+function U6a([Parameter(Mandatory)][string]$OldSetup) {
+  $n = @(Get-ChildItem (Join-Path $DATA 'profiles') -Directory -EA 0).Count
+  $r = RunWatched $OldSetup @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/LOG=`"$OUT12\U6a-setup.log`"")
+  PepQuit "$PU\Pepite.exe"
+  $m = PepStart "$PU\Pepite.exe"
+  $l = @(Lines $m 'profiles: loaded') | Select-Object -First 1
+  @( Verd 'U6a old setup accepted (exit 0), old Pepite reads every profile' ($r.Exit -eq 0 -and $l -match "loaded $n in" -and $l -match ', 0 unreadable') "exit $($r.Exit) | '$l'" )
+}
+function U6Fake([string]$v) { Set-ItemProperty -Path "HKCU:\$UKEY" -Name DisplayVersion -Value $v }
+function U6b {
+  $exe = "$PU\Pepite.exe"
+  if (-not (PepProcs)) { PepStart $exe | Out-Null }
+  $tree = TreeHash $PU; $run = RunValue 'HKCU'
+  U6Fake '0.11.9'
+  $p = Start-Process (InstTest) -PassThru; $null = $p.Handle   # the handle now, or ExitCode stays empty
+  $box = WaitSetupText 'plus r.cente' 120
+  Start-Sleep 1; Shot 'U6b-01-refusal' | Out-Null
+  # the message box: Enter on it (a UIA click on its OK button may land on another window)
+  $w = Get-Process | Where-Object { $_.ProcessName -match 'installation\.tmp$' -and $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+  if ($w) { [PI12a]::SetForegroundWindow($w.MainWindowHandle) | Out-Null; Start-Sleep -Milliseconds 500; [PI12a]::Key(0x0D) }
+  $ok = "enter on '$($w.MainWindowTitle)'"
+  $p.WaitForExit(60000) | Out-Null
+  $dv = RegVal 'HKCU' $UKEY 'DisplayVersion'
+  @( Verd 'U6b refusal box with 0.11.9 and 0.11.0; OK -> exit 1; nothing changed; Pepite still running' ($box -match '0\.11\.9' -and $box -match '0\.11\.0' -and $p.ExitCode -eq 1 -and (TreeHash $PU) -eq $tree -and $dv -eq '0.11.9' -and (RunValue 'HKCU') -eq $run -and (PepProcs)) "exit $($p.ExitCode) | $ok | '$(Cut $box 400)'" )
+}
+function U6c {
+  $r = RunWatched (InstTest) @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/CURRENTUSER', "/LOG=`"$OUT12\U6c-setup.log`"")
+  $l = SetupLogLines 'downgrade refused' "$OUT12\U6c-setup.log"
+  U6Fake '0.11.0'
+  @( Verd 'U6c silent: exit 1, no window, log line' ($r.Exit -eq 1 -and -not $r.Windows -and @($l -match 'downgrade refused: installed 0\.11\.9, this setup 0\.11\.0').Count -ge 1) "exit $($r.Exit) | windows '$($r.Windows)' | $($l -join ' | ')" )
+}
+
+# U8: the old version in C:\Outils\Pepite (U1Prep -dir), then U1 -dir; the shortcut and the Run value point there
+function U8Check([string]$dir = 'C:\Outils\Pepite') {
+  $lnk = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Filter 'P*pite.lnk' -EA 0 | Select-Object -First 1
+  $target = if ($lnk) { (New-Object -ComObject WScript.Shell).CreateShortcut($lnk.FullName).TargetPath } else { '' }
+  @( Verd 'U8 installed in the custom folder (Run value, shortcut), no default folder' ((Test-Path "$dir\Pepite.exe") -and (RunValue 'HKCU') -eq "`"$dir\Pepite.exe`" --autostart" -and $target -eq "$dir\Pepite.exe" -and -not (Test-Path $PU)) "run '$(RunValue 'HKCU')' | lnk '$target'" )
+}
+
+# U2 (all users, as SYSTEM: the host runs both setups). In the pupil's session: before, after the upgrade, after a new logon
+function U2Before { "U2 before: running $((PepProcs).Count) cmd '$(PepCmd)' | zips $((VersionZips).Count)" }
+function U2After { Start-Sleep 20; @( Verd 'U2a pupil copy closed and not restarted' (-not (PepProcs)) "procs $((PepProcs).Count)" ) }
+function U2Logon {
+  $p = $null; for ($i = 0; $i -lt 120 -and -not $p; $i++) { $p = PepProcs | Select-Object -First 1; if (-not $p) { Start-Sleep -Milliseconds 500 } }
+  Start-Sleep 10
+  Shot 'U2-01-after-logon' | Out-Null
+  $ver = if ($p) { (Get-Item $p.Path).VersionInfo.ProductVersion } else { '' }
+  @( Verd 'U2b next logon: new version with --autostart, one version zip' ([bool]$p -and (PepCmd) -match '--autostart' -and $ver -like '0.11.0*' -and (VersionZips).Count -eq 1) "ver '$ver' cmd '$(PepCmd)' zips $((VersionZips).Count) lastVersion '$(LastVersion)'" )
+}

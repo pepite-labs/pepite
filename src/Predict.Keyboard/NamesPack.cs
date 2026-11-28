@@ -66,15 +66,7 @@ internal sealed class NamesPack
             var pics = new Dictionary<string, string>(StringComparer.Ordinal);
             var root = dir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
             // streaming: the pictures are collected as the names are read (no list of records is kept)
-            var (lex, doc) = NamesLexicon.Load(dir, engine, also: n =>
-            {
-                // never a picture on a restricted figure (owner 2026-11-15), whatever the file says
-                if (n.Restreint || n.Image is null || !NamesImport.SafeRelative(n.Image)) return;
-                var full = Path.GetFullPath(Path.Combine(dir, n.Image.Replace('/', Path.DirectorySeparatorChar)));
-                if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !File.Exists(full)) return;
-                pics.TryAdd(n.Nom, full);
-                foreach (var v in n.Variantes) pics.TryAdd(v, full);
-            });
+            var (lex, doc) = NamesLexicon.Load(dir, engine, also: n => AddPicture(dir, root, n, pics));
             engine.Names = lex;
             var p = new NamesPack(dir, doc, lex, pics);
             log?.Invoke($"names: pack « {p.Title} » edition {p.Edition}, {p.Names} names, {p.Forms} forms, {pics.Count} pictured forms, loaded in {sw.ElapsedMilliseconds} ms");
@@ -85,5 +77,27 @@ internal sealed class NamesPack
             log?.Invoke($"names: off (bad pack: {ex.GetType().Name}: {ex.Message})");
             return null;
         }
+    }
+
+    /// <summary>The pictured forms of one name: its own form and, unless the entry says <c>"image_variantes": false</c>
+    /// (pack 2026.3, owner 2026-11-27: the Saint-Nicolas drawing is not « Sint-Niklaas »'s), its variants.</summary>
+    private static void AddPicture(string dir, string root, NameRecord n, Dictionary<string, string> pics)
+    {
+        // never a picture on a restricted figure (owner 2026-11-15), whatever the file says
+        if (n.Restreint || n.Image is null || !NamesImport.SafeRelative(n.Image)) return;
+        var full = Path.GetFullPath(Path.Combine(dir, n.Image.Replace('/', Path.DirectorySeparatorChar)));
+        if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !File.Exists(full)) return;
+        pics.TryAdd(n.Nom, full);
+        if (n.ImageVariantes) foreach (var v in n.Variantes) pics.TryAdd(v, full);
+    }
+
+    /// <summary>The pack's pictures alone (form → file), without building the names layer: used by the tests. The same rules as <see cref="LoadAsync"/>.</summary>
+    internal static Dictionary<string, string> ReadPictures(string dir)
+    {
+        dir = Path.GetFullPath(dir);
+        var pics = new Dictionary<string, string>(StringComparer.Ordinal);
+        var root = dir.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        NamesFile.ParseJson(File.ReadAllBytes(Path.Combine(dir, "noms.json")), n => AddPicture(dir, root, n, pics));
+        return pics;
     }
 }

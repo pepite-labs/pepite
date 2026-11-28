@@ -71,6 +71,9 @@ internal static class Strings
         "ONNX Runtime 1.31.1 (MIT) ; NAudio 2.2.1 (MIT).";
     public const string AboutNoticesLink = "Licences des composants (THIRD-PARTY-NOTICES.txt)";
     public const string AboutAppLicence = "Pépite est un logiciel libre sous licence GPL-3.0-or-later (COPYING).";
+    /// <summary>LibreOffice phase 1: the IAccessible2 interface definitions transcribed in Ia2Interop.cs (nothing shipped from it).</summary>
+    public const string AboutIa2 = "Lecture du texte de LibreOffice Writer : interfaces IAccessible2 (LinuxA11y/IAccessible2, " +
+                                   "© Linux Foundation, IBM, Sun Microsystems), licence BSD-3-Clause.";
     /// <summary>« Site : » then the <see cref="SiteUrl"/> link (the site exists since the first public push, 0.10.1).</summary>
     public const string AboutSite = "Site\u00A0: ";
     public const string OflUrl = "https://openfontlicense.org";
@@ -91,6 +94,8 @@ internal static class Strings
     public const string TipPrefix = "Suite du mot";
     public const string TipPhonetic = "Même son (orthographe phonétique)";
     public const string TipEdit = "Lettres inversées / faute de frappe";
+    /// <summary>0.11.0 (plan negation): the « ne » marker's group tile — a correction of the typed words.</summary>
+    public const string TipNegationGroup = "Phrase corrigée : avec « ne »";
     public const string TipActions = " — clic : insérer, clic droit : écouter";
     // 2026-11-25 owner: listen before inserting (« Clic sur un mot », « Touches F1–F8 », A Maj + F1…F8, D the speaker band)
     public const string TipActionsListenFirst = " — 1er clic : écouter, 2e clic : insérer, clic droit : écouter";
@@ -281,7 +286,9 @@ internal static class Strings
     public const string ReadingClipboardWriter = "Dans LibreOffice Writer seulement";
     public const string ReadingClipboardEverywhere = "Partout";
     public const string ReadingClipboardNever = "Jamais";
+    /// <summary>LibreOffice phase 2 (owner 2026-11-27): Writer's selection is read directly; the copy is its safety net.</summary>
     public const string ReadingClipboardHint =
+        "Dans LibreOffice Writer, la sélection est lue directement : la copie sert seulement si la lecture directe échoue. " +
         "Envoie Ctrl+C à l'application, lit le texte copié, puis remet le presse-papiers comme avant (sans l'ajouter à " +
         "l'historique). La copie faite par l'application elle-même peut apparaître dans l'historique du presse-papiers " +
         "(Windows+V) : cela ne peut pas être évité. Jamais dans un champ de mot de passe, dans une console ni dans LibreOffice Calc.";
@@ -299,6 +306,8 @@ internal static class Strings
     public const string ReadNext = "Phrase suivante";
     public const string ReadLarge = "Grande fenêtre";
     public const string ReadTooLong = "Texte trop long, seuls les 1000 premiers mots sont lus";
+    /// <summary>LibreOffice phase 2: the selection's start was read but not its end (a table, a frame, a slow LibreOffice).</summary>
+    public const string ReadPartial = "Seule une partie de la sélection a pu être lue.";
     public const string ReadTileHint = "Clic : écouter ce mot";
     public const string ReadWindowTitle = "Lecture — Pépite";
     public const string ReadingName = "Barre de lecture";
@@ -700,6 +709,9 @@ internal static class Strings
     public const string SpellUnknownName = "Orthographe : mot inconnu";
     public const string SpellSoundsAction = "clic : voir les mots qui se prononcent pareil";
     public const string SpellUnknownAction = "clic : ajouter ce mot à mes mots";
+    // 0.11.0 (plan negation, owner Q3/Q4): « il veut pas » → « il ne veut pas »
+    public const string SpellNegationName = "Négation : il manque peut-être « ne »";
+    public const string SpellNegationAction = "clic : voir la phrase avec « ne »";
     public const string SpellActionSep = " — ";
     public const string SpellKeyF9 = " (F9)";
     public const string SpellListen = " — clic droit : écouter";
@@ -716,6 +728,16 @@ internal static class Strings
     public const string NamePicturesHint =
         "Le drapeau d'un pays, d'une région ou d'une province, ou l'image donnée par l'enseignant, au-dessus d'un nom propre. " +
         "Un nom propre ne prend jamais l'image d'un mot ordinaire (« Pierre » n'a pas l'image d'une pierre).";
+    // D33 (plan dys-sound-tolerance Phase 2): the voicing pairs a pupil confuses, per profile (Mots tab)
+    public const string SoundPairsHeader = "Sons que l'élève confond";
+    public const string SoundPairChJLabel = "ch / j (ch, j, g, ge)";
+    public const string SoundPairFVLabel = "f / v";
+    public const string SoundPairKGLabel = "k / g (c, qu, k / g, gu)";
+    public const string SoundPairTDLabel = "t / d";
+    public const string SoundPairPBLabel = "p / b";
+    public const string SoundPairsHint =
+        "À cocher d'après le bilan du ou de la logopède. Pépite propose aussi le mot où ce son est remplacé par son voisin " +
+        "(chardin → jardin), en vert, en général après les mots qui se prononcent pareil.";
     public const string AboutNamesHeader = "Noms propres";
     public const string AboutNamesMissing = "Noms propres : paquet absent (prénoms, pays et villes non proposés).";
     public const string AboutNamesSource = "Paquet de données ouvertes « Noms propres » (licence CC BY 4.0) ; sources et auteurs : dossier noms (SOURCES.md).";

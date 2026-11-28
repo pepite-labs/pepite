@@ -202,5 +202,51 @@
     "context": "avec",
     "typed": "martine",
     "intended": "Martine"
+  },
+  {
+    "category": "hyphen-name",
+    "context": "saint-",
+    "typed": "n",
+    "intended": "Saint-Nicolas"
+  },
+  {
+    "category": "hyphen-name",
+    "context": "Saint-",
+    "typed": "",
+    "intended": "Saint-Marin"
+  },
+  {
+    "category": "hyphen-name",
+    "context": "Saint-Pierre-",
+    "typed": "e",
+    "intended": "Saint-Pierre-et-Miquelon"
+  },
+  {
+    "category": "hyphen-name",
+    "context": "je vais à Saint-",
+    "typed": "Ni",
+    "intended": "Saint-Nicolas"
+  },
+  {
+    "category": "hyphen-name",
+    "context": "Jean-",
+    "typed": "",
+    "intended": "Jean-Pierre"
+  },
+  {
+    "category": "compound-head",
+    "typed": "saint",
+    "intended": "Saint-Marin"
+  },
+  {
+    "category": "compound-head",
+    "context": "je vais à",
+    "typed": "saint",
+    "intended": "Saint-Marin"
+  },
+  {
+    "category": "compound-head",
+    "typed": "Saint",
+    "intended": "Saint-Marin"
   }
 ]

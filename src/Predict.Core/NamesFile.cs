@@ -15,8 +15,11 @@ namespace Predict.Core;
 /// <param name="Restreint">owner decision 2026-11-15: a figure taught for the harm done (« restreint »: true) is recognised
 /// (✓, never red) but offered only after a capital typed inside a sentence and at least 3 letters, always after the first
 /// names, and never with a picture.</param>
+/// <param name="ImageVariantes">false (<c>"image_variantes": false</c>, pack 2026.3): the picture is the name's only, not its
+/// variants' (owner 2026-11-27: the Saint-Nicolas drawing is not shown for « Sint-Niklaas »).</param>
 public sealed record NameRecord(string Nom, IReadOnlyList<string> Variantes, string Categorie, double Rang, int Niveau,
-                                string? Image, string? Source, string? Licence, string? Auteur, bool Restreint = false);
+                                string? Image, string? Source, string? Licence, string? Auteur, bool Restreint = false,
+                                bool ImageVariantes = true);
 
 /// <summary>A parsed names database: its title, edition, licence, the attribution text to show, the names, and the
 /// lines refused (number + reason, in French for the teacher's report).</summary>
@@ -30,7 +33,8 @@ public sealed record NamesDocument(string Titre, string? Edition, string? Licenc
 /// <code>
 /// noms.json  { "format": "pepite-noms", "version": 1, "titre": "…", "edition": "…", "licence": "…", "attribution": "…",
 ///              "sources": { "&lt;id&gt;": { "titre", "licence", "url" } },
-///              "noms": [ { "nom", "variantes": [..], "categorie", "rang", "niveau", "image", "source", "licence", "auteur" } ] }
+///              "noms": [ { "nom", "variantes": [..], "categorie", "rang", "niveau", "image", "image_variantes", "source",
+///                          "licence", "auteur" } ] }
 /// noms.csv   nom;variantes;categorie;image;source;licence;auteur      (UTF-8, header line, variants separated by |)
 /// </code>
 /// A name: 2–40 characters, starting with a capital, letters with inner spaces, hyphens, apostrophes or a dot after a
@@ -167,6 +171,7 @@ public static class NamesFile
                                     case "rang": r.Rang = reader.TokenType == JsonTokenType.Number ? reader.GetDouble() : null; break;
                                     case "niveau": r.Niveau = reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out var nv) ? nv : null; break;
                                     case "restreint": r.Restreint = reader.TokenType == JsonTokenType.True; break;
+                                    case "image_variantes": r.NoVariantImage = reader.TokenType == JsonTokenType.False; break;
                                     case "variantes" when reader.TokenType == JsonTokenType.StartArray:
                                         while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                                             if (reader.TokenType == JsonTokenType.String) (r.Var ??= new List<string>()).Add(reader.GetString()!);
@@ -193,7 +198,8 @@ public static class NamesFile
         void Put(RawName r)
         {
             var lic = r.Lic ?? (r.Src != null && sources.TryGetValue(r.Src, out var sl) ? sl : null) ?? licence;
-            Add(sink, refused, seen, r.Line, r.Nom, r.Var, r.Cat, r.Rang, r.Niveau, r.Image, r.Src, Shared(lic), r.Aut, maxNames, requireLicence, r.Restreint);
+            Add(sink, refused, seen, r.Line, r.Nom, r.Var, r.Cat, r.Rang, r.Niveau, r.Image, r.Src, Shared(lic), r.Aut, maxNames, requireLicence, r.Restreint,
+                !r.NoVariantImage);
         }
     }
 
@@ -210,7 +216,7 @@ public static class NamesFile
     private sealed class RawName
     {
         public int Line; public string? Nom, Cat, Image, Src, Lic, Aut; public double? Rang; public int? Niveau; public List<string>? Var;
-        public bool Restreint;
+        public bool Restreint, NoVariantImage;
     }
 
     private static string? Str(ref Utf8JsonReader r)
@@ -248,7 +254,7 @@ public static class NamesFile
 
     private static void Add(Sink noms, List<string> refused, HashSet<string> seen, int line, string? nom, List<string>? variants,
                             string? cat, double? rang, int? niveau, string? image, string? src, string? lic, string? aut, int max, bool requireLicence,
-                            bool restreint = false)
+                            bool restreint = false, bool imageVariantes = true)
     {
         var name = Clean(nom);
         if (CheckName(name) is { } why) { refused.Add($"ligne {line} : {why}"); return; }
@@ -273,7 +279,7 @@ public static class NamesFile
         }
         noms.Put(new NameRecord(name, vs, cat is { Length: > 0 } k && k == Clean(k) ? k : Clean(cat) is { Length: > 0 } k2 ? k2 : "nom", Math.Clamp(rang ?? 1.0, 0.001, 1.0),
                                 niveau == 2 || restreint ? 2 : 1, restreint || string.IsNullOrWhiteSpace(image) ? null : image.Trim(), src, lic?.Trim(), aut?.Trim(),
-                                restreint));
+                                restreint, imageVariantes));
     }
 
 }

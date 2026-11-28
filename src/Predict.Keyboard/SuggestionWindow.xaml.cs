@@ -202,7 +202,9 @@ public partial class SuggestionWindow : Window
     /// <param name="mark">plan 10B: the spelling marker left of the words (None = no marker); with no word the bar shows the
     /// marker alone (the caller decides when: Q10).</param>
     /// <param name="markWord">the word the marker is about (right-click says it); never logged.</param>
-    public void ShowSuggestions(IReadOnlyList<Suggestion> s, SpellingMark mark = SpellingMark.None, string? markWord = null)
+    /// <param name="groupFirst">0.11.0 (plan negation): the first tile is the « ne » marker's corrected group (its tooltip
+    /// says so, not « même son »).</param>
+    public void ShowSuggestions(IReadOnlyList<Suggestion> s, SpellingMark mark = SpellingMark.None, string? markWord = null, bool groupFirst = false)
     {
         long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
         int gen = _gen = NextPictureGeneration();
@@ -215,7 +217,10 @@ public partial class SuggestionWindow : Window
         int cached = 0, named = 0;
         for (int i = 0; i < s.Count; i++)
         {
-            Bar.Children.Add(MakeButton(i, s[i], out var slot));
+            var tile = MakeButton(i, s[i], out var slot);
+            if (groupFirst && i == 0 && BarBuilder.WordButtonOf(tile) is { } gb)
+                gb.ToolTip = Strings.TipNegationGroup + Strings.TipActionsFor(Look?.Click ?? ClickMode.Insert, Look?.ListenButton ?? false);
+            Bar.Children.Add(tile);
             if (slot is not { } sl) continue;
             // plan 10C: the teacher's picture for this exact form, or the pack's flag of a name (same slot, Q18); 0.10.2 (glued
             // words, owner Q6): a joined tile (« l'école ») is looked up by its main word (« école »), as PictureStore.KeyFor

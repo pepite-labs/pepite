@@ -1155,6 +1155,111 @@ dau: no nonsense joined form) 9/9, ≈ list top-1 0.811 → 0.902, `--glued` ful
 which every remaining entry is rarer (« sai » keeps « sais » ahead). `Check` p99 13.0 µs. KSS was not re-run: the change
 only removes split candidates, and the KSS harness never ranks a joined form as a target.
 
+## Glued words follow-up (0.11.0)
+
+Plan `glued-words-followup.md` (owner 2026-11-27: Q1 no — three words and expressions for an unknown typed word only; Q2
+B1 + B2, B2 dropped if its own gates fail; predict-core-design § 5g « 0.11.0 »): A « cé » → c'est, « nè » → n'est, « ce »
+at a start → c'est; B fixed expressions (« ilya » → il y a, « parceque », « keske »); C subject + clitic + word (« jtaime »
+→ je t'aime, « ilsapelle »). Method: HEAD `7a098b7`'s binary and the final one, with `--no-est --no-split3 --no-expr` (off,
+`runs\off-final\`) and the defaults (on, `runs\final\`), each with `--grammar` and `--names <pack>`, one run at a time; light held-out sets
+`<work>\corpus-work\corpus-light\heldout\` (E1, E2, W, S-unseen `--max 2000`, E3 all), lower case and keep-case; `--glued
+--max 2000` and the new `--glued-noise --max 2000` per set. Outputs: `<work>\runs-glued2\` (`run.sh`, `bench.sh`,
+`compare.py`, `gates.py`, `runs\<label>\`). The baseline of the new cases and sections is the new binary with the three
+switches off, which is HEAD byte for byte (first gate).
+
+New cases (ours): `cases.json` `split-est` (13), `split-3` (17), `expr` (21), `expr-b2` (8), `split-neg` + 14 (ces, ses,
+les, des, mes, tes, jeté, jeter, entrain, parce, île, élan, onze, illégal, each typed in full after a context where it is
+top-1 at HEAD); `spelling-cases.json` `glued-est` (8), `glued-3` (11), `glued-expr` (12), `glued-b2` (4), `glued-neg` + 8
+(cet, set, met, cava, parsec, ile, sava, jeté: no « c'et » / « m'et » / « s'et », now nonsense in the harness too).
+`--glued` sections: (a) c'est / s'est / n'est / qu'est typed bare + « é » and « ce » / « se »; (b) « subject clitic'word »
+typed glued (and « j » for je, and without accents); (c) each kept expression glued, with and without accents.
+
+| Gate (plan) | HEAD / off | **Final (defaults)** |
+|---|---|---|
+| Switches off = HEAD, byte for byte | — | **met**: every curated and dys log, the HEAD case files, the ten dumps; `--glued` and `--spelling` logs differ only by the appended lines |
+| Old `cases.json` categories: ranks unchanged or better; `split` ≥ 1.00 / 0.81 | 0.73 / 1.00 (127) | **one rank lower: `sounded-e` « sé » → ces 5th → 6th** (c'est, a same-sound candidate, now 3rd; hit@8 kept); `split` 1.00 / 0.81 |
+| `split-est` hit@8 ≥ 0.90, top-1 ≥ 0.60 | 0.00 / 0.00 | **0.92 / 0.62** (« kè » → qu'est missed: qu'est alone is rare) |
+| `split-3` hit@8 ≥ 0.90, top-1 ≥ 0.60 | 0.00 / 0.00 | **1.00 / 0.94** |
+| `expr` hit@8 ≥ 0.90, top-1 ≥ 0.70 | 0.00 / 0.00 | **1.00 / 1.00** |
+| `split-neg` top-1 = 1.00 | 1.00 (30) | **1.00** |
+| KSS lc / kc E1 E2 E3 W S-unseen, Δ ≥ −0.1 pt | lc 44.67 / 50.86 / 54.57 / 48.07 / 46.36; kc 44.61 / 50.83 / 54.58 / 48.07 / 46.24 | **Δ 0.00 except S-unseen −0.01 (lc and kc)**; eight dumps identical |
+| `--spelling`: 0 wrong reds; old categories; `glued` 1.000 / 1.000; `glued-neg` all | 0; —; 1.000 / 1.000; 9/9 | **0; unchanged (HEAD file identical); 1.000 / 1.000; 17/17** |
+| new ≈ and among ≥ 0.90 | — | `glued-3` **1.000 / 1.000**, `glued-expr` **1.000 / 1.000**, `glued-est` **1.000 / 0.750 — not met** (s'est after « sé »: the 6-candidate ≈ list keeps se, ce, ses, c'est, sais, ces, all more frequent, before the words before order it) |
+| ≈ list top-1 with context (the 143 old lists) ≥ 0.902 | 0.902 | **0.902** |
+| `--glued` new sections full hit@8 ≥ 0.80 where n ≥ 30 | — | « est » bare + é W 0.900 (30), S-unseen 0.907 (86); ce / se S-unseen 0.938 (80); B1 S-unseen 1.000 (62); **three words E1 0.762 (42), S-unseen 0.693 (101) — not met** (see below) |
+| `--glued-noise` top-1 intrusions ≤ 0.2 % per set | — | **≤ 0.10 %** (full length 0.00–0.10 %, 3 letters 0.00 %; bars with a new tile 0.49–0.95 % full, 0.00–0.09 % at 3 letters) |
+| B2 rows: own gates | — | **failed → B2 dropped** (`ExprB2` = false): `--glued` B2 hit@8 E3 0.636 (44), S-unseen 0.594 (69); « je suis » took bar slots in the dys sets (« geaise », « jaise ») |
+| G-invented top-1 within 2 pts | 0.55 | **0.55** |
+| `cases-personal` / « Mes fautes » ≥ 0.474 / 1.000 | 0.491 / 1.000 | **0.491 / 1.000** |
+| Dys sets: `chj-full` and guards unchanged | — | **met** (two `jemi` / `gemi` bars, already missed, show « je m'y ») |
+| D35 | — | `ExcludedLate` 0 in every log; see below |
+
+**Three words on natural text.** The kind needs the trigram « subject clitic word » ≥ 50 (`Split3MinCount`); on S-unseen
+only 76 of the 101 pairs are that frequent (« je m'occuperais » 3, « vous l'abattez » 0, « tu m'aimais » 17), so 0.75 is the
+ceiling there; the bar reaches 0.69. With the minimum at 20: E1 0.833, S-unseen 0.693; at 10: S-unseen 0.733 (noise
+unchanged). The plan's fallbacks do not raise coverage (a weight only lowers the tile, `Split3From` = 5 removes cases);
+the last one, the kind off, would make it 0. **C is left on** (curated 1.00 / 0.94, ≈ 1.00, noise 0, KSS unchanged) —
+confirmed by the owner (below).
+
+**Adjustments made while measuring** (each against a gate the plan's first design failed):
+- **`ExprNotPrefix`** (not in the plan): no expression in the bar while the typed letters start a lexicon word — « Sylv »
+  showed « s'il vous plaît » before Sylvie (`cases-names` 2nd → 3rd). The plan's fallback `ExprFrom` = 5 fixed it too
+  but also removed « ilya »; with the rule `cases-names` is identical.
+- **« est » in the bar only for a typed word of 3 letters at most ending in an e** (not in the plan): « nei » gave n'est
+  first, before neige (a `dys` guard, 1st → 2nd). The ≈ check keeps the plan's rule.
+- **`MuteEPrefix`** (a deviation from « same score »): « ce » / « se » typed in full get the literal-prefix bonus on their
+  c'est / s'est tile (the typed letters start « cest »); with the plain chain score c'est was not among the 25 first
+  candidates (`split-est` « ce » cases ✗).
+- **Subject sounds** beyond the plan's list: the letters a glued subject keeps (« elle » `ele`: « ellesapelle »; « ils »,
+  « vous », « nous » with their s; « on » `on` before m / n), and a « s' » the fold voices `z` after a vowel read back as
+  `s`. « jtadore » (11 counts) was replaced by « jtavais » in the cases (the plan's example is below the minimum).
+- **Load**: the new counts read with the bare forms' made the load +250–400 ms; they are now read on another connection
+  once the bare forms' are in, and the first query that needs them waits (deterministic).
+- **Weights**: `WSplit3` = `WExpr` = 0 (0.5 gives the same hit@8, lower top-1: « enfait » → en fait 1st → 2nd, three
+  words E1 top-1 0.738 → 0.738 / hit 0.762 → 0.738, expressions W top-1 0.857 → 0.714). `EstFromKnown` stays true (its
+  fallback did not apply: the failures were unknown words).
+
+**Speed** (`bench.sh`: three rounds, HEAD / off / on interleaved, same host, not idle — logged values only): `--bench`
+mean HEAD 0.176–0.187, off 0.179–0.198, on 0.175–0.176 ms (one on run 0.258 under load) — **+≤ 0.05 met**; load HEAD
+809–861 ms, new 854–946 ms (one off run 1 396) — the load does not depend on the switches (the new counts are read after
+it), so HEAD vs new is **+13 ms (off) to +57 ms (on) by median: at the +50 ms gate, within this host's noise; a quiet
+re-measure is left for the release session**; working set 113–119 vs 112–121 MB. `Check` p99 (`--spelling` on the HEAD
+case file, 87 400 calls): HEAD 13.1 / 13.8 / 14.0, off 13.7 / 13.6 / 13.5, **on 16.6 / 15.6 / 16.1 µs (< 20 met)**, mean
+3.0 → 3.5 µs, 333 → 365 bytes per call. `--bench-split` warm p99 (rounds 2–3, two reruns): on 0.616–0.659 ms, off
+0.638–0.661 ms (**< 1 ms met**; a first run under load gave 1.07–2.99 on and 0.74–1.32 off); `RankCorrections` mean
+0.003 ms. The isolated 10–16 ms maxima are the pre-existing ones (§ Glued words).
+
+**D35**: `Predict.Eval --probe-exclusions` (grammar, names; every listed form also typed glued after a clitic and after a
+subject + clitic, bar and ≈): 849 787 queries, **0 offered, ExcludedLate 0, 0 failures**; `scan_dumps.py` over every final
+log and dump: **0 offered** (2 « expected »: one listed word is a target word of the S-unseen text, line 1963 of both
+dumps — the same in the HEAD run); `ExcludedLate` 0 in every log; xUnit: an excluded word is never inside a joined or
+multi-word tile, `IsExcluded` tests each space-separated part.
+
+Probes (`Predict.Cli --probe`, defaults; `~` sounds like): « il cé » → s'est~ 1st (c'est in the ≈ list); « et cé » →
+c'est 2nd; « il nè » → n'est 1st; « ce » at a start → ce, c'est~; « jtaime » → je t'aime~ (≈ je t'aime); « jemapelle »,
+« ilsapelle », « ellesapelle », « tumas », « onsen » → their form 1st; « ilya » → il y a~, il y avait~; « parceque » → parce
+que~, parce qu'~, parsecs, parsec (≈ the same order); « keske », « eske » → qu'est-ce que / est-ce que; « silteplai » → s'il
+te plaît; « jeté », « cet », « met », « entrain », « parce » → nothing new. Expression table at load: 30 kept of 33 (« ça
+va », « tu es », « tu as » glued are words; B2 off by default), 10 keys equal to a word's whole key (kept, counted).
+
+**Owner decisions (2026-11-27)** on the gates not met (no plan fallback applied): (1) **C stays on with `Split3MinCount`
+= 50**; the 0.80 three-word coverage gate is documented as **not met** (`--glued` hit@8 0.76 E1 / 0.69 S-unseen: a missed
+pair gives no tile, noise 0; the plan's last fallback, C off, would make it 0; 20 would give E1 0.833, S-unseen unchanged);
+(2) `glued-est` among 0.75 **accepted**, no change to the ≈ cut (s'est is cut from the 6-candidate ≈ list after « sé »; the
+bar shows s'est first after il / elle); (3) the old curated rank « sé » → ces 5th → 6th (behind the new c'est) **accepted**;
+(4) the five adjustments the plan did not list **accepted**: `ExprNotPrefix`; « est » only for a typed word of 3 letters at
+most ending in an e, in the bar and (since the review) in the ≈ check (« sai » keeps sais / sait); `MuteEPrefix`; the extra
+subject sounds and the « s' » read `z` after a vowel; **a sound key equal to a word's whole key is counted and kept, not
+dropped** (10 keys; the plan said dropped — needed for « parceque » ≈ parce que before parsec); (5) the load time accepted
+provisionally, re-measured on a quiet host at the release session (TODO). An expression ending in an apostrophe (« parce
+qu' ») is a bar tile only, never in the ≈ list (review).
+
+**After the review** (`runs\final\` vs the run before it): every curated, dys and spelling log and every dump identical;
+in `--glued` only the ≈ columns move — the 0.10.2 pairs' list top-1 in the Check order rises (E1 0.860 → 0.872,
+S-unseen 0.882 → 0.892: c'est no longer pushes « sait » off), and « parce qu' » leaves the ≈ list (B1 among E1 1.000 →
+0.813, S-unseen 1.000 → 0.968; bar hit@8 unchanged 1.000). Full xUnit suite with `PEPITE_REQUIRE_DATA=1`: 1 791 passed, 0
+skipped; `scan_dumps.py` 0 offered.
+
 ## Sound confusions ch/j (0.11.0, Phase 1)
 
 Plan `dys-sound-tolerance.md` (study `dys-sound-confusions.md`, owner Q1–Q6, Q-A, Q-B; predict-core-design § 5h): a pupil
@@ -1220,6 +1325,48 @@ Probes (`Predict.Cli --probe`, chj, W 1.5; `~` sounds like, `*` edit): « chardi
 → marcher*, manger~ 2nd, ≈ manger first; « il faut manch » → manger~ 1st; « visache » → visage~ 1st; « le jat » →
 château~, chat~ 2nd; « bouche » stays ✓ (bar unchanged); « chanbe » → chambre~ 1st, jambes~ 7th, ≈ jambes / jambe.
 
+## Sound confusions — the other pairs (0.11.0, Phase 2, 2026-11-27)
+
+Phase 2 of `dys-sound-tolerance.md` makes the pairs a profile setting (« Sons que l'élève confond », D33: ch/j on, f/v,
+k/g, t/d, p/b off) and measures the four extra pairs. No engine change: the binary is HEAD `0618c05`'s engine (Phase 1 +
+the offensive-word exclusion), `--sound-pairs chj,<p>` for each pair, then `--sound-pairs all5`, each with `--grammar
+out\grammar.sqlite --names <pack>`, one run at a time; light held-out lower case (per pair E2 `--max 2000` and E3 all;
+all five: E1, E2, W `--max 2000`, E3 all). Baseline: the same binary with no flag (= ch/j, the shipped default).
+Outputs: `<work>\runs-sound\runs\{p2-default, chj+fv, chj+kg, chj+td, chj+pb, all5}` (`phase2.sh`,
+`phase2_summary.py`).
+
+**Per pair** (with ch/j; dys set test split, 736 cases; dys spelling 342 cases):
+
+| Pair | `-full` top-1 / hit@8 | `-p4` hit@8 | `-p3` hit@8 | `-guard` ranks | ≈ recall / target among / first with the words before | KSS Δ E2 / E3 | Curated sets |
+|---|---|---|---|---|---|---|---|
+| none extra (ch/j only) | fv 0.65 / 0.91, kg 0.65 / 1.00, td 0.68 / 0.95, pb 0.67 / 1.00 (the edit pass already finds most whole words) | 0.00 each | 0.00 each | — | fv 0.22 / 0.00 / 0.00, kg 0.25 / 0.00 / 0.00, td 0.23 / 0.00 / 0.00, pb 0.21 / 0.00 / 0.00 | — | — |
+| f/v | 0.65 / **0.91** | 0.00 → **0.79** (14) | 0.00 → 0.64 (14) | 49 unchanged | **1.00 / 0.91 / 0.78** | 0.00 / 0.00 | ranks identical; 1 bar tail |
+| k/g | 0.65 / **1.00** | 0.00 → **0.81** (16) | 0.00 → 0.33 (15) | 50 unchanged | **1.00 / 1.00 / 0.75** | 0.00 / 0.00 | ranks identical; bar tails (cases 2, personal 1); `--spelling` phonetic ≈ 62 → 63 / 75 |
+| t/d | 0.68 / **1.00** (one case up, one down) | 0.00 → **0.79** (14) | 0.00 → 0.60 (10) | 49 unchanged | **1.00 / 0.95 / 0.77** | −0.01 / 0.00 | ranks identical; bar tails (cases 8, exact 1, personal 2, names 2); `chj-full` hit@8 0.93 → 0.92 (one case), `dys-chj` ≈ first in Check order 54 → 52 / 71 (with the words before unchanged, 62) |
+| p/b | 0.67 / **1.00** | 0.00 → **0.71** (14) | 0.00 → 0.83 (12) | 50 unchanged | **1.00 / 1.00 / 0.79** | 0.00 / 0.00 | ranks identical; bar tails (cases 2, names 1) |
+
+**All five pairs on**:
+
+| Gate (plan, Phase 2) | Result |
+|---|---|
+| Defaults unchanged: curated suite and dys sets with no flag = the Phase 1 result | **met**: identical to HEAD's last recorded run (offensive-words Phase A `excl2`), timing aside |
+| 0 wrong reds; `junk` and `typo` | **0 wrong reds**; junk 7 / 7, typo 4 / 5 — **11 / 12, as before the pairs** (the typo « chein » was already ≈ from the fold, Phase 1); phonetic ≈ recall 0.827 → **0.853**, sentence-start ≈ 30 → 32 / 35 |
+| Each pair alone (with ch/j), test split: `<pair>-full` hit@8 ≥ 0.80; `<pair>-guard` keeps its rank | **met**: 0.91 / 1.00 / 1.00 / 1.00; no guard case moved (test and dev) |
+| KSS per pair (E2, E3) and all five (four sets): reported, a pair costing > 0.5 pt flagged | per pair ≤ 0.01 pt; all five **E1 44.62 (−0.05), E2 50.85 (−0.01), E3 54.57 (0.00), W 47.98 (−0.10)**; **no pair flagged** |
+| `--bench-sound` p99 < 1 ms warm | **met**: rounds 2–3 none 0.86–0.89, ch/j 0.93, all five 0.87–0.94 ms; max all five 2.98–12.7 ms vs none 2.9–14.1 (the pre-existing spikes) |
+| `Check` p99 < 20 µs | **not measurable on this host; fallback not applied** (decision 2026-11-27, coordinator + reviewer). Logged p99: `--spelling` (87 400 calls) all five 19.0 µs, the default (ch/j) 19.1 µs, ch/j + k/g 24.8 µs; dys spelling words (68 400 calls) all five 25.5 µs, the default 71.5 µs; `--bench-sound` dys words none 18.9, ch/j 7.8, all five 9.8 µs; `check-p99.txt` (six interleaved rounds, host loaded): ch/j alone 23.8–110.5 µs, all five 19.4–122.0, all five with one swap 38.0–143.8. The p99 here measures the host load (ch/j alone, the shipped default, goes over 20 µs as often as all five). `Check` runs once per finished word (≈ 0.15 % of a frame); all five is opt-in; one swap only would miss the double confusions of exactly the pupils who tick several pairs (its ≈ results were identical on the dys set, but that set has one swap per word). A quiet-host re-measure is a TODO item before the release |
+| Mots exclus (D35) with every pair on | **0 hits**: `scan_dumps.py` over every Phase 2 log and dump (85 files); `Predict.Eval --probe-exclusions` (ch/j and all five): 808 747 queries, listed forms offered 0, ExcludedLate 0, failures 0 |
+
+**Green for a ticked pair (owner 2026-11-27)**: a word reached by both the tolerant pass and the edit pass keeps the
+better score but the tolerant kind (green « même son »). Re-run with that build (`runs\b-*`: the default, each pair,
+all five with the four held-out sets): every curated, dys and spelling log and every dump is **identical** to the runs
+above (timing aside) — no rank moved. Probes (`Predict.Cli --probe`, all five): « la dable » → table~ 1st, « il crogne »
+→ grogne~ 1st, « le pateau » → bateau~ 2nd, « la foiture » → voiture~ 1st (with ch/j only: the same words, `*` orange).
+
+The dys set's `-real` categories (a swap that is a real word: info) do not move. The bar changes on the curated sets are
+tail tiles only (a tolerant word replaces a weak 6th–8th candidate), never an expected word's rank. Off by default and
+per pupil, so no reject gate (plan); the help says to tick only what the assessment shows.
+
 ## Selection cost — « Écouter avant d'insérer » (2026-11-25)
 
 Listen before inserting (owner request, on by default) makes the pupil act twice on a tile: the first action speaks the
@@ -1276,6 +1423,99 @@ forms by `forms.tsv` id only.
 The only changes are the bars that held a listed form: the word is gone and the next candidate fills the tile; no
 expected word moved. 45 of the listed lexicon forms are not in the spelling reference (they were never ✓); a typed listed
 word keeps exactly the mark it had without the list (checked for the 513 forms by `RealExclusionTests`).
+
+## Négation (0.11.0, plan negation, 2026-11-27)
+
+Plan `negation.md` (owner answers 2026-11-17; predict-core-design § 5j, keyboard-design § 6h). Method: one binary of the
+working tree against HEAD `adda5ca`, both with `--grammar out\grammar.sqlite --names <pack>`, one run at a time on this
+host (loaded: timings are noisy). Each text is typed word by word and checked after each word's one or two separators,
+exactly as the keyboard checks (`Negation.ClauseOf`, the same clause as `WordTracker.TryClause`). Outputs:
+`<work>\runs-neg\` (the dumps for hand labelling stay there, never in the repository).
+
+**Rule: never tune on the untouched sets.** Two kinds of sets:
+
+- **dev (tuned)**: the curated `cases-negation.json`, the held-out sets of `<work>\corpus-work\corpus-light\heldout\` (E1, E2,
+  W, S-unseen `--max 2000`, E3 all), G-clean (`<work>\grammar-sets\g-clean.jsonl`, 10 000 sentences) and, after the review,
+  the reviewer's `books-4000` (4 000 random lines of `<work>\corpus-work\corpus-light\full\books.txt`, seed 20261127): the
+  rules were refined on their misses and false alarms (names not in the pack, « N de N », post-nominal adjectives, « leur »,
+  « s'il » / « l'on », « ce qui », « que » dropped from the « ever » guards, the opener as the n-gram context; after the
+  review: « ne », « n' », « pas » added to those guards, no fix for a noun / verb homograph after determiner + adjective
+  unless it is être / avoir). The « nous / vous » margin stayed at the plan's 1.0.
+- **untouched**: 4 000 other random lines of the same `books.txt` (seed **20261128**, the reviewer's lines left out;
+  `<work>\runs-neg\sets\books-4000-s20261128.txt`), measured once after the rules were frozen. And the reviewer's invented
+  `review-cases.json` (37 cases, never seen before the run).
+
+**Owner decision 2026-11-27**: « plus » is a negation only before . ! ? … or a line end (« , ; : » removed: « j'en veux
+plus, merci » means « more »).
+
+| Gate (plan) | dev (tuned) | untouched | |
+|---|---|---|---|
+| Curated positives: exact rewrite ≥ 0.90 | **44 / 44** | reviewer's: **20 / 20** | met |
+| Curated negatives: 0 alarms | **0 / 53** | reviewer's: 0 / 10 plain negatives; its 7 « risk » probes: 5 alarms (below) | met on negatives |
+| Deletion test, pas + jamais + rien pooled: exact ≥ 0.70, wrong ≤ 2 % of alarms | five held-out sets **208 / 229 = 0.908**, wrong 1 / 209; G-clean **534 / 634 = 0.842**, wrong 1 / 535; books-4000 **605 / 685 = 0.883**, wrong 0 | books s20261128: **552 / 646 = 0.854**, wrong **1 / 553 = 0.2 %** | met |
+| « plus » (. ! ? … or a line end): exact ≥ 0.50, wrong ≤ 2 % | S-unseen 1 / 1, G-clean 5 / 5, books-4000 9 / 10; wrong 0 | 3 / 3, wrong 0 | kept (few sites) |
+| Clean text: ≤ 5 false alarms per 1 000 sentences per set | 0 false alarm in E1, E2, E3, W, S-unseen (8 alarms), G-clean (12), books-4000 (8: before the review fixes 11, 3 false) | **2 false of 8 alarms = 0.5 per 1 000** | met |
+| Precision ≥ 0.95 (hand-labelled) | 28 / 28 = 1.00 | **6 / 8 = 0.75** (n = 8) | **not met, accepted by the owner 2026-11-27**: on by default in the 0.11.0 bêta; n = 8 alarms too small; false-alarm rate 0.5 per 1 000 meets ≤ 5 per 1 000; marker only, never auto-applied |
+| KSS E1 / E2 / E3 / W / S-unseen, lower case and keep case: byte-identical | **10 / 10 dumps identical** (`Predict` untouched); KSS lc 44.7 / 50.9 / 54.6 / 46.4 / 48.1 | — | met |
+| `--spelling`: 0 wrong reds; unchanged | **0**; the log identical to HEAD's but for the timings | — | met |
+| `--bench-negation` (clause + `MissingNe`, 5 000 calls × 3 rounds): p99 < 50 µs, max < 1 ms | **p99 17–18 µs**, mean 3–4 µs; raw max 0.13–6.2 ms in 2 of 3 rounds on plain inputs (host preemption: the same calls took < 40 µs in another round); each call's best of the 3 rounds: **p99 17 µs, max 37 µs** | — | met (raw max: re-measure on a quiet host) |
+| `--bench` and `Check` unchanged | `--bench` 0.177–0.220 ms (HEAD 0.177–0.197, interleaved, noisy host); `Check` code untouched | — | met |
+| Data / working set: +0 data, ≤ +1 MB | **+0 data** (our closed word lists only) | — | met |
+| D35 | `scan_dumps.py --text` on every group offered and the curated logs: **0 hits**; `ExcludedLate` 0 in every log | — | met |
+
+The two false alarms of the untouched sample are « ever / intensifier » readings the rules do not see: « Et tu crois que
+je ferais jamais une chose pareille ! » (« jamais » = ever, after « tu crois que ») and « ça allait rien barder ! » (« rien »
+= « very », regional). Both are literary dialogue; no rule was changed for them (untouched set). The reviewer's « risk »
+probes: « Vous mangez pas ? », « Nous partons pas ce soir. », « Vous parlez pas assez fort. » get the « ne » (real dropped
+« ne »: the rewrite is right); « j'en veux plus ! » gets it by the owner's « plus » rule; « il marche pas à pas. » is a
+false alarm the check cannot avoid (it runs at the first « pas », before « à pas » is typed — like « j'ai pas mal de »).
+
+Noisy variant (pa, jamé, veu): five sets 196 / 218 = 0.899 exact, G-clean 506 / 604 = 0.838, books s20261128 512 / 593 =
+0.863, wrong 1 each. The wrong rewrites are « Vous vendez pas » → « Ne vous vendez pas » (the n-grams prefer the imperative
+by more than the margin) and one in books s20261128. The misses are mostly out of scope (an adverb in between, no
+subject, a subject beyond a comma, an infinitive or a participle) or longer noun groups.
+
+## Noms à trait d'union (0.11.0, plan hyphen-names, 2026-11-27)
+
+Plan hyphen-names (owner Q1 = B: the whole name; Q2: the same tile where the head cannot be replaced; predict-core-design
+§ 5k, keyboard-design § 6h). Method: the working tree after the review fixes against **HEAD 45eb16c** (the baseline binary
+was built at 567fd1e; 45eb16c only changed the names-pack loader's picture flag, so the prediction numbers hold), both with
+`--grammar out\grammar.sqlite --names <pack 2026.2>`, one run at a time; the same binary with `--no-hyphen
+--no-compound-slot` is the curated baseline (it is HEAD byte for byte, and scores the cases with the same rule). Light
+held-out (E1, E2, W `--max 2000`, E3 all, `<work>\corpus-work\corpus-light\heldout\`). Outputs: `<work>\runs-hyphen\`.
+The held-out KSS never sees a hyphen context (its tokeniser splits on `-`): it checks that `Predict` did not move;
+`--hyphen-report` measures the new path and `--slot-report` the name slot. Curated cases after « head- » count a tile as
+right when it, or the head and it, write the intended word (« être » after « peut- » is « peut-être »).
+
+| Gate (plan) | Result | |
+|---|---|---|
+| switches off = HEAD, byte for byte | every pre-existing case line of `cases`, `cases-exact`, `cases-personal`, `cases-names` identical; the 7 held-out dumps identical | met |
+| curated sets (baseline = switches off) | the real gains are names: `cases-names` 0.54 / 0.78 → **0.65 / 0.93** (top-1 / hit@8): `hyphen-name` top-1 0/5 → **5/5** (« saint- »+n, « Saint- »+∅, « Saint-Pierre- »+e, « je vais à Saint- »+Ni → Saint-Nicolas, « Jean- »+∅), `compound-head` hit@8 0/3 → **3/3** (8th place). `cases.json` `hyphen` / `hyphen-keep` and `cases-personal` « Jean-B » were already right without the feature (« être », « bas », « cinq », « Baptiste » write the compound after the head): unchanged, 0.77 / 0.96 and 0.54 / 0.73 both ways; `cases-exact` unchanged | met |
+| KSS lc E1 / E2 / E3 / W and kc E1 / E2 / W: no set −0.05 pt | 44.7 / 50.9 / 54.6 / 48.1 and 44.6 / 50.8 / 48.1, **Δ 0.00**, dumps byte-identical (re-checked after the review fixes, lowercase) | met |
+| `--hyphen-report --max 2000`: hit@8 at 0 letters must not fall; pronoun subset ≤ −2 pt | hit@8 at 0 letters **Δ 0.0** on the four sets; 1–3 letters 0.0 to +3.9 pt; pronoun subset **unchanged** everywhere (table below) | met |
+| name slot on clean text (`--slot-report --max 2000`, 4–8 letters) | fires in **0.71 / 0.71 / 0.74 %** of bars (E1 / E2 / W); hit@8 0.9534 / 0.9603 / 0.9419 both ways; **0 targets pushed out of the 8**, 0 brought | met (no tightening needed) |
+| `--bench` mean +≤ 0.02 ms | HEAD 0.167–0.175, new 0.167–0.174 ms (interleaved) | met |
+| `--bench-hyphen` p95 < 1 ms, warm max < 5 ms | warm p95 1.6–1.7 ms, max 16–19 ms, **the same with the compounds off** (p95 1.6–1.7 ms, max 19–20 ms: today's `Predict` / `PredictNext` with the grammar in these contexts); the compounds add no measurable mean | **not met as absolute numbers**; not caused by the feature |
+
+Top-1 / hit@8 after a typed hyphen (`--hyphen-report`, compounds off → on; n = hyphen positions):
+
+| Set | Subset | 0 letters | 1 letter | 2 letters | 3 letters |
+|---|---|---|---|---|---|
+| E1 | all | .429→.429 / .724→.724 (n 98) | .745→.745 / .918→.929 (n 98) | .867→.878 / .956→.967 (n 90) | .893→.911 / .946→.964 (n 56) |
+| E1 | pronouns | .466→.466 / .810→.810 (n 58) | .879→.879 / 1.000→1.000 (n 58) | .980→.980 / 1.000→1.000 (n 50) | 1.000→1.000 / 1.000→1.000 (n 19) |
+| E2 | all | .357→.333 / .667→.667 (n 42) | .595→.571 / .690→.690 (n 42) | .675→.675 / .725→.725 (n 40) | .656→.656 / .656→.656 (n 32) |
+| E2 | pronouns | .000→.000 / .000→.000 (n 2) | .000→.000 / 1.000→1.000 (n 2) | 1.000→1.000 / 1.000→1.000 (n 2) | — |
+| W | all | .237→.226 / .462→.462 (n 93) | .419→.398 / .548→.581 (n 93) | .500→.511 / .589→.622 (n 90) | .481→.481 / .584→.623 (n 77) |
+| W | pronouns | .500→.500 / .500→.500 (n 2) | .500→.500 / 1.000→1.000 (n 2) | 1.000→1.000 / 1.000→1.000 (n 2) | 1.000→1.000 / 1.000→1.000 (n 1) |
+| S-unseen | all | .430→.430 / .664→.664 (n 128) | .695→.695 / .797→.797 (n 128) | .770→.770 / .828→.828 (n 122) | .722→.722 / .789→.811 (n 90) |
+| S-unseen | pronouns | .471→.471 / .794→.794 (n 68) | .838→.838 / .985→.985 (n 68) | .968→.968 / 1.000→1.000 (n 62) | 1.000→1.000 / 1.000→1.000 (n 34) |
+
+History: the first version put every compound ahead of today's list. With no cap E2's hit@8 at 0 letters fell 11.9 pt
+(heads with many compounds: « ex-[aequo] », « vice-[présidents] »), so `HyphenMax` = 5 was set (the plan's fallback); the
+review then found the top-1 losses (« il va-[t] » → « va-tout », « qu'est-[c] » → « est-ce-que », E2 −11.9 pt top-1 at
+0 and 1 letters, E1 pronouns −5 / −6 pt at 1 / 2 letters). Now only names go ahead; the remaining top-1 dips (E2 −2.4 pt
+at 0 and 1 letters, W −1.1 / −2.1 pt) are a name tile first where the plain word was right. The 0-letter hit@8 is
+unchanged because most heads have no name.
 
 ## Performance / footprint (the resource budget)
 

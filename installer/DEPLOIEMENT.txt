@@ -65,15 +65,39 @@ Windows 11 64 bits (x64) seulement.
     /LOG="<fichier>"               journal de l'installation
     /FORCECLOSEAPPLICATIONS        fermer de force un Pépite ouvert
                                    qui ne s'est pas fermé seul
+    /NOLANCER                      ne pas relancer Pépite après une
+                                   mise à jour silencieuse (voir
+                                   ci-dessous)
 
-  Une installation silencieuse ne lance jamais Pépite : chaque
+  Une installation silencieuse ne lance pas Pépite : chaque
   utilisateur l'a à sa prochaine ouverture de session (démarrage avec
-  Windows, clé Run de HKLM pour une installation pour tous).
+  Windows, clé Run de HKLM pour une installation pour tous). Une
+  seule exception (à partir de 0.11.0) : une mise à jour silencieuse
+  qui a fermé le Pépite ouvert du compte qui lance l'installation le
+  relance pour ce compte, sans droits d'administrateur
+  (« --autostart »). /NOLANCER l'empêche. En compte SYSTEM (Intune,
+  SCCM), rien n'est relancé : chaque compte a la nouvelle version à
+  sa prochaine ouverture de session. Lancée depuis une console déjà
+  en administrateur, l'installation relancerait Pépite avec ces
+  droits : ajoutez /NOLANCER.
+
+  Mise à jour : la nouvelle version s'installe par-dessus l'ancienne,
+  dans le même mode et le même dossier, avec les mêmes composants et
+  tâches (sauf paramètres /COMPONENTS ou /TASKS). Les réglages, les
+  profils et les mots des élèves sont gardés ; au premier démarrage
+  de la nouvelle version, Pépite en fait une copie (voir § 8). Une
+  version plus ancienne que celle installée est refusée (code 1,
+  voir § 4 pour revenir en arrière).
 
   Un Pépite ouvert est fermé proprement avant la mise à jour (même
-  utilisateur). Celui d'une autre session est fermé par le
-  gestionnaire de redémarrage de Windows (/FORCECLOSEAPPLICATIONS si
-  nécessaire).
+  utilisateur). Attention : lancée en compte SYSTEM (Intune, SCCM),
+  l'installation ne peut pas fermer le Pépite ouvert dans la session
+  d'un élève (Windows le refuse d'une session à l'autre, même avec
+  /FORCECLOSEAPPLICATIONS) : la mise à jour s'arrête alors sans rien
+  changer (code 5, l'ancienne version reste installée). Déployez les
+  mises à jour quand personne n'est connecté (au démarrage du poste,
+  ou après la fermeture des sessions), ou faites quitter Pépite dans
+  chaque session avant le déploiement, ou relancez le déploiement.
 
   Ne mélangez pas les deux modes : si Pépite est déjà installé « pour
   moi » sur un compte, l'installation « pour tous » est refusée sur
@@ -85,7 +109,9 @@ Windows 11 64 bits (x64) seulement.
 --------------------------------------------------------------------
     0   installation réussie
     1   l'installation n'a pas démarré (dont : Pépite déjà installé
-        dans l'autre mode ; Windows 10 ; processeur non x64)
+        dans l'autre mode ; une version plus récente de Pépite est
+        déjà installée — désinstallez-la d'abord pour revenir en
+        arrière, voir § 4 ; Windows 10 ; processeur non x64)
     2   Pépite est installé, mais le fichier /CONFIG a été refusé
         (JSON non valable ou schéma inconnu, installation sans
         /ALLUSERS, ou dossier %PROGRAMDATA%\Pepite-Prediction déjà
@@ -102,7 +128,9 @@ Windows 11 64 bits (x64) seulement.
         lien (voir le journal /LOG)
     3, 4, 8   erreur pendant la préparation ou l'installation
         (voir le journal /LOG)
-    5   annulé pendant l'installation
+    5   annulé pendant l'installation (dont : en compte SYSTEM, un
+        Pépite ouvert dans la session d'un utilisateur ; rien n'est
+        changé, voir § 2)
 
 
 4. DÉSINSTALLATION SANS QUESTION
@@ -126,6 +154,18 @@ Windows 11 64 bits (x64) seulement.
   HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\
   {999AA879-43C2-4C22-9785-691AA95A3455}_is1, valeur
   QuietUninstallString (HKCU pour une installation par utilisateur).
+
+  Revenir à une version précédente : désinstallez sans
+  /SUPPRIMERDONNEES (les données sont gardées), puis installez
+  l'ancienne version. Une installation plus ancienne que celle en
+  place est refusée (code 1) à partir de 0.11.0 ; les installations
+  antérieures à 0.11.0 ne vérifient pas la version. À partir de
+  0.11.0, une version qui trouve un fichier de réglages écrit par une
+  version plus récente le lit sans jamais le réécrire.
+
+  Installations « pour moi » restées sur un poste (avant de passer à
+  une installation pour tous), en PowerShell administrateur :
+    Get-ChildItem "$env:SystemDrive\Users\*\AppData\Local\Programs\Pepite-Prediction" -Directory -EA 0
 
 
 5. CONFIGURATION DE L'ÉTABLISSEMENT (FACULTATIVE)
@@ -155,6 +195,12 @@ Windows 11 64 bits (x64) seulement.
       2e insérer, par défaut ; false = insérer tout de suite),
     words.listenShiftKeys (Maj + F1 à F8 : écouter le mot),
     words.listenButton (bouton haut-parleur sous chaque mot),
+    words.soundPairs.chj, .fv, .kg, .td, .pb (« Sons que l'élève
+      confond » : true = Pépite propose aussi le mot où ce son est
+      remplacé par son voisin, « chardin » -> jardin ; par défaut
+      chj true, les quatre autres false ; chaque paire se règle ou
+      se bloque seule, par exemple
+      "locked": { "words": { "soundPairs": { "chj": false } } }),
     bar.position (caret, top, bottom, free),
     text.punctuationSpace (french, french-nbsp, none),
     speech.speakInserted, speech.speakWords,
@@ -163,7 +209,9 @@ Windows 11 64 bits (x64) seulement.
     reading.clipboardFallback (copie de la sélection par Ctrl+C ;
       absent ou null = dans LibreOffice Writer seulement, par
       défaut ; true = partout ; false = jamais ; jamais dans
-      LibreOffice Calc, quelle que soit la valeur),
+      LibreOffice Calc, quelle que soit la valeur ; dans Writer, la
+      sélection est lue directement et la copie ne sert que si la
+      lecture directe échoue),
     reading.pictures, start.welcome.
 
   Mots à ne jamais proposer (dans « locked » seulement) :
@@ -240,13 +288,29 @@ Windows 11 64 bits (x64) seulement.
   - Pépite surveille le clavier (pour proposer les mots) et insère
     du texte : certains antivirus peuvent le signaler. Rien n'est
     enregistré ni envoyé ; ajoutez une exclusion si nécessaire.
+  - LibreOffice Writer (25.2 ou plus récent ; testé avec 26.8.3 et
+    25.2.7) : Pépite lit le texte par l'interface d'accessibilité
+    IAccessible2 de LibreOffice, avec les composants de Windows
+    (oleacc.dll, ia2comproxy.dll). Rien à installer, enregistrer ni
+    configurer, aucune option de LibreOffice n'est changée. La
+    variable d'environnement SAL_ACCESSIBILITY_ENABLED=0 coupe
+    l'accessibilité de LibreOffice : Pépite y fonctionne alors en
+    mode « touches seulement » (sans barre dans les fenêtres de
+    dialogue de LibreOffice). Calc et Impress : touches seulement.
+    La sélection de Writer est lue par la même interface, sans
+    presse-papiers. Si LibreOffice ne répond plus un moment, Pépite
+    passe en « touches seulement » 10 s (puis 20 s, 40 s) et réessaie
+    ensuite.
 
 
 8. DONNÉES PERSONNELLES (RGPD)
 --------------------------------------------------------------------
   - Tout reste sur le poste : réglages et profils dans
     %APPDATA%\Pepite-Prediction de chaque compte, sauvegardes dans
-    %LOCALAPPDATA%\Pepite-Prediction\sauvegardes. Rien n'est envoyé.
+    %LOCALAPPDATA%\Pepite-Prediction\sauvegardes (une par jour, une
+    avant chaque suppression ou import, et une au premier démarrage
+    de chaque nouvelle version : profils-<date>-mise-a-jour.zip ; les
+    5 dernières de chaque sorte sont gardées). Rien n'est envoyé.
   - Les profils contiennent les prénoms des élèves (et, si
     l'enseignant en ajoute, des listes de mots). Pas de photo
     (seulement des pictogrammes ou dessins).

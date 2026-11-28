@@ -2,7 +2,7 @@
   "comment": "Inputs of the « Noms propres » pack, pinned by SHA-256 (build_names.py fetch refuses a mismatch). A null sha256 is pinned once by « fetch --pin-new » (first edition, or a new input after review); the Wikidata / Commons snapshots are re-made only by the deliberate « snapshot » step, which records their new SHA-256 here.",
   "pack": {
     "id": "pepite-noms",
-    "edition": "2026.2",
+    "edition": "2026.3",
     "titre": "Noms propres (données ouvertes)",
     "licence": "CC BY 4.0",
     "licence_url": "https://creativecommons.org/licenses/by/4.0/deed.fr"
@@ -174,6 +174,24 @@
     "attribution_fr": "Villes, personnages historiques, régions et départements de France, noms des communes belges en français — Wikidata (https://www.wikidata.org), données CC0 1.0."
   },
   "commons_attribution_fr": "Drapeaux des régions et provinces de Belgique — Wikimedia Commons, domaine public ou CC0 (liste des fichiers et auteurs : noms/SOURCES.md).",
+  "dessins": {
+    "comment": "Pépite's own drawings (owner 2026-11-27, D30 amended: no portraits of real people, an original drawing of a popular-feast figure is allowed). The SVG is committed here (images/), pinned by SHA-256, drawn by resvg into a 128 × 128 palette PNG; « variantes »: false keeps the picture off the entry's variants (written as « image_variantes »: false).",
+    "attribution_fr": "Dessin de Saint-Nicolas : Pépite (dessin original, réalisé avec l'aide de Claude), CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/deed.fr).",
+    "files": [
+      {
+        "nom": "Saint-Nicolas",
+        "file": "images/saint-nicolas.svg",
+        "sha256": "f7e8a4551472729662f86f85106a2bc1e46f45cb88bf4b81ef86c75ce6a3fe33",
+        "image": "images/pepite/saint-nicolas.png",
+        "titre": "Dessin de Saint-Nicolas (buste)",
+        "licence": "CC0 1.0",
+        "auteur": "Pépite (dessin original, réalisé avec l'aide de Claude)",
+        "date": "2026-11-27",
+        "variantes": false,
+        "note": "the feast and the Belgian municipality share the name; not its Dutch name « Sint-Niklaas » (owner 2026-11-27)"
+      }
+    ]
+  },
   "commons": [
     {
       "file": "Drapeau Province BE Brabant Wallon.svg",

@@ -9,12 +9,15 @@ using Predict.Core;
 //        --bench-exact [--grammar <g>] [--names <folder>]  speed of the rule (2 000 grammar-context queries typed as words)
 //        0.10.2 (glued words): --splits / --no-splits [--w-split F] [--split-known 0|1] for --probe and --bench;
 //        --bench-split [--grammar <g>] [--names <folder>]  speed of the split pass (off / on) and of RankCorrections
+//        0.11.0 (glued words follow-up): --est / --no-est, --split3 / --no-split3, --expr / --no-expr, --expr-b2 / --no-expr-b2,
+//        --est-known 0|1, --w-split3 F, --w-expr F for --probe and --bench (--bench-split: the 0.11.0 kinds follow Splits)
 //        0.11.0 (plan dys-sound-tolerance): --sound-pairs none|chj|chj,fv,kg,td,pb|all5 [--w-tolerant F] [--tolerant-from N]
 //        [--tolerant-check-from N] for --probe and --bench;
 //        --bench-sound [--grammar <g>] [--names <folder>] [--dys <dys-sound folder>]  speed with the pairs none / chj / all five
 //        0.11.0 (plan offensive-words): --exclusions <fr.txt>|none (any mode; default: the list next to the database;
 //        --grammar expands it as the app does); --mem-exclusions [--grammar <g>]  load time and memory of the list;
 //        the exhaustive probe is Predict.Eval --probe-exclusions
+//        0.11.0 (plan negation): --bench-negation [--grammar <g>] [--names <folder>]  speed of the « ne » detector (clause + MissingNe)
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 var db = args.Length > 0 ? args[0] : "Data.Build/out/prediction.sqlite";
 var sw = Stopwatch.StartNew();
@@ -48,6 +51,21 @@ engine.SplitMinCount = int.Parse(OptAfter("--split-min", engine.SplitMinCount.To
 if (args.Contains("--splits") || args.Contains("--no-splits") || args.Contains("--w-split") || args.Contains("--split-known"))
     Console.WriteLine(FormattableString.Invariant($"glued words: splits {(engine.Splits ? "on" : "off")}, WSplit {engine.WSplit}, SplitMax {engine.SplitMax}, from {engine.SplitFrom}, known {engine.SplitKnown}\n"));
 
+// 0.11.0 (plan glued-words-followup.md): the new glued kinds for --probe and --bench (default: the engine's)
+if (args.Contains("--est")) engine.EstSplits = true;
+if (args.Contains("--no-est")) engine.EstSplits = false;
+if (args.Contains("--split3")) engine.Split3 = true;
+if (args.Contains("--no-split3")) engine.Split3 = false;
+if (args.Contains("--expr")) engine.Expressions = true;
+if (args.Contains("--no-expr")) engine.Expressions = false;
+if (args.Contains("--expr-b2")) engine.ExprB2 = true;
+if (args.Contains("--no-expr-b2")) engine.ExprB2 = false;
+if (OptAfter("--est-known", "") is { Length: > 0 } ek) engine.EstFromKnown = ek != "0";
+engine.WSplit3 = double.Parse(OptAfter("--w-split3", engine.WSplit3.ToString(System.Globalization.CultureInfo.InvariantCulture)), System.Globalization.CultureInfo.InvariantCulture);
+engine.WExpr = double.Parse(OptAfter("--w-expr", engine.WExpr.ToString(System.Globalization.CultureInfo.InvariantCulture)), System.Globalization.CultureInfo.InvariantCulture);
+if (new[] { "--est", "--no-est", "--split3", "--no-split3", "--expr", "--no-expr", "--expr-b2", "--no-expr-b2", "--est-known", "--w-split3", "--w-expr" }.Any(args.Contains))
+    Console.WriteLine(FormattableString.Invariant($"glued words follow-up: est {(engine.EstSplits ? "on" : "off")} (from known {engine.EstFromKnown}), three words {(engine.Split3 ? "on" : "off")} (WSplit3 {engine.WSplit3}), expressions {(engine.Expressions ? "on" : "off")} (WExpr {engine.WExpr}, B2 {engine.ExprB2})\n"));
+
 // 0.11.0 (plan dys-sound-tolerance): the pupil's confused sounds for --probe and --bench (default: the engine's)
 if (OptAfter("--sound-pairs", "") is { Length: > 0 } sp) engine.Tolerance = SoundPairsInfo.Parse(sp);
 engine.WTolerant = double.Parse(OptAfter("--w-tolerant", engine.WTolerant.ToString(System.Globalization.CultureInfo.InvariantCulture)), System.Globalization.CultureInfo.InvariantCulture);
@@ -55,6 +73,58 @@ engine.TolerantFrom = int.Parse(OptAfter("--tolerant-from", engine.TolerantFrom.
 engine.TolerantCheckFrom = int.Parse(OptAfter("--tolerant-check-from", engine.TolerantCheckFrom.ToString()));
 if (args.Contains("--sound-pairs") || args.Contains("--w-tolerant") || args.Contains("--tolerant-from") || args.Contains("--tolerant-check-from"))
     Console.WriteLine(FormattableString.Invariant($"sound pairs: {SoundPairsInfo.Describe(engine.Tolerance)}, WTolerant {engine.WTolerant}, from {engine.TolerantFrom}, check from {engine.TolerantCheckFrom}, max swaps {engine.TolerantMaxSwaps}\n"));
+
+// 0.11.0 (plan hyphen-names): the compounds after a typed hyphen and the compound name slot, for --probe and --bench
+if (args.Contains("--no-hyphen")) engine.HyphenCompounds = false;
+if (args.Contains("--no-compound-slot")) engine.CompoundNameSlot = false;
+engine.HyphenMax = int.Parse(OptAfter("--hyphen-max", engine.HyphenMax.ToString()));
+if (args.Contains("--no-hyphen") || args.Contains("--no-compound-slot") || args.Contains("--hyphen-max"))
+    Console.WriteLine($"hyphen compounds {(engine.HyphenCompounds ? "on" : "off")} (max {engine.HyphenMax}), compound name slot {(engine.CompoundNameSlot ? "on" : "off")}\n");
+
+if (args.Contains("--bench-hyphen"))
+{
+    // 0.11.0: the speed of PredictAfterHyphen as the keyboard asks it (k = 11 with letters, 9 for the next word): heads of
+    // common compounds and names typed with 0–3 letters after the hyphen, in « je vais à » / no context; 200 warm-up queries,
+    // 3 rounds of 2 000, with the grammar (and the names pack with --names). Gate: p95 < 1 ms, warm max < 5 ms.
+    engine.Grammar = LoadGrammar(OptAfter("--grammar", DefaultGrammar), engine);
+    if (OptAfter("--names", "") is { Length: > 0 } np) engine.Names = LoadNames(np, engine);
+    (string Head, string Ending)[] heads =
+    {
+        ("saint", "nicolas"), ("Saint", "nicolas"), ("Saint", "marin"), ("Saint-Pierre", "et"), ("Jean", "pierre"), ("jean", "baptiste"),
+        ("peut", "être"), ("grand", "mère"), ("vingt", "cinq"), ("là", "bas"), ("celui", "là"), ("dis", "moi"), ("a-t", "il"),
+        ("va", "t"), ("Sainte", "lucie"), ("Marie", "france"), ("arc", "en"), ("porte", "monnaie"), ("après", "midi"), ("New", "york"),
+    };
+    var rnd = new Random(1);
+    var qs = new List<(string H, string T, string[] C)>();
+    for (int i = 0; i < 2000; i++)
+    {
+        var (h, e) = heads[rnd.Next(heads.Length)];
+        var t = e[..Math.Min(e.Length, rnd.Next(0, 4))];
+        if (char.IsUpper(h[0]) && t.Length > 0 && rnd.Next(2) == 0) t = char.ToUpperInvariant(t[0]) + t[1..];
+        var c = (rnd.Next(2) == 0 ? new[] { "je", "vais", "à" } : Array.Empty<string>()).Concat(h.Split('-')).ToArray();
+        qs.Add((h, t, c));
+    }
+    bool Neutral(string[] c, string h) => c.Length == h.Split('-').Length;
+    // off = today's list alone (Predict / PredictNext of the letters after the hyphen): the compounds' own cost is on − off
+    for (int round = 1; round <= 3; round++)
+    foreach (var on in new[] { false, true })
+    {
+        engine.HyphenCompounds = on;
+        foreach (var (h, t, c) in qs.Take(200)) engine.PredictAfterHyphen(h, t, c, t.Length > 0 ? 11 : 9, false, Neutral(c, h));
+        var times = new double[qs.Count];
+        for (int i = 0; i < qs.Count; i++)
+        {
+            var (h, t, c) = qs[i];
+            var t0 = Stopwatch.GetTimestamp();
+            engine.PredictAfterHyphen(h, t, c, t.Length > 0 ? 11 : 9, false, Neutral(c, h));
+            times[i] = (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency;
+        }
+        Array.Sort(times);
+        Console.WriteLine(FormattableString.Invariant(
+            $"round {round} after a hyphen, compounds {(on ? "on " : "off")}: 2000 queries: mean {times.Average():0.000} ms, p50 {times[1000]:0.000}, p95 {times[1899]:0.000}, p99 {times[1979]:0.000}, max {times[^1]:0.000} ms"));
+    }
+    return;
+}
 
 if (args.Contains("--mem-exclusions"))
 {
@@ -184,6 +254,53 @@ if (args.Contains("--bench-exact"))
     return;
 }
 
+if (args.Contains("--bench-negation"))
+{
+    // 0.11.0 (plan negation): the speed of the « ne » detector as the keyboard runs it once per finished word — the clause
+    // from the kept text (Negation.ClauseOf) + PredictionEngine.MissingNe. 5 000 calls per round: the curated kinds (the
+    // negation word last, with and without « ne », ≈ words, nous / vous) and, two calls in three, ordinary clauses whose last
+    // word is no negation (most finished words); 200 warm-up calls, 3 rounds. Gate: p99 < 50 µs, max < 1 ms.
+    engine.Grammar = LoadGrammar(OptAfter("--grammar", DefaultGrammar), engine);
+    if (OptAfter("--names", "") is { Length: > 0 } np) engine.Names = LoadNames(np, engine);
+    string[] neg =
+    {
+        "mon cousin veu pa ", "c'est pas ", "j'aime plus.\n", "je l'ai pas ", "on a jamais ", "il fé pas ", "les enfants dorment pas ",
+        "le petit chien aboie pas ", "Mange pas ", "vous inquiétez pas ", "Vous êtes pas ", "je le lui donne pas ", "il ne veut pas ",
+        "il fait un pas ", "plus que jamais ", "le meilleur ami qu'il ait jamais ", "la situation économique s'améliore guère ",
+        "et les hausses de prix des médicaments génériques peuvent pas ", "Rusty est pas ", "elle en a plus !",
+    };
+    string[] plain =
+    {
+        "il fait ", "la maison ", "je mange une pomme ", "nous sommes allés à la plage ", "le chat dort sur le lit ",
+        "c'est l'heure ", "elle aime les ", "demain, on ira ", "les enfants jouent ", "il y a ",
+    };
+    var rnd = new Random(1);
+    var texts = new List<string>();
+    for (int i = 0; i < 5000; i++) texts.Add(i % 3 == 0 ? neg[rnd.Next(neg.Length)] : plain[rnd.Next(plain.Length)]);
+    int fired = 0;
+    double Once(string t)
+    {
+        var t0 = Stopwatch.GetTimestamp();
+        if (Negation.ClauseOf(t, 0, true, out var toks, out bool start, out _, out bool plus) && engine.MissingNe(toks, start, plus) is not null) fired++;
+        return (Stopwatch.GetTimestamp() - t0) * 1e6 / Stopwatch.Frequency;
+    }
+    for (int i = 0; i < 200; i++) Once(texts[i]);
+    var best = Enumerable.Repeat(double.MaxValue, texts.Count).ToArray();
+    for (int round = 1; round <= 3; round++)
+    {
+        fired = 0;
+        var times = texts.Select(Once).ToArray();
+        for (int i = 0; i < times.Length; i++) best[i] = Math.Min(best[i], times[i]);
+        Array.Sort(times);
+        Console.WriteLine(FormattableString.Invariant(
+            $"round {round}: 5000 calls ({fired} fixes): mean {times.Average():0.0} µs, p50 {times[2500]:0.0}, p95 {times[4749]:0.0}, p99 {times[4949]:0.0}, max {times[^1]:0.0} µs (GC gen0 so far {GC.CollectionCount(0)})"));
+    }
+    // a lone slow call is the host (a preemption, a GC): the same call's fastest of the three rounds is the detector's own cost
+    Array.Sort(best);
+    Console.WriteLine(FormattableString.Invariant($"each call's fastest of 3 rounds: p99 {best[4949]:0.0} µs, max {best[^1]:0.0} µs"));
+    return;
+}
+
 if (args.Contains("--bench-split"))
 {
     // 0.10.2 (glued words): the speed of the split pass. 2 000 queries: the glued words of the plan typed letter by letter
@@ -198,6 +315,11 @@ if (args.Contains("--bench-split"))
         ("cest", new[] { "et" }), ("quil", new[] { "je", "pense" }), ("daccord", new[] { "oui" }), ("jusqua", new[] { "je", "marche" }),
         ("ma", new[] { "il" }), ("sil", new[] { "ne", "sais", "pas" }), ("mappelle", new[] { "je" }), ("larbre", new[] { "dans" }),
         ("nest", new[] { "il" }), ("lami", new[] { "avec" }), ("lhistoire", new[] { "c'est" }), ("lecole", new[] { "la", "de" }),
+        // 0.11.0 (glued words follow-up): « est », three words, expressions
+        ("cé", new[] { "et" }), ("nè", new[] { "il" }), ("ce", Array.Empty<string>()), ("jtaime", Array.Empty<string>()),
+        ("jemapelle", new[] { "bonjour" }), ("ilsapelle", new[] { "mon", "chien" }), ("tumas", new[] { "et" }),
+        ("ilya", Array.Empty<string>()), ("parceque", new[] { "c'est" }), ("quelquechose", new[] { "il", "y", "a" }),
+        ("toutdesuite", new[] { "viens" }), ("keske", Array.Empty<string>()),
     };
     var common = new[] { "maiz", "oriz", "bo", "sou", "enfan", "ordi", "ékri", "boku", "tele", "kestion" };
     var rnd = new Random(1);
@@ -209,6 +331,7 @@ if (args.Contains("--bench-split"))
         qs.Add((w[..Math.Min(w.Length, rnd.Next(2, w.Length + 1))], c, c.Length == 0));
     }
     bool keep = engine.Splits;
+    // 0.11.0: « on » = the engine's kinds as set (default, or the flags above); « off » = Splits off turns them all off
     for (int round = 1; round <= 3; round++)
         foreach (var on in new[] { false, true })
         {
@@ -525,19 +648,38 @@ if (args.Contains("--probe"))
     // 0.10.2 (glued words): the bare forms' successors kept at load (words taking an elision / all successors' count)
     Console.WriteLine("bare successors (glued words): " + string.Join(", ", engine.GetBareSuccessors().Select(x =>
         FormattableString.Invariant($"{x.Bare}' {x.Successors}/{x.Total} ({x.PerMillion:0}/M)"))));
+    // 0.11.0 (glued words follow-up): the subject + clitic contexts and the expression table as loaded
+    var s3i = engine.GetSplit3Info();
+    Console.WriteLine($"three words: {s3i.Contexts} subject + clitic contexts, {s3i.Rows} trigram rows, {s3i.Attested} at or above {engine.Split3MinCount}");
+    var ex = engine.GetExpressions();
+    Console.WriteLine($"expressions: {ex.Count(e => e.Dropped is null)} kept of {ex.Count}; keys equal to a word's whole key {ex.Sum(e => e.KeyCollisions)}");
+    foreach (var e in ex)
+        Console.WriteLine($"  {(e.B2 ? "B2" : "B1")} {e.Written,-16} count {e.Count,6}  keys {string.Join("/", e.Keys)}{(e.KeyCollisions > 0 ? $" ({e.KeyCollisions} = a word's key)" : "")}{(e.Dropped is { } d ? "  LEFT OUT: " + d : "")}");
     foreach (var a in args.Skip(1).Where((a, i) => a.Contains('|')))
     {
         var parts = a.Split('|');
         var ctx = parts[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
         bool start = parts.Length > 2 && parts[2] == "start";
         var expect = engine.Grammar.IsEmpty ? "" : $"   expect={engine.ExpectOf(ctx)}";
-        if (parts[1].Length == 0)
+        if (parts[1].Length == 0 && HyphenProbe(parts[0]) is null)
         {
             // plan 11: an empty typed word = the next-word bar
             Console.WriteLine($"[{parts[0]}] (next)     -> {string.Join(", ", engine.PredictNext(ctx, 8).Select(x => x.Word))}{expect}");
             continue;
         }
-        var s = engine.Predict(parts[1], ctx, 8, start);
+        // 0.11.0 (plan hyphen-names): a context ending with a glued « - » (« je vais à Saint-|Ni ») is asked as the keyboard does
+        // after « head- » (PredictAfterHyphen; the head and the words before it are the context)
+        IReadOnlyList<Suggestion> s;
+        if (HyphenProbe(parts[0]) is { } hp)
+        {
+            s = engine.PredictAfterHyphen(hp.Head, parts[1], hp.Ctx, 8, start, hp.Neutral);
+            if (parts[1].Length == 0)
+            {
+                Console.WriteLine($"[{parts[0]}] (next)     -> {string.Join(", ", s.Select(x => x.Word + (x.Name ? "@" : "")))}   head={hp.Head}{(hp.Neutral ? " (neutral)" : "")}");
+                continue;
+            }
+        }
+        else s = engine.Predict(parts[1], ctx, 8, start);
         var c = engine.Check(parts[1]);
         // ~ = sounds like (Phonetic), * = correction (Edit)
         Console.WriteLine($"[{parts[0]}] {parts[1],-10}{(start ? " (start)" : "")} -> {string.Join(", ", s.Select(x => x.Word + (x.Kind == MatchKind.Prefix ? "" : x.Kind == MatchKind.Phonetic ? "~" : "*") + (scores ? "(" + x.Score.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ")" : "")))}   check={c.Status} {string.Join("/", c.Candidates)}{(c.Tolerant > 0 ? $" (tolerant tier {c.Tolerant})" : "")}{expect}");
@@ -546,6 +688,15 @@ if (args.Contains("--probe"))
 }
 
 var tests = args.Length > 1 ? args[1..] : new[] { "orizon", "maizon", "famme", "oto", "boku" };
+
+// 0.11.0 (plan hyphen-names): a context ending with « head- » → the head (HyphenHead, as the keyboard's tracker finds it),
+// whether its capital says nothing about a name, and the context the tracker would hold (the hyphen ends a word)
+static (string Head, bool Neutral, string[] Ctx)? HyphenProbe(string context)
+{
+    if (context.Length < 2 || context[^1] != '-' || !HyphenHead.Find(context, context.Length - 1, 0, out int s0)) return null;
+    var words = System.Text.RegularExpressions.Regex.Matches(context, "[a-zA-Zà-ÿÀ-ÖØ-ÞœŒ]+").Select(m => m.Value).ToArray();
+    return (context[s0..^1], HyphenHead.NeutralBefore(context, s0, 0), words);
+}
 foreach (var t in tests)
 {
     var s = engine.Predict(t, null, 8);

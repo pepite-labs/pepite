@@ -1,11 +1,11 @@
 {
   "comment": "The data release the « app » workflow and a normal build use (plan 13, A1): every asset of the GitHub Release <tag> of <repo>, pinned by SHA-256 and size. fetch_data_release.py downloads (or takes from --from), checks and unpacks them into src/Data.Build/out/<unpack_to> (null = kept as a file: the espeak-ng source archive, the GPL-3 source offer). The assets are made by package_data_release.py (deterministic zips) from the pinned sources: data-pack.lock.json, the pictures, the « Noms propres » pack, fetch_fonts.py, build_espeak.ps1 (espeak-ng.lock.json), fetch_voices.py (voices.json). A new data release = a new tag (data-YYYY.MM, « .2 » for a second one in the month) and a new lock; a published asset is never replaced.",
   "repo": "pepite-labs/pepite",
-  "tag": "data-2026.11.2",
+  "tag": "data-2026.11.3",
   "assets": [
     {"name": "pepite-data-2026.11.1.zip", "sha256": "195c763beff85fbd947b5b903660ed996bfb152b618ba1d28a6c64f614036346", "bytes": 83903404, "licence": "CC BY-SA 4.0 (prediction.sqlite) + MPL-2.0 (spelling.sqlite, grammar.sqlite), with their notices", "unpack_to": "."},
     {"name": "pictos-arasaac-2026-11-08.zip", "sha256": "fdabdb612d2920c94e21a5e06f73bc25e513cd8b58770e33006daa692f4e4104", "bytes": 13912398, "licence": "CC BY-NC-SA 4.0 (ARASAAC pictograms; a separate, optional component)", "unpack_to": "."},
-    {"name": "noms-2026.2.zip", "sha256": "2df79a676e0ac39b5e43d06a99405ba8910ebe1d3e7f2a126b6631ea827ccd5a", "bytes": 464079, "licence": "CC BY 4.0 (the « Noms propres » pack)", "unpack_to": "noms-pack"},
+    {"name": "noms-2026.3.zip", "sha256": "3c0dbd4a332690b1f9d703e860a3b262c25ad95c387ad83ffba7a0e264150f3b", "bytes": 467710, "licence": "CC BY 4.0 (the « Noms propres » pack)", "unpack_to": "noms-pack"},
     {"name": "fonts-2026.11.zip", "sha256": "d12b52cfeeb1e475987c9f15930a073b1eff923909aad3a82def70389a58f02e", "bytes": 1230044, "licence": "SIL Open Font License 1.1", "unpack_to": "fonts"},
     {"name": "espeak-ng-win-x64-724808c5.zip", "sha256": "4fc99a511996fe36e905cb2354ce9938f73b45b8fe591f569328ef1546ce4c7a", "bytes": 751292, "licence": "GPL-3.0-or-later", "unpack_to": "espeak"},
     {"name": "espeak-ng-724808c5a83f9ef95fdd0db886ba7ba537ff224a.tar.gz", "sha256": "8ec04f630c025ef9b8cf329344f9705025d8d046694bccb5d60a1996f65f2647", "bytes": 18737755, "licence": "GPL-3.0-or-later (the source of espeak-ng-win-x64: the source offer)", "unpack_to": null},

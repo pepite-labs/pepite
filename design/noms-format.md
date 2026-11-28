@@ -39,6 +39,7 @@ sit at the root or in one top folder.
 | `niveau` | 1 (default) = predicted; 2 = recognised (✓), predicted after a capital typed inside a sentence and, since 0.10.2, from 4 typed letters without that capital when its `rang` is at least 0.02 (a rarer one still needs the capital) |
 | `restreint` | `true`: a figure taught for the harm done (owner 2026-11-15) — recognised, offered only after a capital typed inside a sentence and at least 3 letters, after every other name, never with a picture (an `image` is ignored); implies `niveau` 2 |
 | `image` | a relative path inside the database; PNG / JPEG ≤ 5 MB, ≤ 4096 × 4096 px (read from the header before any decoding) |
+| `image_variantes` | `false` (pack 2026.3): the picture is the name's only, not its variants' (« Saint-Nicolas » shows the drawing, its variant « Sint-Niklaas » does not); default `true`. Read by the shipped pack; a teacher's import ignores it for now (its picture goes to the variants too) |
 | `source` | an id of the `sources` table, or a URL / free text |
 | `licence` | the licence of the entry — of its picture when it has one; resolved from the entry, else its source, else the file's `licence` |
 | `auteur` | the author of the picture |

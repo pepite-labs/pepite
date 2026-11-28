@@ -3,8 +3,8 @@
   "pack": {
     "id": "pepite-data",
     "version": "2026.11.1",
-    "url": "https://github.com/pepite-labs/pepite/releases/download/data-2026.11.2/pepite-data-2026.11.1.zip",
-    "url_note": "the asset pepite-data-2026.11.1.zip of the data release data-2026.11.2 (plan 13; the same bytes as in data-2026.11): fetched, checked and unpacked by fetch_data_release.py (data-release.lock.json), then checked file by file here",
+    "url": "https://github.com/pepite-labs/pepite/releases/download/data-2026.11.3/pepite-data-2026.11.1.zip",
+    "url_note": "the asset pepite-data-2026.11.1.zip of the data release data-2026.11.3 (plan 13; the same bytes as in data-2026.11 and data-2026.11.2): fetched, checked and unpacked by fetch_data_release.py (data-release.lock.json), then checked file by file here",
     "built_from": "src/Data.Build/data.lock.json (corpus inputs), grammar.lock.json (French.lex); plan corpus-light Phase 2; spelling.sqlite: build_spelling_ref.py (same French.lex pin)",
     "change_note": "2026.11.1 (publication cleanup, 2026-11-16): the spelling tables moved out of prediction.sqlite (CC BY-SA 4.0) into spelling.sqlite (MPL-2.0, derived from French.lex) with its notices; prediction.sqlite otherwise unchanged (same words and n-gram rows, VACUUMed); prediction-SOURCES.txt header updated."
   },

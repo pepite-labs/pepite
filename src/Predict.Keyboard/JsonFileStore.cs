@@ -12,7 +12,10 @@ namespace Predict.Keyboard;
 /// empty; bad JSON → renamed <c>&lt;file&gt;.bad-&lt;stamp&gt;</c>, or — <c>moveBadAside: false</c>, the profiles — kept and
 /// marked <see cref="Unreadable"/>; a file that exists but cannot be read is never overwritten: <see cref="ReadOnly"/>);
 /// writes are serialised on a background task chain (roaming / redirected <c>%APPDATA%</c> can be slow) and atomic
-/// (<c>.tmp</c> flushed to disk, then renamed). Thread-safe.
+/// (<c>.tmp</c> flushed to disk, then renamed). A file whose numeric <c>schema</c> is higher than the one this version
+/// writes (a newer Pépite wrote it, then an older one was installed or run) is read but never written this session
+/// (<see cref="NewerSchema"/>): saving would relabel it with the older schema and drop what the newer one meant (plan
+/// installer-upgrade, step 1). Thread-safe.
 /// </summary>
 internal sealed class JsonFileStore
 {
@@ -42,19 +45,33 @@ internal sealed class JsonFileStore
     /// <summary>The file existed but its content could not be used (bad JSON, read error).</summary>
     public bool Unreadable { get; private set; }
     public bool Existed { get; private set; }
+    /// <summary>The <c>schema</c> found in the file when it is higher than this version's (the file is then read-only).</summary>
+    public int? NewerSchema { get; private set; }
 
     /// <summary>Read the file (see the class summary). Returns a copy of the whole document.</summary>
     public JsonObject Load()
     {
         JsonObject root = new();
         Unreadable = false;
+        NewerSchema = null;
         try
         {
             Existed = File.Exists(_path);
             if (Existed)
             {
                 var text = File.ReadAllText(_path);
-                try { root = JsonNode.Parse(text) as JsonObject ?? throw new JsonException("not an object"); }
+                try
+                {
+                    root = JsonNode.Parse(text) as JsonObject ?? throw new JsonException("not an object");
+                    if (_schema is int mine && root["schema"] is JsonValue v && v.TryGetValue(out double d)
+                        && d > mine && d <= int.MaxValue)
+                    {
+                        NewerSchema = (int)Math.Ceiling(d);
+                        _readOnly = true;
+                        _log?.Invoke($"{_label}: {Path.GetFileName(_path)} has schema {NewerSchema}, newer than this version " +
+                                     $"({mine}): read, never written this session");
+                    }
+                }
                 catch (JsonException ex)
                 {
                     Unreadable = true;
@@ -157,7 +174,13 @@ internal sealed class JsonFileStore
 
     private Task QueueWrite()   // under _lock
     {
-        if (_readOnly) { _log?.Invoke($"{_label}: not saved (the unreadable {Path.GetFileName(_path)} is kept as is)"); return Task.CompletedTask; }
+        if (_readOnly)
+        {
+            _log?.Invoke(NewerSchema is int n
+                ? $"{_label}: not saved ({Path.GetFileName(_path)} has the newer schema {n}, kept as is)"
+                : $"{_label}: not saved (the unreadable {Path.GetFileName(_path)} is kept as is)");
+            return Task.CompletedTask;
+        }
         var text = Snapshot();
         _writes = _writes.ContinueWith(_ =>
         {

@@ -448,9 +448,10 @@ internal sealed class ProfileStore
     public bool CanBackup => _backupDir != null && !InMemory;
 
     /// <summary>Zip <c>profiles\</c> into the backup folder (<c>profils-&lt;stamp&gt;-&lt;reason&gt;.zip</c>), keep the 5 newest
-    /// of that reason (daily, delete and import backups do not push each other out).
+    /// of that reason (daily, delete, import and version backups do not push each other out). <paramref name="extraFiles"/>
+    /// (the root <c>settings.json</c> for the version backup) go in as <c>application/&lt;file name&gt;</c>; a missing one is skipped.
     /// Returns the zip path, or null (no backup folder, nothing to save, or a failure — logged, never thrown).</summary>
-    public string? Backup(string reason)
+    public string? Backup(string reason, IReadOnlyList<string>? extraFiles = null)
     {
         if (_backupDir is null || InMemory || !Directory.Exists(_dir)) return null;
         try
@@ -464,6 +465,7 @@ internal sealed class ProfileStore
             var tmp = zip + ".tmp";
             if (File.Exists(tmp)) File.Delete(tmp);
             using (var z = ZipFile.Open(tmp, ZipArchiveMode.Create))
+            {
                 foreach (var f in Directory.GetFiles(_dir, "*", SearchOption.AllDirectories))
                 {
                     if (f.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)) continue;   // a write in progress
@@ -472,8 +474,18 @@ internal sealed class ProfileStore
                     using var dst = z.CreateEntry(rel, CompressionLevel.Fastest).Open();
                     src.CopyTo(dst);
                 }
+                foreach (var f in extraFiles ?? Array.Empty<string>())
+                {
+                    if (!File.Exists(f)) continue;
+                    using var src = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    using var dst = z.CreateEntry("application/" + Path.GetFileName(f), CompressionLevel.Fastest).Open();
+                    src.CopyTo(dst);
+                }
+            }
             File.Move(tmp, zip, overwrite: true);
-            foreach (var old in Directory.GetFiles(_backupDir, $"profils-*-{reason}.zip").OrderByDescending(Path.GetFileName, StringComparer.Ordinal).Skip(KeepBackups))
+            // exact reason: « profils-*-jour.zip » alone would also match the « -mise-a-jour » ones
+            foreach (var old in Directory.GetFiles(_backupDir, $"profils-*-{reason}.zip").Where(f => IsBackupOf(f, reason))
+                                         .OrderByDescending(Path.GetFileName, StringComparer.Ordinal).Skip(KeepBackups))
                 try { File.Delete(old); } catch (IOException) { }
             _log?.Invoke($"profiles: backup ({reason}) -> {name}");
             return zip;
@@ -483,6 +495,16 @@ internal sealed class ProfileStore
             _log?.Invoke($"profiles: backup ({reason}) failed ({ex.GetType().Name}: {ex.Message})");
             return null;
         }
+    }
+
+    /// <summary><c>profils-yyyyMMdd-HHmmss-&lt;reason&gt;.zip</c> with exactly that reason.</summary>
+    internal static bool IsBackupOf(string path, string reason)
+    {
+        var n = Path.GetFileName(path);
+        const int stamp = 15;   // yyyyMMdd-HHmmss
+        return n.Length == "profils-".Length + stamp + 1 + reason.Length + ".zip".Length &&
+               n.StartsWith("profils-", StringComparison.Ordinal) &&
+               n.EndsWith("-" + reason + ".zip", StringComparison.Ordinal);
     }
 
     /// <summary>The daily backup: when the newest one is older than a day (or there is none).</summary>

@@ -8,7 +8,7 @@ namespace Predict.Keyboard;
 
 /// <summary>A place of the embedded help (<c>aide\</c>, plan « aide intégrée »): what the tray « Aide », the « ? »
 /// buttons and F1 of Réglages, and the welcome windows open.</summary>
-internal enum HelpTopic { Home, Welcome, Settings, SettingsWords, SettingsPosition, SettingsSpeech, SettingsReading, SettingsStart, Pupils, MyWords, Spelling }
+internal enum HelpTopic { Home, Welcome, Settings, SettingsWords, SettingsPosition, SettingsSpeech, SettingsReading, SettingsStart, Pupils, MyWords, Spelling, SettingsSounds }
 
 /// <summary>
 /// Where the help entry points lead, and how a page is opened: a <b>file path</b> handed to the shell (the default
@@ -38,6 +38,7 @@ internal static class HelpLinks
         HelpTopic.Pupils => (@"aide\enseignants.html", null),
         HelpTopic.MyWords => (@"aide\mes-mots.html", null),
         HelpTopic.Spelling => (@"aide\orthographe.html", null),
+        HelpTopic.SettingsSounds => (@"aide\reglages.html", @"aide\aller\reglages-sons.html"),
         _ => (HomePage, null),
     };
 
@@ -77,6 +78,7 @@ internal static class HelpLinks
         "eleves" => HelpTopic.Pupils,
         "orthographe" => HelpTopic.Spelling,
         "mes-mots" => HelpTopic.MyWords,
+        "sons" => HelpTopic.SettingsSounds,
         _ => wordsTab ? HelpTopic.MyWords : HelpTopic.Settings,
     };
 

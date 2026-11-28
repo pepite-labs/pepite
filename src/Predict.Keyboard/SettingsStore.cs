@@ -135,6 +135,17 @@ internal sealed class SettingsStore
         st["welcomeShown"] = shown;
     });
 
+    /// <summary>The Pépite version that last started on this Windows account (<c>state.lastVersion</c>, plan
+    /// installer-upgrade R5: a change triggers the version backup); null = never recorded (a first start, or before 0.11.0).</summary>
+    public string? LastVersion =>
+        _file.Read(root => (root["state"] as JsonObject)?["lastVersion"] is JsonValue v && v.TryGetValue<string>(out var s) ? s : null);
+
+    public Task SetLastVersion(string version) => _file.Update(root =>
+    {
+        if (root["state"] is not JsonObject st) { st = new JsonObject(); root["state"] = st; }
+        st["lastVersion"] = version;
+    });
+
     /// <summary>Write <c>state</c> values now (migration).</summary>
     public void MergeStateNow(JsonObject? state)
     {

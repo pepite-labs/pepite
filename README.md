@@ -26,8 +26,8 @@ mots personnels restent sur l'ordinateur. Les champs de mot de passe ne sont jam
 - Installation pour vous seul, ou pour tous les utilisateurs de l'ordinateur (écoles : installation silencieuse et fichier
   de configuration de l'établissement, voir `installer/DEPLOIEMENT.txt`).
 
-0.10.2 est une version de test publique (préversion, non signée), sous .NET 10 ; la prochaine version (0.11.0)
-restera une version de test.
+0.11.0 est une version de test publique (bêta : préversion, non signée), sous .NET 10 ; la première version stable
+suivra les retours des testeurs.
 
 ## Licences
 
@@ -59,7 +59,7 @@ dotnet test Pepite.sln -c Release
 ```
 
 La base de mots et les autres données ne sont pas reconstruites à chaque fois : elles sont fournies déjà construites,
-dans la version de données `data-2026.11.2` des Releases. Une commande les télécharge dans un dossier de votre choix,
+dans la version de données `data-2026.11.3` des Releases. Une commande les télécharge dans un dossier de votre choix,
 vérifie leurs empreintes SHA-256, les dépose dans `src\Data.Build\out\` et vérifie la base de mots
 ([development/BUILD.md](development/BUILD.md) § 0) :
 

@@ -64,11 +64,14 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Word base (data release, pack only)
+      # the word base and the « Noms propres » pack (pack 2026.3: its real-pack picture test needs it under PEPITE_REQUIRE_DATA)
+      - name: Word base and names pack (data release)
         shell: pwsh
         run: |
           $pack = (Get-Content src/Data.Build/data-pack.lock.json -Raw | ConvertFrom-Json).pack.version
-          python -I src/Data.Build/fetch_data_release.py --cache "$env:RUNNER_TEMP/data-cache" --only "pepite-data-$pack.zip"
+          $noms = ((Get-Content src/Data.Build/data-release.lock.json -Raw | ConvertFrom-Json).assets | Where-Object { $_.unpack_to -eq 'noms-pack' }).name
+          if (-not $noms) { Write-Error 'data-release.lock.json: no asset unpacks to noms-pack'; exit 1 }
+          python -I src/Data.Build/fetch_data_release.py --cache "$env:RUNNER_TEMP/data-cache" --only "pepite-data-$pack.zip" --only "$noms"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Mots exclus (out/exclusions from the committed, reviewed list; plan offensive-words)
         shell: pwsh

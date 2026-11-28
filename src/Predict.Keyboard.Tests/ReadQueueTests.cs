@@ -72,6 +72,61 @@ public class ReadQueueTests
         Assert.Equal(ReadStatus.Timeout, h.Done.Single().R.Status);
     }
 
+    /// <summary>WS4 (0.11.0): Word's GetSelection on a long document takes 160–306 ms. A slow Selection must stay a
+    /// Selection (no text for the bar; the selection reader, with its own budget, is asked next), and so must a slow
+    /// Password.</summary>
+    [Trait("Category", "Timing")]
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SlowSelectionOrPassword_KeepsItsStatus(bool selection)
+    {
+        var status = selection ? ReadStatus.Selection : ReadStatus.Password;
+        using var h = new Harness
+        {
+            Read = _ => { Thread.Sleep(KeyboardPolicy.ReadTimeoutMs + 60); return new ReadResult(status, "fake", TextContext.Invalid, 0); },
+        };
+        h.Q.Request(1, Fg, 0, "ctrl");
+        Assert.True(h.WaitCompleted());
+        var r = h.Done.Single().R;
+        Assert.Equal(status, r.Status);
+        Assert.True(r.Ms > KeyboardPolicy.ReadTimeoutMs);
+    }
+
+    /// <summary>A slow Selection with a newer request made during its read is still delivered as Selection, and the queue's
+    /// latest id has moved on to the newer request. (Dropping such a late result is the controller's job:
+    /// AfterCaretRead / OnSelectionRead check the latest id, the tracker version and the window.)</summary>
+    [Trait("Category", "Timing")]
+    [Fact]
+    public void SlowSelection_OvertakenByANewerRequest_IsNotTheLatest()
+    {
+        var started = new ManualResetEventSlim(false);
+        var release = new ManualResetEventSlim(false);
+        using var h = new Harness
+        {
+            Read = n =>
+            {
+                if (n == 1)
+                {
+                    started.Set();
+                    release.Wait(5000);
+                    Thread.Sleep(KeyboardPolicy.ReadTimeoutMs + 20);
+                    return new ReadResult(ReadStatus.Selection, "fake", TextContext.Invalid, 0);
+                }
+                return Ok("mai");
+            },
+        };
+        h.Q.Request(1, Fg, 0, "ctrl");
+        Assert.True(started.Wait(30000));       // the first read is running
+        h.Q.Request(1, Fg, 0, "click");         // a newer request while it runs
+        release.Set();
+        Assert.True(h.WaitCompleted());
+        Assert.True(h.WaitCompleted());
+        var first = h.Done.First(d => d.Q.Reason == "ctrl");
+        Assert.Equal(ReadStatus.Selection, first.R.Status);
+        Assert.NotEqual(h.Q.LatestId, first.Q.Id);
+    }
+
     [Trait("Category", "Timing")]
     [Fact]
     public void ThrowingRead_IsUnavailableAndLogged()

@@ -137,19 +137,22 @@ internal static class ProfileMigration
     /// The start-up sequence (plan 09): the migration, then the app state and the profiles. Never throws: when the
     /// folder cannot be created or written (ACL, a file in its place, a full or offline redirected drive), the error is
     /// logged and the session runs on an in-memory « Mon profil » built from the old settings (nothing is written, so
-    /// the next start retries the migration).
+    /// the next start retries the migration). <paramref name="appVersion"/> (the running version): at the first start of
+    /// a new version the profiles are zipped first (<see cref="VersionBackup"/>), before anything of theirs is loaded.
     /// </summary>
     public static (SettingsStore App, ProfileStore Profiles) OpenStores(string root, string legacyDir, string? backupDir,
-                                                                       Action<string>? log, Func<DateTime>? utcNow = null)
+                                                                       Action<string>? log, Func<DateTime>? utcNow = null,
+                                                                       string? appVersion = null)
     {
         var app = new SettingsStore(root, log);
         var profiles = new ProfileStore(root, backupDir, log, utcNow);
         bool appLoaded = false;
         try
         {
-            Run(root, legacyDir, log, utcNow);
+            var outcome = Run(root, legacyDir, log, utcNow);
             app.Load();
             appLoaded = true;
+            VersionBackup.Run(app, profiles, appVersion, outcome == Outcome.AlreadyDone, log);
             profiles.Load();
         }
         catch (Exception ex)
@@ -161,5 +164,53 @@ internal static class ProfileMigration
             profiles.LoadInMemory(ReadLegacyLayer(legacyDir, log), ex.GetType().Name);
         }
         return (app, profiles);
+    }
+}
+
+/// <summary>
+/// Plan installer-upgrade R5: at the first start of each new version (<c>state.lastVersion</c> differs), one
+/// <c>profils-&lt;stamp&gt;-mise-a-jour.zip</c> of <c>profiles\</c> plus the root <c>settings.json</c> (as
+/// <c>application/settings.json</c>) in the backups folder, the 5 newest kept. Runs before the profiles are loaded, so the
+/// zip holds what the previous version left. A first start (no profiles before this start) records the version and
+/// zips nothing; <c>lastVersion</c> is recorded only once a zip is written, so a failure is retried at the next start.
+/// Skipped for an unknown version (a dev build) or a read-only <c>settings.json</c> (newer schema, unreadable). Never throws.
+/// </summary>
+internal static class VersionBackup
+{
+    public const string Reason = "mise-a-jour";
+
+    public static void Run(SettingsStore app, ProfileStore profiles, string? appVersion, bool hadProfiles, Action<string>? log)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(appVersion) || appVersion == "?" || app.ReadOnly) return;
+            var old = app.LastVersion;
+            if (old == appVersion) return;
+            var t0 = Environment.TickCount64;
+            if (!hadProfiles)
+            {
+                app.SetLastVersion(appVersion);
+                log?.Invoke($"version: {old ?? "none"} -> {appVersion}, first start, no backup");
+                return;
+            }
+            if (!profiles.CanBackup)
+            {
+                log?.Invoke($"version: {old ?? "none"} -> {appVersion}, no backup folder, not recorded");
+                return;
+            }
+            app.Flush();
+            var zip = profiles.Backup(Reason, new[] { app.FilePath });
+            if (zip is null)
+            {
+                log?.Invoke($"version: {old ?? "none"} -> {appVersion}, backup failed, retried next start");
+                return;
+            }
+            app.SetLastVersion(appVersion);
+            log?.Invoke($"version: {old ?? "none"} -> {appVersion}, backup {Path.GetFileName(zip)} in {Environment.TickCount64 - t0} ms");
+        }
+        catch (Exception ex)
+        {
+            log?.Invoke($"version: backup failed ({ex.GetType().Name}: {ex.Message})");
+        }
     }
 }

@@ -647,6 +647,58 @@ public class AppRulesTests
     [InlineData("notepad", false)] [InlineData("msedge", false)] [InlineData(null, false)]
     public void Apps_That_Space_Punctuation_Themselves(string? process, bool expected) => Assert.Equal(expected, AppRules.AppSpacesPunctuation(process));
 
+    /// <summary>LibreOffice phase 1 (owner Q1 = yes): Writer is read back when it answers through IA2, never otherwise;
+    /// Word unchanged.</summary>
+    [Theory]
+    [InlineData("soffice.bin", true, true)] [InlineData("soffice.bin", false, false)] [InlineData("swriter", true, true)]
+    [InlineData("WINWORD", false, true)] [InlineData("WINWORD", true, true)] [InlineData("notepad", true, false)] [InlineData(null, true, false)]
+    public void Writer_Is_Read_Back_Only_When_Ia2_Is_Live(string? process, bool live, bool expected) =>
+        Assert.Equal(expected, AppRules.ReadsBackSpacing(process, live));
+
+    /// <summary>The read-back's edit: Missing → our space per the setting (Word and Writer); Double → one removed in Word,
+    /// never in Writer (LibreOffice's U+00A0 is never touched); « Aucune » → nothing.</summary>
+    [Theory]
+    [InlineData((int)SpacingCheck.Missing, (int)PunctuationSpacing.French, true, (int)ReadBackFix.InsertOurs)]
+    [InlineData((int)SpacingCheck.Missing, (int)PunctuationSpacing.FrenchNbsp, true, (int)ReadBackFix.InsertOurs)]
+    [InlineData((int)SpacingCheck.Missing, (int)PunctuationSpacing.None, true, (int)ReadBackFix.None)]
+    [InlineData((int)SpacingCheck.Double, (int)PunctuationSpacing.French, true, (int)ReadBackFix.None)]
+    [InlineData((int)SpacingCheck.Ok, (int)PunctuationSpacing.French, true, (int)ReadBackFix.None)]
+    [InlineData((int)SpacingCheck.Unknown, (int)PunctuationSpacing.French, true, (int)ReadBackFix.None)]
+    [InlineData((int)SpacingCheck.Missing, (int)PunctuationSpacing.French, false, (int)ReadBackFix.InsertOurs)]
+    [InlineData((int)SpacingCheck.Double, (int)PunctuationSpacing.French, false, (int)ReadBackFix.RemoveOne)]
+    [InlineData((int)SpacingCheck.Ok, (int)PunctuationSpacing.French, false, (int)ReadBackFix.None)]
+    public void Read_Back_Fix(int check, int setting, bool libreOffice, int expected) =>
+        Assert.Equal((ReadBackFix)expected, AppRules.ReadBack((SpacingCheck)check, (PunctuationSpacing)setting, libreOffice));
+
+    /// <summary>Writer: LibreOffice's own U+00A0 (French AutoCorrect) reads Ok, none reads Missing (our space then), and the
+    /// sign is always sent alone first (the armed mode is None whatever the setting).</summary>
+    [Fact]
+    public void Writer_Read_Back_Sees_LibreOffice_Space_Or_None()
+    {
+        Assert.Equal(SpacingCheck.Ok, AppRules.Check("our !", '!'));
+        Assert.Equal(SpacingCheck.Missing, AppRules.Check("jour!", '!'));
+        Assert.Equal(PunctuationSpacing.None, AppRules.Effective(PunctuationSpacing.French, "soffice.bin"));
+        Assert.Equal(PunctuationSpacing.French, AppRules.Effective(PunctuationSpacing.French, "notepad"));   // Notepad: U+202F at once
+    }
+
+    /// <summary>Review S3–S7: the read-back is pending only until its answer was handled (then the Writer settle read may
+    /// run); an answer for an older version never clears a newer one.</summary>
+    [Fact]
+    public void Pending_Read_Back_Is_Cleared_Once_Answered()
+    {
+        var p = new PendingReadBack();
+        Assert.False(p.IsPending(Fg, 0));                      // nothing armed (Fg zero / version 0 never match by accident)
+        p.Arm('!', false, Fg, 7, true);
+        Assert.True(p.IsPending(Fg, 7));
+        Assert.False(p.IsPending(Fg, 8));                      // typed since: not pending for the current version
+        Assert.False(p.IsPending((IntPtr)10, 7));
+        p.Done(Fg, 6);                                         // an older answer
+        Assert.True(p.IsPending(Fg, 7));
+        p.Done(Fg, 7);
+        Assert.False(p.IsPending(Fg, 7));
+        Assert.Equal(IntPtr.Zero, p.Current.Fg);
+    }
+
     [Theory] [InlineData((int)PunctuationSpacing.French)] [InlineData((int)PunctuationSpacing.FrenchNbsp)] [InlineData((int)PunctuationSpacing.None)]
     public void In_LibreOffice_No_Space_Of_Ours_Before_High_Punctuation(int setting)
     {

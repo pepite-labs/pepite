@@ -4,7 +4,7 @@
   src\Data.Build\out\.
 
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.10.2 [-Private] [-VerifyReproducible]
+  powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.11.0 [-Private] [-VerifyReproducible]
 
 .DESCRIPTION
   -WorkDir <work> (or $env:PEPITE_WORK): the bulk-data folder outside the repository. Outputs:

@@ -117,6 +117,18 @@ internal static class Native
     [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
     [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(POINT pt);
 
+    // ---- LibreOffice Writer through IAccessible2 (Ia2Interop.cs): the MSAA entry points, read-only ----
+    public const int OBJID_CLIENT = -4, CHILDID_SELF = 0;
+    /// <summary>The object a WinEvent named (here the out-of-context EVENT_OBJECT_FOCUS of a Writer paragraph).
+    /// <paramref name="child"/> comes back as a VARIANT: VT_I4 child id, CHILDID_SELF for the object itself.</summary>
+    [DllImport("oleacc.dll")]
+    public static extern int AccessibleObjectFromEvent(IntPtr hwnd, uint objectId, uint childId, out IntPtr acc,
+                                                       [MarshalAs(UnmanagedType.Struct)] out object? child);
+    /// <summary>A window's own accessible object (OBJID_CLIENT): the second-resort resolve, and what starts LibreOffice's
+    /// accessibility bridge (its first WM_GETOBJECT).</summary>
+    [DllImport("oleacc.dll")]
+    public static extern int AccessibleObjectFromWindow(IntPtr hwnd, uint objectId, ref Guid iid, out IntPtr obj);
+
     // ---- clipboard (plan 07: simulated Ctrl+C fallback of the selection reading, off by default) ----
     [DllImport("user32.dll", SetLastError = true)] public static extern bool OpenClipboard(IntPtr owner);
     [DllImport("user32.dll")] public static extern bool CloseClipboard();

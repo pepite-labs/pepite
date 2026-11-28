@@ -78,18 +78,30 @@ public sealed class ExcludedWords
 
     /// <summary>
     /// Is <paramref name="word"/> excluded? The whole word (case ignored), then the part after each apostrophe (« l'… »,
-    /// « qu'… »: a joined candidate is excluded with its word). A few hash lookups; no allocation without an apostrophe.
+    /// « qu'… »: a joined candidate is excluded with its word). 0.11.0 (glued words follow-up): a candidate of several words
+    /// (« je t'aime », « il y a ») also by each space-separated part, and the part after each apostrophe in it. A few hash
+    /// lookups; no allocation.
     /// </summary>
     public bool IsExcluded(string? word)
     {
         if (string.IsNullOrEmpty(word) || _forms.Count == 0) return false;
         if (_forms.Contains(word)) return true;
         var s = word.AsSpan();
-        int a = s.IndexOfAny('\'', '’');
+        int a = s.IndexOfAny('\'', '’', ' ');
         if (a < 0) return false;
         var lookup = _forms.GetAlternateLookup<ReadOnlySpan<char>>();
         for (int i = a; i < s.Length - 1; i++)
             if (s[i] is '\'' or '’' && lookup.Contains(s[(i + 1)..])) return true;
+        if (s.IndexOf(' ') < 0) return false;
+        // several words: each part between spaces, and the part of it after each apostrophe (« je t'xxx » → « xxx »)
+        foreach (var range in s.Split(' '))
+        {
+            var part = s[range];
+            if (part.IsEmpty) continue;
+            if (lookup.Contains(part)) return true;
+            for (int i = 0; i < part.Length - 1; i++)
+                if (part[i] is '\'' or '’' && lookup.Contains(part[(i + 1)..])) return true;
+        }
         return false;
     }
 

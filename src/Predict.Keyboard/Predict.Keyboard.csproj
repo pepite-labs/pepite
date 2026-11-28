@@ -11,7 +11,7 @@
     <AssemblyName>Pepite</AssemblyName>
     <RootNamespace>Predict.Keyboard</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>0.10.2</Version>
+    <Version>0.11.0</Version>
     <Product>Pépite</Product>
     <!-- FileDescription: the name Windows shows in Task Manager and on notifications -->
     <AssemblyTitle>Pépite</AssemblyTitle>
@@ -97,6 +97,8 @@
     <None Include="$(PepitePackageRoot)microsoft.ml.onnxruntime\1.31.1\LICENSE" Link="licenses\onnxruntime\LICENSE" CopyToOutputDirectory="PreserveNewest" />
     <None Include="$(PepitePackageRoot)microsoft.ml.onnxruntime\1.31.1\ThirdPartyNotices.txt" Link="licenses\onnxruntime\ThirdPartyNotices.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\licenses\naudio\license.txt" Link="licenses\naudio\license.txt" CopyToOutputDirectory="PreserveNewest" />
+    <!-- LibreOffice phase 1: the IAccessible2 IDL notice (identifiers transcribed in Ia2Interop.cs) -->
+    <None Include="..\..\licenses\iaccessible2\LICENSE.txt" Link="licenses\iaccessible2\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <!-- publication cleanup (S6): the licences of what a self-contained publish ships — the .NET and Windows Desktop runtime
        packs (MIT + their third-party notices), System.Speech (MIT) and the Apache-2.0 text for SQLitePCLRaw; the versions

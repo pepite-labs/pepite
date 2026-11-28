@@ -18,8 +18,9 @@ public readonly record struct SpellingCheck(SpellingStatus Status, IReadOnlyList
     public string? Candidate => Candidates.Count > 0 ? Candidates[0] : null;
 }
 
-/// <summary>The round marker left of the bar's words (plan 10B, Q9): none, ✓ green, ≈ blue, ? red — never ✗.</summary>
-public enum SpellingMark { None, Known, SoundsLike, Unknown }
+/// <summary>The round marker left of the bar's words (plan 10B, Q9): none, ✓ green, ≈ blue, ? red — never ✗; 0.11.0 (plan
+/// negation, owner Q4): « ne » on amber, a negation typed without « ne » (it wins over ✓ and ≈ on the negation word).</summary>
+public enum SpellingMark { None, Known, SoundsLike, Unknown, Grammar }
 
 /// <summary>
 /// A word as the keyboard saw it typed (plan 10B): the word just finished by a separator, or the word being typed

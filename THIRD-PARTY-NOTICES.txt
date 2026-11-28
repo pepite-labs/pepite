@@ -85,10 +85,10 @@ CC BY-SA 4.0 and the GPL: Creative Commons lists GPLv3 as a compatible licence f
 (« ShareAlike compatibility: GPLv3 », creativecommons.org/share-your-work/licensing-considerations/compatible-licenses,
 2015). The voice models are separate data files, not linked code; each keeps its own licence.
 
-« Noms propres » open-data pack, edition 2026.2 — CC BY 4.0 (a separate data component in noms\)
+« Noms propres » open-data pack, edition 2026.3 — CC BY 4.0 (a separate data component in noms\)
   Built by src/Data.Build/pepite-noms/build_names.py from the pinned inputs of names.lock.json (versions, URLs and SHA-256
   in noms\SOURCES.md); licence text and the notices below in noms\LICENCE.txt; the attribution shown in « À propos »:
-    Noms propres — paquet de données ouvertes « Noms propres (données ouvertes) », édition 2026.2, licence CC BY 4.0
+    Noms propres — paquet de données ouvertes « Noms propres (données ouvertes) », édition 2026.3, licence CC BY 4.0
     (https://creativecommons.org/licenses/by/4.0/deed.fr). Données modifiées : sélection, mise en forme et classement par Pépite.
     • Prénoms (France) — Source : Insee, Fichier des prénoms, édition juillet 2026 (naissances 1900-2025), mise à jour du
       16/07/2026. Licence Ouverte / Open Licence 2.0 (Etalab).
@@ -105,12 +105,17 @@ CC BY-SA 4.0 and the GPL: Creative Commons lists GPLv3 as a compatible licence f
     • Drapeaux des pays — flag-icons 7.6.0 (https://github.com/lipis/flag-icons), licence MIT.
     • Drapeaux des régions et provinces — Wikimedia Commons, domaine public ou CC0 (liste des fichiers et auteurs :
       noms/SOURCES.md).
+    • Dessin de Saint-Nicolas : Pépite (dessin original, réalisé avec l'aide de Claude), CC0 1.0
+      (https://creativecommons.org/publicdomain/zero/1.0/deed.fr).
     Statbel et l'Insee ne cautionnent pas Pépite ni l'usage fait de leurs données.
   Inputs (SHA-256 in names.lock.json): INSEE prenoms-2025-nat_csv.zip (4c3662bb…cfee512e); Statbel TA_POP_MALE_2026.zip,
   TA_POP_FEMALE_2026.zip, TA_BIRTHS_FEMALE_2016_2025.zip (52b1729d…e5e569c6), TA_BIRTHS_MALE_2016_2025.zip
   (c1ff4ea4…e878a852), TU_COM_REFNIS-20250101.zip; cldr-json 49.0.0 fr/territories.json; flag-icons v7.6.0 (flags/4x3);
   12 Commons flag files (public domain / CC0; the Liège province flag, CC BY-SA 3.0, is left out); Wikidata query
-  snapshots (CC0) of 2026-11-14. Build-time tool, never shipped: resvg 0.50.0 (Apache-2.0 OR MIT).
+  snapshots (CC0) of 2026-11-14; since edition 2026.3 Pépite's own drawing of Saint-Nicolas (pepite-noms/images/
+  saint-nicolas.svg, f7e8a455…a6a3fe33, an original drawing, no third-party art; CC0 1.0; rendered to a 128 × 128 PNG,
+  shown for « Saint-Nicolas » only, not its variant « Sint-Niklaas »). Build-time tool, never shipped: resvg 0.50.0
+  (Apache-2.0 OR MIT).
 
   flag-icons 7.6.0 — MIT (country flags, rendered to 128 × 96 PNG thumbnails):
     The MIT License (MIT)
@@ -329,6 +334,14 @@ SQLitePCLRaw 2.1.13 (NuGet SQLitePCLRaw.bundle_e_sqlite3, .core, .provider.e_sql
 SQLite 3.53.3 (e_sqlite3.dll, from SQLitePCLRaw.lib.e_sqlite3 2.1.13; source id 2026-06-26 20:14:12 d4c0e51e) — public domain
   https://www.sqlite.org/copyright.html : « All of the code and documentation in SQLite has been dedicated to the public
   domain by the authors. »
+
+IAccessible2 IDL, LinuxA11y/IAccessible2 master@c9ae003d9c85eb707716928de97e055f5b77189c (2025-05-05) — BSD-3-Clause
+  https://github.com/LinuxA11y/IAccessible2 (the repository has no tags). Copyright (c) 2007-2018 Linux Foundation,
+  Copyright (c) 2006 IBM Corporation, Copyright (c) 2000, 2006 Sun Microsystems, Inc.
+  Interface identifiers (IAccessible2, IAccessibleText, IAccessibleRelation), method order and constants (roles,
+  coordinate type, relation types) transcribed in
+  src/Predict.Keyboard/Ia2Interop.cs to read LibreOffice Writer's text; nothing shipped from it. The calls go through
+  Windows' own oleacc.dll and ia2comproxy.dll (not redistributed). Licence text: licenses\iaccessible2\LICENSE.txt.
 
 Build-time tools, never shipped (listed for completeness)
   Python 3.12 (PSF License); Pillow (MIT-CMU, pictures and icons); onnx 1.23.2 (Apache-2.0, the alignment output of the

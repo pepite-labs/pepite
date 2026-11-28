@@ -11,6 +11,8 @@
     <Compile Include="..\Predict.Keyboard\ContextExtractor.cs" Link="ContextExtractor.cs" />
     <Compile Include="..\Predict.Keyboard\WordTracker.cs" Link="WordTracker.cs" />
     <Compile Include="..\Predict.Keyboard\KeyboardPolicy.cs" Link="KeyboardPolicy.cs" />
+    <!-- WR5 (0.11.0): a foreground event against the real foreground -->
+    <Compile Include="..\Predict.Keyboard\ForegroundEvents.cs" Link="ForegroundEvents.cs" />
     <!-- 2026-11-25 owner: listen before inserting (pure state of the pending tile) -->
     <Compile Include="..\Predict.Keyboard\ListenFirst.cs" Link="ListenFirst.cs" />
     <Compile Include="..\Predict.Keyboard\Inserter.cs" Link="Inserter.cs" />
@@ -75,6 +77,8 @@
     <!-- plan 10C: names databases and pictures of names (pure parts; the WPF re-encoder is injected) -->
     <Compile Include="..\Predict.Keyboard\NamesImport.cs" Link="NamesImport.cs" />
     <Compile Include="..\Predict.Keyboard\WordPictures.cs" Link="WordPictures.cs" />
+    <!-- pack 2026.3: the pack's pictures (« image_variantes ») -->
+    <Compile Include="..\Predict.Keyboard\NamesPack.cs" Link="NamesPack.cs" />
     <!-- 0.7.2: pierre's word carrier and phoneme fix; the engine itself (fake model) for the word path -->
     <Compile Include="..\Predict.Keyboard\PiperCarrier.cs" Link="PiperCarrier.cs" />
     <Compile Include="..\Predict.Keyboard\PiperModel.cs" Link="PiperModel.cs" />
@@ -85,6 +89,9 @@
     <Compile Include="..\Predict.Keyboard\SpeechBenchSentences.cs" Link="SpeechBenchSentences.cs" />
     <Compile Include="..\Predict.Keyboard\OpenRequest.cs" Link="OpenRequest.cs" />
     <Compile Include="..\Predict.Keyboard\InstallInfo.cs" Link="InstallInfo.cs" />
+    <!-- LibreOffice phase 1: IAccessible2 interop (slot checks) and the reader core (fake backend) -->
+    <Compile Include="..\Predict.Keyboard\Ia2Interop.cs" Link="Ia2Interop.cs" />
+    <Compile Include="..\Predict.Keyboard\LibreOfficeText.cs" Link="LibreOfficeText.cs" />
     <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
     <None Include="host\**" />
     <None Include="..\Predict.Keyboard\Assets\*.ico" Link="Assets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

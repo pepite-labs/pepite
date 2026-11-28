@@ -183,6 +183,26 @@ internal sealed class SpeechEcho
         return SpeakWords && w != null && !sp ? new EchoEvent(EchoKind.Word, s!, cov) : null;
     }
 
+    /// <summary>
+    /// 0.11.0 (plan negation): a group replaced the last <paramref name="back"/> characters typed (the group and the
+    /// <paramref name="tail"/> after it): the echo goes back over them as Backspace would, then takes the
+    /// <paramref name="replacement"/> — its words as typed (their word echoes are dropped: the group is said once), its last
+    /// word as inserted (<paramref name="spoken"/>: the « inserted » echo says the group, owner Q7) — then the tail. Returns
+    /// the tail's event: a sentence end there makes the sentence echo (after a Backspace over a sentence end: the document's
+    /// sentence, <see cref="EchoEvent.AfterJump"/>).
+    /// </summary>
+    public EchoEvent? ReplacedGroup(int back, string replacement, string tail, bool spoken)
+    {
+        for (int k = 0; k < back; k++) Backspace();
+        int last = replacement.Length;
+        while (last > 0 && Predict.Core.SpellingIndicator.IsWordChar(replacement[last - 1])) last--;
+        foreach (var c in replacement[..last]) Type(c);
+        Inserted(replacement[last..], false, spoken);
+        EchoEvent? ev = null;
+        foreach (var c in tail) ev = Type(c) ?? ev;
+        return ev;
+    }
+
     /// <summary>The word as the echo says it: with the previous word when only spaces separate them and a liaison
     /// follows (<see cref="Liaison.Triggers"/>).</summary>
     private (string Said, string? Covers) Grouped(bool joinsPrev, string word)

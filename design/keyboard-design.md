@@ -1704,8 +1704,10 @@ has the state, never the word.
   the tracker (`WordTracker.Accept`; a ≈ replacement, `CorrectFinished`, reads the kept text again, so the context is its
   words); its picture is the main word of its last part when that part is joined (« je t'aime » → aime), else its full
   form, which no shipped picture has (« il y a »: none; a teacher's picture of that exact form still shows). At a sentence
-  start it takes a capital (« Ilya » → « Il y a »), its apostrophes the document's (« qu’est-ce que »); the indicator never
-  judges a string with a space (`SpellingIndicator.Judged`: no mark after it).
+  start it takes a capital (« ilya » → « Il y a »), its apostrophes the document's (« qu’est-ce que »); the indicator never
+  judges a string with a space (`SpellingIndicator.Judged`: no mark after it). « Ilya » typed with a capital is a first
+  name of the names pack (✓, the bar offers the names), so it gets no « Il y a » (release VM, 2026-11-28; whether it
+  should is an open owner question, development/TODO.md).
 
 - **0.11.0 — the « ne » marker and the group replacement** (plan negation, owner answers 2026-11-17, D12 / D31 amended):
   when the finished word ends a simple negation typed without « ne » (« mon cousin veu pa␣ », « c'est pas␣ », « j'aime

@@ -202,9 +202,11 @@ CORRIGÉ DANS LA 0.11.0
       sont-ils toujours là ? Sur un écran agrandi (150 % ou plus), les
       cases à cocher des pages de l'installation sont-elles entières ?
   T11. Dans le Bloc-notes, tape « jtaime » : « je t'aime » est-il
-      proposé en vert ? Tape « Ilya » au début d'une phrase : « Il y
-      a » est-il proposé, avec sa majuscule ? Choisis-le : la barre
-      propose-t-elle ensuite la suite de « il y a » ?
+      proposé en vert ? Au début d'une phrase, tape « ilya » (en
+      minuscules) : « Il y a » est-il proposé, avec sa majuscule ?
+      Choisis-le : la barre propose-t-elle ensuite la suite de
+      « il y a » ? (« Ilya » avec une majuscule est un prénom : il
+      reste comme tu l'as écrit.)
   T12. Tape « parceque » puis une espace : le rond est-il ≈, et F9
       remplace-t-il le mot par « parce que » ? Tape « et cé » :
       « c'est » est-il proposé ? Et « il sé » : « s'est » ?

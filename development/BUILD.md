@@ -479,8 +479,12 @@ powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 
 python -I -m unittest discover -s installer\tests -p test_release_lint.py
 # the CI form (plan 13, .github/workflows/app.yml): no word list, no earlier release, the data release's source archive
 powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.11.0 -WorkDir <work> -NoForbiddenList ^
-    -OldRelease '' -EspeakSourceArchive <cache>\espeak-ng-<commit>.tar.gz
+    -OldRelease none -EspeakSourceArchive <cache>\espeak-ng-<commit>.tar.gz
 ```
+
+`-OldRelease none` = no size comparison. Write `none` whenever the script is started with `powershell -File` (from
+`cmd` or another program): an empty `''` there reaches the script as a missing argument and the call fails (release
+session 0.11.0). `-OldRelease ''` works only from inside PowerShell, as in the CI step (`pwsh`, `./installer/…`).
 
 - **Inno Setup** (`installer\innosetup.lock.json`): `fetch_innosetup.ps1` downloads the official installer, checks its
   Authenticode signature on the first `-Pin` run (signer, URL, SHA-256 recorded), then only accepts that SHA-256
@@ -497,7 +501,7 @@ powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 
   of INSTALLER shows `gh attestation verify … --source-ref refs/tags/v<ver>` (`{ATTESTATION}` =
   `installer\notes\attestation.txt`, public builds only: a `-Private` build has no attestation)) → **release lint** → PDBs to `symbols-<ver>.zip`
   (not installed) → `files.sha256` (one line per installed file; the installed `prediction.sqlite` must equal the
-  source one) → `ISCC.exe installer\pepite.iss` → `size-report.md` (`size_report.py --installer`; `-OldRelease ''` =
+  source one) → `ISCC.exe installer\pepite.iss` → `size-report.md` (`size_report.py --installer`; `-OldRelease none` =
   no comparison) → the espeak-ng source archive (`git archive` of the pinned commit, or `-EspeakSourceArchive` = the
   one of the data release; the GPL-3 source offer) → `signatures.txt` (Authenticode status of every PE file of the
   stage and of the installer) → `BUILD-INFO.txt` (commit, SDK, Python, Inno Setup, VC++ runtime versions, the
@@ -547,9 +551,11 @@ powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 
   git clone --branch v<ver> https://github.com/pepite-labs/pepite <work>\rebuild\src     # a fresh clone of the tag
   cd <work>\rebuild\src
   python -I src\Data.Build\fetch_data_release.py --cache <work>\rebuild\data-cache        # the lock's data release
+  python -I src\Data.Build\exclusions\build_exclusions.py ship --out-dir src\Data.Build\out\exclusions ^
+      --db src\Data.Build\out\prediction.sqlite --grammar src\Data.Build\out\grammar.sqlite   # out\exclusions (§ 1b4; not fetched)
   powershell -ExecutionPolicy Bypass -File src\Data.Build\stage_vcruntime.ps1
   powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version <ver> -WorkDir <work>\rebuild ^
-      -OldRelease '' -EspeakSourceArchive <work>\rebuild\data-cache\espeak-ng-<commit>.tar.gz   # full forbidden list
+      -OldRelease none -EspeakSourceArchive <work>\rebuild\data-cache\espeak-ng-<commit>.tar.gz   # full forbidden list
   gh release download v<ver> --repo pepite-labs/pepite --pattern files.sha256 --pattern BUILD-INFO.txt --dir <work>\rebuild\ci
   python -I -c "import sys; r=lambda p: dict(l.rstrip('\n').split('  ',1)[::-1] for l in open(p,encoding='utf-8') if l.strip()); a,b=r(sys.argv[1]),r(sys.argv[2]); d=sorted(k for k in a.keys()|b.keys() if a.get(k)!=b.get(k)); print(len(a),len(b),'differ:',len(d)); print('\n'.join(d))" <work>\rebuild\ci\files.sha256 <work>\rebuild\release-<ver>\files.sha256
   ```
@@ -558,7 +564,13 @@ powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 
   difference except `msvcp140.dll`, `msvcp140_1.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` and
   `licenses\vcruntime\SOURCE.txt`, which `stage_vcruntime.ps1` takes from the build machine (the runner image's Visual
   C++ runtime; compare the versions in the two `BUILD-INFO.txt`). Any other line is a finding (0.10.1 had two more,
-  `Pepite.dll` and `Predict.Core.dll`: the version variable and the compiler's runtime above). The installer itself is byte-equal only when `files.sha256` is fully
+  `Pepite.dll` and `Predict.Core.dll`: the version variable and the compiler's runtime above).
+  **Known difference until fixed (0.11.0, accepted for the bêta):** `Pepite.dll` and `Predict.Core.dll` also differ,
+  by the PDB path data only, not by code: the SourceLink JSON embedded in each PDB names the build root (the runner's
+  checkout folder, or the local clone), because `PathMap` maps `src\` only; each DLL carries its PDB's id and checksum,
+  so about 70 bytes of its debug directory differ too (same length). The two `symbols-<ver>.zip` differ in the same
+  way. The fix (a repository-root `PathMap`, or `ContinuousIntegrationBuild=true` in the CI and in local release
+  builds) is planned for a later release; until then these two lines are expected as well. The installer itself is byte-equal only when `files.sha256` is fully
   identical (same VC++ runtime, same Inno Setup of `innosetup.lock.json`, same commit date). `-NoForbiddenList` is the
   CI's switch only: the local rebuild runs the full lint.
 - **The installer script** (`installer\pepite.iss`, GPL-3 « Corresponding Source »): fixed `AppId`

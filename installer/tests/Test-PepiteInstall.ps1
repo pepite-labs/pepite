@@ -198,6 +198,7 @@ function T1 {
   $steps += Btn 'seulement pour moi' 180
   Start-Sleep 2; Shot 'T1-02-info' | Out-Null
   $steps += Btn '^Suivant'                       # information (avant-installation.txt)
+  $steps += Btn '^Suivant'                       # destination folder (shown on a first install)
   $steps += Btn '^Suivant'                       # components
   Start-Sleep 1; Shot 'T1-03-tasks' | Out-Null
   $tasksText = SetupText

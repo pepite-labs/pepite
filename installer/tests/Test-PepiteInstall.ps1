@@ -541,7 +541,7 @@ function U1Prep([Parameter(Mandatory)][string]$OldSetup, [string]$dir = '') {
 }
 
 # U1 interactive upgrade, Pepite running: the upgrade page, " Mettre a jour ", " Terminer " (2 clicks)
-function U1([string]$ver = '0.11.0', [string]$dir = '', [string]$tag = 'U1') {
+function U1([string]$ver = '0.11.1', [string]$dir = '', [string]$tag = 'U1') {
   $app = if ($dir) { $dir } else { $PU }
   $hBefore = DataHashes; $zBefore = (VersionZips).Count; $act = ActiveProfile
   $runBefore = RunValue 'HKCU'; $procsBefore = (PepProcs).Count
@@ -595,7 +595,7 @@ function U1Time([string]$exe = "$PU\Pepite.exe") {
 }
 
 # U1-b the same version again, " Modifier les choix ": Suivant, the previous ticks, the ready page names the repair; Annuler -> 2
-function U1b([string]$ver = '0.11.0') {
+function U1b([string]$ver = '0.11.1') {
   $p = Start-Process (InstTest) -PassThru
   $page = WaitSetupText 'Mise . jour de P.pite' 120
   Shot 'U1b-01-repair-page' | Out-Null
@@ -618,7 +618,7 @@ function U1b([string]$ver = '0.11.0') {
     Verd 'U1b-b ticked: button Suivant' ($next -match '\| Suivant \| Annuler$') "'$(Cut $next 80)...'"
     Verd 'U1b-c components page (ticks: see the screenshot, the list items are not in UIA)' ($comp -cmatch 'Composants . installer') ''
     Verd 'U1b-d tasks page' ($tasks -cmatch 'T.ches suppl.mentaires') ''
-    Verd 'U1b-e ready page: Mise a jour 0.11.0 -> 0.11.0' ($memo -match "Mise . jour : P.pite $vEsc . $vEsc") "'$(Cut $memo 200)'"
+    Verd "U1b-e ready page: Mise a jour $ver -> $ver" ($memo -match "Mise . jour : P.pite $vEsc . $vEsc") "'$(Cut $memo 200)'"
     Verd 'U1b-f Cancel -> exit 2' ($p.ExitCode -eq 2) "exit $($p.ExitCode); $($s -join ' ; ')"
   )
 }
@@ -652,7 +652,7 @@ function U6a([Parameter(Mandatory)][string]$OldSetup) {
   @( Verd 'U6a old setup accepted (exit 0), old Pepite reads every profile' ($r.Exit -eq 0 -and $l -match "loaded $n in" -and $l -match ', 0 unreadable') "exit $($r.Exit) | '$l'" )
 }
 function U6Fake([string]$v) { Set-ItemProperty -Path "HKCU:\$UKEY" -Name DisplayVersion -Value $v }
-function U6b {
+function U6b([string]$ver = '0.11.1') {
   $exe = "$PU\Pepite.exe"
   if (-not (PepProcs)) { PepStart $exe | Out-Null }
   $tree = TreeHash $PU; $run = RunValue 'HKCU'
@@ -666,13 +666,13 @@ function U6b {
   $ok = "enter on '$($w.MainWindowTitle)'"
   $p.WaitForExit(60000) | Out-Null
   $dv = RegVal 'HKCU' $UKEY 'DisplayVersion'
-  @( Verd 'U6b refusal box with 0.11.9 and 0.11.0; OK -> exit 1; nothing changed; Pepite still running' ($box -match '0\.11\.9' -and $box -match '0\.11\.0' -and $p.ExitCode -eq 1 -and (TreeHash $PU) -eq $tree -and $dv -eq '0.11.9' -and (RunValue 'HKCU') -eq $run -and (PepProcs)) "exit $($p.ExitCode) | $ok | '$(Cut $box 400)'" )
+  @( Verd "U6b refusal box with 0.11.9 and $ver; OK -> exit 1; nothing changed; Pepite still running" ($box -match '0\.11\.9' -and $box -match [regex]::Escape($ver) -and $p.ExitCode -eq 1 -and (TreeHash $PU) -eq $tree -and $dv -eq '0.11.9' -and (RunValue 'HKCU') -eq $run -and (PepProcs)) "exit $($p.ExitCode) | $ok | '$(Cut $box 400)'" )
 }
-function U6c {
+function U6c([string]$ver = '0.11.1') {
   $r = RunWatched (InstTest) @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/CURRENTUSER', "/LOG=`"$OUT12\U6c-setup.log`"")
   $l = SetupLogLines 'downgrade refused' "$OUT12\U6c-setup.log"
-  U6Fake '0.11.0'
-  @( Verd 'U6c silent: exit 1, no window, log line' ($r.Exit -eq 1 -and -not $r.Windows -and @($l -match 'downgrade refused: installed 0\.11\.9, this setup 0\.11\.0').Count -ge 1) "exit $($r.Exit) | windows '$($r.Windows)' | $($l -join ' | ')" )
+  U6Fake $ver
+  @( Verd 'U6c silent: exit 1, no window, log line' ($r.Exit -eq 1 -and -not $r.Windows -and @($l -match "downgrade refused: installed 0\.11\.9, this setup $([regex]::Escape($ver))").Count -ge 1) "exit $($r.Exit) | windows '$($r.Windows)' | $($l -join ' | ')" )
 }
 
 # U8: the old version in C:\Outils\Pepite (U1Prep -dir), then U1 -dir; the shortcut and the Run value point there
@@ -685,10 +685,10 @@ function U8Check([string]$dir = 'C:\Outils\Pepite') {
 # U2 (all users, as SYSTEM: the host runs both setups). In the pupil's session: before, after the upgrade, after a new logon
 function U2Before { "U2 before: running $((PepProcs).Count) cmd '$(PepCmd)' | zips $((VersionZips).Count)" }
 function U2After { Start-Sleep 20; @( Verd 'U2a pupil copy closed and not restarted' (-not (PepProcs)) "procs $((PepProcs).Count)" ) }
-function U2Logon {
+function U2Logon([string]$ver = '0.11.1') {
   $p = $null; for ($i = 0; $i -lt 120 -and -not $p; $i++) { $p = PepProcs | Select-Object -First 1; if (-not $p) { Start-Sleep -Milliseconds 500 } }
   Start-Sleep 10
   Shot 'U2-01-after-logon' | Out-Null
-  $ver = if ($p) { (Get-Item $p.Path).VersionInfo.ProductVersion } else { '' }
-  @( Verd 'U2b next logon: new version with --autostart, one version zip' ([bool]$p -and (PepCmd) -match '--autostart' -and $ver -like '0.11.0*' -and (VersionZips).Count -eq 1) "ver '$ver' cmd '$(PepCmd)' zips $((VersionZips).Count) lastVersion '$(LastVersion)'" )
+  $got = if ($p) { (Get-Item $p.Path).VersionInfo.ProductVersion } else { '' }
+  @( Verd 'U2b next logon: new version with --autostart, one version zip' ([bool]$p -and (PepCmd) -match '--autostart' -and $got -like "$ver*" -and (VersionZips).Count -eq 1) "ver '$got' (expected $ver) cmd '$(PepCmd)' zips $((VersionZips).Count) lastVersion '$(LastVersion)'" )
 }

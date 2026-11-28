@@ -114,11 +114,11 @@ public partial class SettingsWindow : Window
                                                   HelpButtonFor("mes-mots", "HelpMyWords", Strings.MyWordsList, new Thickness(10, 0, 0, 0)))
                                    { Tag = "aide:mes-mots" });
         // 0.11.0: « Classe »'s Mots tab is taller than a 768-pixel screen: the window never outgrows the work area and the
-        // tab scrolls (reviewer 2026-11-27)
-        WordsTab.Content = new ScrollViewer { Content = wordsDock, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                                              HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false };
-        MaxHeight = SystemParameters.WorkArea.Height;
-        SizeChanged += (_, _) => KeepOnScreen();
+        // tab scrolls (reviewer 2026-11-27); 0.11.1: « Barre et voix » scrolls too (GeneralScroll, XAML) — at 1920×1080
+        // its last sections were under the button row
+        WordsTab.Content = Ui.Scroll(wordsDock);
+        Ui.ForwardWheel(GeneralScroll);
+        Ui.FitToWorkArea(this);
         // Enter in the word search box must not « Enregistrer » and close the window
         Tabs.SelectionChanged += (_, e) => { if (e.OriginalSource == Tabs) SaveButton.IsDefault = Tabs.SelectedItem != WordsTab; };
         _service = service;
@@ -300,13 +300,6 @@ public partial class SettingsWindow : Window
         BarFont.Andika => Strings.FontAndika,
         _ => Strings.FontSegoe,
     };
-
-    /// <summary>A tab switch resizes the window (SizeToContent): move it up when its bottom would leave the work area.</summary>
-    private void KeepOnScreen()
-    {
-        var wa = SystemParameters.WorkArea;
-        if (Top + ActualHeight > wa.Bottom) Top = Math.Max(wa.Top, wa.Bottom - ActualHeight);
-    }
 
     private void CentreOnPrimary()
     {

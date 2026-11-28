@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
-<meta name="description" content="Pépite 0.11.0, version de test de Pépite : téléchargement, avertissements de Windows, contact.">
+<meta name="description" content="Pépite 0.11.1, version de test de Pépite : téléchargement, avertissements de Windows, contact.">
 <title>Pépite — version de test</title>
 <link rel="stylesheet" href="{LATEST}/aide/style.css">
 <link rel="stylesheet" href="beta.css">
@@ -36,14 +36,14 @@
   </ul>
 </nav>
 <main id="contenu">
-<h1>Pépite : la version de test 0.11.0 est là</h1>
+<h1>Pépite : la version de test 0.11.1 est là</h1>
 <p class="chapeau">Pépite propose des mots pendant que l'on écrit, avec une image, et peut les lire à voix haute. C'est un logiciel libre et gratuit pour Windows, qui fonctionne sans Internet. Voici sa nouvelle version publique, encore une version de test (bêta), pour les enseignants et les parents qui veulent bien l'essayer avec nous. Merci&#8239;!</p>
 
 <section class="carte telecharger" aria-labelledby="telecharger">
-<h2 id="telecharger">Pépite 0.11.0, version de test</h2>
+<h2 id="telecharger">Pépite 0.11.1, version de test</h2>
 <p>Préversion du 28 novembre 2026, pour Windows 11 (64 bits). Un seul fichier d'installation, d'environ 250 Mo.</p>
-<p><a class="bouton" href="https://github.com/pepite-labs/pepite/releases/download/v0.11.0/Pepite-0.11.0-installation.exe">Télécharger Pépite 0.11.0</a></p>
-<p class="petit">Le fichier s'appelle <samp>Pepite-0.11.0-installation.exe</samp>. Tous les détails de cette version&#8239;: <a href="https://github.com/pepite-labs/pepite/releases/tag/v0.11.0">la page de la version 0.11.0 sur GitHub</a>.</p>
+<p><a class="bouton" href="https://github.com/pepite-labs/pepite/releases/download/v0.11.1/Pepite-0.11.1-installation.exe">Télécharger Pépite 0.11.1</a></p>
+<p class="petit">Le fichier s'appelle <samp>Pepite-0.11.1-installation.exe</samp>. Tous les détails de cette version&#8239;: <a href="https://github.com/pepite-labs/pepite/releases/tag/v0.11.1">la page de la version 0.11.1 sur GitHub</a>.</p>
 <p class="petit">Le mode d'emploi&#8239;: <a href="{LATEST}/aide/index.html">l'aide de Pépite</a>, en particulier <a href="{LATEST}/aide/installation.html">Installer</a> et <a href="{LATEST}/aide/enseignants.html">Enseignants et parents</a>. La même aide est installée avec Pépite et s'ouvre sans Internet.</p>
 <p class="petit">Ce qui change d'une version à l'autre, expliqué simplement&#8239;: <a href="../nouveautes/index.html">les nouveautés de Pépite</a>.</p>
 </section>
@@ -53,7 +53,7 @@
 <p>Pour être tranquille, téléchargez Pépite uniquement depuis cette page ou depuis <b>github.com/pepite-labs/pepite</b>.</p>
 
 <h3 id="edge">1. Pendant le téléchargement (Microsoft Edge)</h3>
-<p>Edge peut afficher&#8239;: <q>Pepite-0.11.0-installation.exe n'est pas fréquemment téléchargé</q>. Pour garder le fichier&#8239;:</p>
+<p>Edge peut afficher&#8239;: <q>Pepite-0.11.1-installation.exe n'est pas fréquemment téléchargé</q>. Pour garder le fichier&#8239;:</p>
 <ol class="etapes">
   <li><p>Appuyez sur <kbd>Ctrl</kbd> + <kbd>J</kbd>&#8239;: la liste des téléchargements s'ouvre.</p></li>
   <li><p>À côté du fichier, cliquez sur <b>«&#8239;…&#8239;»</b> (plus d'actions).</p></li>
@@ -66,7 +66,7 @@
 <p>Double-cliquez sur le fichier téléchargé. Une fenêtre bleue peut s'afficher&#8239;: <q>Windows a protégé votre ordinateur</q>.</p>
 <ol class="etapes">
   <li><p>Cliquez sur <b>«&#8239;Informations complémentaires&#8239;»</b>.</p></li>
-  <li><p>Vérifiez le nom de l'application&#8239;: <samp>Pepite-0.11.0-installation.exe</samp>. «&#8239;Éditeur inconnu&#8239;» est normal pour cette version de test.</p></li>
+  <li><p>Vérifiez le nom de l'application&#8239;: <samp>Pepite-0.11.1-installation.exe</samp>. «&#8239;Éditeur inconnu&#8239;» est normal pour cette version de test.</p></li>
   <li><p>Cliquez sur <b>«&#8239;Exécuter quand même&#8239;»</b>. L'installation de Pépite commence.</p></li>
 </ol>
 <div class="astuce"><p><b>Ne désactivez pas SmartScreen.</b> Il protège votre ordinateur. Il suffit d'accepter une fois, pour ce fichier-là.</p></div>
@@ -106,14 +106,17 @@
 
 <h2 id="informaticiens">Pour les informaticiens</h2>
 <div class="carte technique">
-<p>Empreinte SHA-256 de <samp>Pepite-0.11.0-installation.exe</samp>&#8239;:</p>
-<pre class="commande"><samp>ee0f1c98cfb2997f826376fb1ee52490e04455b0c07b81de42abfa12b1a5f5dd</samp></pre>
+<!-- À REMPLIR APRÈS LA CI (version 0.11.1) : remplacer le paragraphe ci-dessous par
+     <p>Empreinte SHA-256 de <samp>Pepite-0.11.1-installation.exe</samp>&#8239;:</p>
+     <pre class="commande"><samp>(les 64 caractères de la ligne de Pepite-0.11.1-installation.exe dans le SHA256SUMS.txt de la version)</samp></pre>
+     et retirer ce commentaire. -->
+<p>Empreinte SHA-256 de <samp>Pepite-0.11.1-installation.exe</samp>&#8239;: dans le fichier <samp>SHA256SUMS.txt</samp> de <a href="https://github.com/pepite-labs/pepite/releases/tag/v0.11.1">la page de la version 0.11.1</a>.</p>
 <p>Vérification dans PowerShell, dans le dossier du fichier&#8239;:</p>
-<pre class="commande"><samp>Get-FileHash .\Pepite-0.11.0-installation.exe</samp></pre>
-<p>Provenance&#8239;: le fichier a été construit par GitHub Actions à partir de l'étiquette v0.11.0 du dépôt. Avec l'outil <samp>gh</samp>, après <samp>gh auth login</samp>&#8239;:</p>
-<pre class="commande"><samp>gh attestation verify Pepite-0.11.0-installation.exe --repo pepite-labs/pepite --signer-workflow pepite-labs/pepite/.github/workflows/app.yml --source-ref refs/tags/v0.11.0</samp></pre>
+<pre class="commande"><samp>Get-FileHash .\Pepite-0.11.1-installation.exe</samp></pre>
+<p>Provenance&#8239;: le fichier a été construit par GitHub Actions à partir de l'étiquette v0.11.1 du dépôt. Avec l'outil <samp>gh</samp>, après <samp>gh auth login</samp>&#8239;:</p>
+<pre class="commande"><samp>gh attestation verify Pepite-0.11.1-installation.exe --repo pepite-labs/pepite --signer-workflow pepite-labs/pepite/.github/workflows/app.yml --source-ref refs/tags/v0.11.1</samp></pre>
 <p>Installation silencieuse pour tous les utilisateurs (compte administrateur ou SYSTEM)&#8239;:</p>
-<pre class="commande"><samp>Pepite-0.11.0-installation.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /ALLUSERS</samp></pre>
+<pre class="commande"><samp>Pepite-0.11.1-installation.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /ALLUSERS</samp></pre>
 <p>Les autres paramètres (<samp>/CURRENTUSER</samp>, <samp>/COMPONENTS</samp>, <samp>/TASKS</samp>, <samp>/CONFIG</samp>, <samp>/LOG</samp>), les codes de retour, la configuration d'établissement et la désinstallation silencieuse&#8239;: <a href="{LATEST}/DEPLOIEMENT.txt">DEPLOIEMENT.txt</a>. Voir aussi le <a href="{LATEST}/LISEZ-MOI.txt">LISEZ-MOI</a>.</p>
 </div>
 </main>

@@ -11,7 +11,7 @@
     <AssemblyName>Pepite</AssemblyName>
     <RootNamespace>Predict.Keyboard</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>0.11.0</Version>
+    <Version>0.11.1</Version>
     <Product>Pépite</Product>
     <!-- FileDescription: the name Windows shows in Task Manager and on notifications -->
     <AssemblyTitle>Pépite</AssemblyTitle>

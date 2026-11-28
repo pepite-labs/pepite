@@ -1,7 +1,7 @@
 ﻿; Pépite — installer script (plan 12, D6, D11, D13, D27 amended, D28). Inno Setup 7.1.1 (innosetup.lock.json).
 ; GPL-3.0-or-later like the rest of Pépite: an installation script is part of the Corresponding Source (GPL-3 § 1).
 ; Built by build_installer.ps1, which passes the defines below; do not compile it by hand without them:
-;   /DVersion=0.11.0 /DStageDir=<stage> /DOutDir=<release> /DTouchDate=YYYY-MM-DD /DTouchTime=HH:MM:SS
+;   /DVersion=0.11.1 /DStageDir=<stage> /DOutDir=<release> /DTouchDate=YYYY-MM-DD /DTouchTime=HH:MM:SS
 ;   [/DPrivate]  (private test build: « -test » suffix, keeps any "public": false voice pack, D28)
 ;   [/DSIGN]     (code signing, prepared, off: Q4 — SignPath later)
 ; No network: no download of any kind; the URLs below are only shown as text.

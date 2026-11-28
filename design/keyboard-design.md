@@ -71,7 +71,10 @@ UI Automation `TextPattern` first where the application supports it, with the Wi
   │                      (WTS logon time)
   ├── SettingsWindow     « Réglages »: tabs « Barre et voix » (working copy of an ISettingsTarget, live preview
   │                      (BarBuilder), Enregistrer / Annuler; « Plusieurs élèves ») and « Mots » (« Indicateur
-  │                      d'orthographe », saved by Enregistrer, plan 10B; WordEditor, saved at once)
+  │                      d'orthographe », saved by Enregistrer, plan 10B; WordEditor, saved at once). With the
+  │                      TeacherWindow (and AboutWindow): never taller than its own monitor's work area
+  │                      (Ui.FitToWorkArea), every tab's content in a ScrollViewer (Ui.Scroll: not a tab stop, the
+  │                      wheel over a list at its end scrolls the tab), the button row outside it (0.11.1)
   ├── SuggestionWindow   WPF, topmost, never activates; ShowSuggestions / Place / Contains / WarmUp / ReWarm /
   │                      RenderBar; free-position grip (manual drag); trims words that do not fit the screen;
   │                      the spelling marker left of the words (plan 10B, §6h);
@@ -1530,8 +1533,8 @@ the « ? » of the spelling indicator (0.8.1, §6h).
   banned word's own (the homograph guard); without the grammar the word alone. A typed banned word stays ✓ and is
   inserted normally. « Effacer tous les mots de la classe… » keeps the list (its confirmation says so). The `.pepite`
   export carries « Classe »'s `exclus` in `classe.mots`; « Remplacer la classe de ce poste » takes the file's list,
-  otherwise this PC's list stays (a pupil never gets a copy). The Réglages window never outgrows the work area: the Mots
-  tab scrolls. Logs, counts only: `exclusions: teacher list N classe + M machine words applied (<reason>)`,
+  otherwise this PC's list stays (a pupil never gets a copy). The Réglages window never outgrows the work area: its tabs
+  scroll (« Barre et voix » too since 0.11.1). Logs, counts only: `exclusions: teacher list N classe + M machine words applied (<reason>)`,
   `exclusions: N teacher words -> F forms (+X new), T in all`, the machine file's `motsExclus N words (M ignored)`.
 - **Erase**: « Effacer tous mes mots… » (« … de la classe… » for « Classe ») after a confirmation: a profiles backup
   `profils-<stamp>-mots.zip` first (none possible → nothing erased), then the profile's lists, « Mes fautes » and hidden

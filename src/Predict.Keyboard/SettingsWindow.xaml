@@ -50,6 +50,10 @@
   </StackPanel>
   <TabControl x:Name="Tabs" AutomationProperties.AutomationId="SettingsTabs">
   <TabItem Header="{x:Static local:Strings.TabSettingsGeneral}" AutomationProperties.AutomationId="TabGeneral">
+  <!-- 0.11.1: the tab scrolls when the window is capped at the work area (1920×1080 with a taskbar: the last sections
+       were under the button row); not a tab stop, a control focused by Tab is scrolled into view; Ui.ForwardWheel (code) -->
+  <ScrollViewer x:Name="GeneralScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False"
+                Padding="0,0,8,0">
   <Grid Margin="0,4,0,0">
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="Auto"/>
@@ -262,6 +266,7 @@
                  AutomationProperties.AutomationId="PupilsHint"/>
     </StackPanel>
   </Grid>
+  </ScrollViewer>
   </TabItem>
   <!-- plan 10A: the profile's words (WordEditor, code-built; saved at once) -->
   <TabItem x:Name="WordsTab" Header="{x:Static local:Strings.TabWords}" AutomationProperties.AutomationId="TabWords"/>

@@ -1,0 +1,47 @@
+UNE VERSION DE CORRECTION
+  - La 0.11.1 corrige deux défauts de la 0.11.0. Rien d'autre ne
+    change : les nouveautés de la 0.11.0 (écouter un mot avant de
+    l'écrire, les sons « ch » et « j », LibreOffice Writer, les
+    mots collés, le « ne » oublié…) sont toutes là. Si tu passes
+    directement de la 0.10.2 à la 0.11.1, lis aussi les notes de
+    la 0.11.0 :
+    https://github.com/pepite-labs/pepite/releases/tag/v0.11.0
+    et, pour les adultes, les pages des nouveautés :
+    https://pepite-labs.github.io/pepite/nouveautes/
+
+CORRIGÉ DANS LA 0.11.1
+  - La fenêtre Réglages ne dépasse plus de l'écran : sur un écran
+    1920 × 1080 avec la barre des tâches, le bas de l'onglet « Barre
+    et voix » (« Copier la sélection par Ctrl+C… », Démarrage,
+    Plusieurs élèves) était caché sous les boutons « Enregistrer »
+    et « Annuler ». Chaque onglet a maintenant une barre de
+    défilement quand il est plus haut que l'écran, et les boutons
+    restent visibles. La touche Tab fait défiler jusqu'au réglage
+    choisi. L'Espace enseignant défile de la même façon.
+  - Aide : la page « Un souci ? » (Dans LibreOffice) disait encore
+    que Pépite copie la sélection de Writer et qu'un mot coupé reste
+    coupé. Depuis la 0.11.0, Pépite lit la sélection directement, le
+    mot coupé est lu en entier, et il ne copie que si la lecture
+    directe échoue (jamais dans Calc). Le fichier LISEZ-MOI est
+    corrigé de même.
+
+À TESTER (merci de noter ce qui ne va pas)
+  T1. Ouvre Réglages -> Barre et voix, sur un écran 1920 × 1080
+      (100 %, 125 % et 150 %) puis 1366 × 768 : la fenêtre tient-elle
+      dans l'écran, au-dessus de la barre des tâches ? Fais défiler
+      jusqu'en bas : « Copier la sélection par Ctrl+C… », Démarrage
+      et « Plusieurs élèves » sont-ils visibles, et « Enregistrer » /
+      « Annuler » toujours là ?
+  T2. Sans souris, dans Réglages, appuie sur Tab jusqu'au bouton
+      « Plusieurs élèves » : la fenêtre défile-t-elle pour le
+      montrer ? Le Narrateur lit-il les mêmes noms qu'avant ?
+  T3. Dans l'Espace enseignant, onglets « Exporter / importer » et
+      « Mots », sur un écran 1366 × 768 : le contenu défile-t-il, et
+      « Terminer la session » / « Fermer » restent-ils visibles ?
+  T4. Ouvre l'aide -> « Un souci ? » -> Dans LibreOffice : le texte
+      sur « lire un texte » dit-il que Pépite lit la sélection
+      directement, et ne copie que si la lecture directe échoue ?
+  T5. Installe la 0.11.1 par-dessus la 0.11.0 : l'installation dit-
+      elle « Pépite 0.11.0 est déjà installé : il sera mis à jour en
+      0.11.1 » ? Après « Mettre à jour » puis « Terminer », les
+      réglages, les profils et les mots des élèves sont-ils gardés ?

@@ -100,35 +100,9 @@ public partial class AboutWindow : Window
         CloseButton.Content = Strings.AboutClose;
         Icon = AppIcon(16);
         Logo.Source = AppIcon(48);
-        SourceInitialized += (_, _) => FitToWorkArea();
-        SizeChanged += (_, _) => KeepOnScreen();   // an Expander opened: the window grows downwards
-    }
-
-    /// <summary>The work area of the monitor the window is on, in this window's DIPs (per-monitor DPI).</summary>
-    private Rect WorkArea()
-    {
-        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-        var wa = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea;   // device pixels
-        var m = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformFromDevice ?? System.Windows.Media.Matrix.Identity;
-        var tl = m.Transform(new Point(wa.Left, wa.Top));
-        var br = m.Transform(new Point(wa.Right, wa.Bottom));
-        return new Rect(tl, br);
-    }
-
-    /// <summary>MaxHeight = the monitor's work area minus a margin: the credits scroll instead of leaving the screen.</summary>
-    private void FitToWorkArea()
-    {
-        var wa = WorkArea();
-        MaxHeight = Math.Max(240, wa.Height - 32);
-    }
-
-    private void KeepOnScreen()
-    {
-        if (!IsLoaded) return;
-        var wa = WorkArea();
-        MaxHeight = Math.Max(240, wa.Height - 32);
-        if (Top + ActualHeight > wa.Bottom) Top = Math.Max(wa.Top, wa.Bottom - ActualHeight);
-        if (Top < wa.Top) Top = wa.Top;
+        // MaxHeight = the monitor's work area minus a margin: the credits scroll instead of leaving the screen; an Expander
+        // opened makes the window grow downwards, it moves up
+        Ui.FitToWorkArea(this, margin: 32);
     }
 
     /// <summary>Smallest frame of the embedded app icon at least <paramref name="min"/> px wide (null on failure: cosmetic).</summary>

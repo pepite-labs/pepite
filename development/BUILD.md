@@ -659,6 +659,17 @@ hash in, then a new « Run workflow » of `pages.yml` (`help: release`) publishe
 shows the interim sentence and a download link that works only once the release is published: approve its
 `github-pages` deployment after publishing (or reject it before dispatching the run that puts the hash in).
 
+**Release step — « Nouveautés » pages (every release, owner 2026-11-28).** At release prep, next to the version
+commit, add to `site/nouveautes/` one page per important new feature **and** one « Petites améliorations » page for
+the rest (one folder each, `index.html` + `img/`, same shell and `nouveautes.css` as the existing pages), and one card
+per page in `site/nouveautes/index.html`. Page rules: French, « vous » (parents, teachers, therapists, testers);
+real screenshots of that version taken in the test VM (installed release build, cropped, optimised PNG, no
+personal data, user name or path visible); « Page publiée le … » dated; say when the version is a bêta / test
+version; no broken link (a `{LATEST}/aide/…#anchor` link only if the anchor exists in the help that the Pages run
+publishes, otherwise no link); never an offensive word, not even as an example; no mention of where feedback came
+from. Then the site build above (0 problem(s)), a link / anchor check and the forbidden-term scan; **the owner
+proofreads the pages before they are published** (a `pages.yml` run).
+
 ## 2b. Try the predictor
 
 ```

@@ -475,10 +475,10 @@ committed.
 
 ```
 powershell -ExecutionPolicy Bypass -File installer\fetch_innosetup.ps1 -WorkDir <work> -Pin     # once: Inno Setup 7.1.1
-powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.11.0 -WorkDir <work> [-Private] [-VerifyReproducible]
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.11.1 -WorkDir <work> [-Private] [-VerifyReproducible]
 python -I -m unittest discover -s installer\tests -p test_release_lint.py
 # the CI form (plan 13, .github/workflows/app.yml): no word list, no earlier release, the data release's source archive
-powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.11.0 -WorkDir <work> -NoForbiddenList ^
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.11.1 -WorkDir <work> -NoForbiddenList ^
     -OldRelease none -EspeakSourceArchive <cache>\espeak-ng-<commit>.tar.gz
 ```
 

@@ -12,7 +12,7 @@
     var adresse = span.textContent.replace(/\s+/g, "");
     if (!/^[^@]+@[^@]+\.[a-z]+$/i.test(adresse)) { return; }
     var lien = document.createElement("a");
-    lien.href = "mailto:" + adresse + "?subject=" + encodeURIComponent("Pépite 0.11.0 — mon avis de testeur");
+    lien.href = "mailto:" + adresse + "?subject=" + encodeURIComponent("Pépite 0.11.1 — mon avis de testeur");
     lien.textContent = adresse;
     span.textContent = "";
     span.appendChild(lien);

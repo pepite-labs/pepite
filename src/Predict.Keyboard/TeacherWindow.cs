@@ -73,6 +73,9 @@ internal sealed class TeacherWindow : Window
     {
         _c = c;
         Ui.Setup(this, Strings.TeacherTitle, "TeacherWindow");
+        // 0.11.1: the « Exporter / importer » and « Mots » tabs are taller than a 768-pixel screen: every tab scrolls (Tab)
+        // and « Terminer la session » / « Fermer » stay visible
+        Ui.FitToWorkArea(this);
         var tabs = _tabs = new TabControl { Margin = new Thickness(12, 12, 12, 0) };
         AutomationProperties.SetAutomationId(tabs, "TeacherTabs");
 
@@ -319,7 +322,7 @@ internal sealed class TeacherWindow : Window
 
     private static TabItem Tab(string header, string id, UIElement content)
     {
-        var t = new TabItem { Header = header, Content = content };
+        var t = new TabItem { Header = header, Content = Ui.Scroll(content) };
         AutomationProperties.SetAutomationId(t, id);
         return t;
     }

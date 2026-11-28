@@ -149,10 +149,12 @@ UTILISER
     rien à installer ni à régler. La barre s'affiche près du
     curseur, un mot est remplacé en entier, ≈ et « ne » remplacent
     les mots corrigés. Devant « ! ? : ; », l'espace est celle de
-    LibreOffice ; s'il n'en met pas, Pépite ajoute la sienne. La
-    lecture d'une sélection passe par une copie (Ctrl+C), faite
-    d'office, puis le presse-papiers est remis comme avant (jamais
-    dans LibreOffice Calc : la feuille n'est jamais modifiée). Calc
+    LibreOffice ; s'il n'en met pas, Pépite ajoute la sienne. Une
+    sélection est lue directement, sans toucher au presse-papiers,
+    et un mot coupé par la sélection à la souris est lu en entier ;
+    Pépite ne la copie (Ctrl+C, puis le presse-papiers est remis
+    comme avant) que si la lecture directe échoue. Jamais de copie
+    dans LibreOffice Calc : la feuille n'est jamais modifiée. Calc
     et Impress : touches seulement. LibreOffice lancé avec
     SAL_ACCESSIBILITY_ENABLED=0 : touches seulement aussi, sans
     barre dans les fenêtres de dialogue de LibreOffice.

@@ -5,17 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
-<meta name="description" content="Les petites améliorations de Pépite 0.11.0 : mots collés, le « ne » oublié, Saint-Nicolas, mots jamais proposés, mise à jour plus simple, et des corrections.">
-<title>Pépite — petites améliorations de la 0.11.0</title>
+<meta name="description" content="Les petites améliorations de Pépite 0.11 : les Réglages qui défilent sur tous les écrans (0.11.1), mots collés, le « ne » oublié, Saint-Nicolas, mots jamais proposés, mise à jour plus simple, et des corrections.">
+<title>Pépite — petites améliorations de la 0.11</title>
 <link rel="stylesheet" href="{LATEST}/aide/style.css">
 <link rel="stylesheet" href="../nouveautes.css">
 <script src="{LATEST}/aide/prefs.js" defer></script>
 </head>
 <body>
-<!-- Page « Nouveautés » du site GitHub Pages (installer/build_help_site.py --pages), en ligne avec la version 0.11.0.
-     LATEST entre accolades = le dossier de la dernière version de l'aide. Les images sont de vraies captures de Pépite
-     0.11.0 (installation publiée), sans données d'élève ; dans la capture de l'installation, le nom du compte Windows
-     est flouté. Licence : CC BY-SA 4.0, sauf les pictogrammes ARASAAC visibles dans les captures (Sergio Palao, ARASAAC,
+<!-- Page « Nouveautés » du site GitHub Pages (installer/build_help_site.py --pages), en ligne avec la version 0.11.0,
+     complétée pour la 0.11.1. LATEST entre accolades = le dossier de la dernière version de l'aide. Les images sont de
+     vraies captures de Pépite 0.11.0 (installation publiée), sans données d'élève ; dans la capture de l'installation,
+     le nom du compte Windows est flouté. La capture des Réglages (reglages-defilement.png) vient de la correction 0.11.1,
+     dans la machine de test, sur un écran 1366 × 768. Licence : CC BY-SA 4.0, sauf les pictogrammes ARASAAC visibles dans les captures (Sergio Palao, ARASAAC,
      Gouvernement d'Aragon, CC BY-NC-SA 4.0) ; le dessin de saint Nicolas est un dessin original de Pépite (CC0 1.0).
      Ne jamais écrire de mot blessant ou grossier sur cette page, même en exemple. -->
 <!-- Date : la ligne « Page publiée le … » sous le chapeau garde la date de la première publication. Si la page
@@ -31,6 +32,8 @@
 </header>
 <nav class="menu" aria-label="Parties de la page">
   <ul>
+      <li><a href="#v0-11-1">Version 0.11.1</a></li>
+      <li><a href="#v0-11-0">Version 0.11.0</a></li>
       <li><a href="#mots-colles">Mots collés</a></li>
       <li><a href="#ne">Le « ne »</a></li>
       <li><a href="#trait-d-union">Saint-Nicolas</a></li>
@@ -42,39 +45,52 @@
   </ul>
 </nav>
 <main id="contenu">
-<h1>Les petites améliorations de la 0.11.0</h1>
-<p class="chapeau">À côté des grandes nouveautés, Pépite 0.11.0 apporte une série d'améliorations plus discrètes, mais utiles tous les jours en classe. Chacune en quelques lignes, avec un exemple.</p>
-<p class="petit">Page publiée le <time datetime="2026-11-28">28 novembre 2026</time>. Pépite 0.11.0 est une version de test (bêta)&#8239;: dites-nous ce qui ne va pas.</p>
+<h1>Les petites améliorations de la 0.11</h1>
+<p class="chapeau">À côté des grandes nouveautés, Pépite 0.11.0 apporte une série d'améliorations plus discrètes, mais utiles tous les jours en classe. Chacune en quelques lignes, avec un exemple. La version 0.11.1 corrige ensuite deux défauts de la 0.11.0.</p>
+<p class="petit">Page publiée le <time datetime="2026-11-28">28 novembre 2026</time>, complétée le même jour pour la version 0.11.1. Pépite 0.11 est une version de test (bêta)&#8239;: dites-nous ce qui ne va pas.</p>
 
-<h2 id="mots-colles">Encore plus de mots collés</h2>
+<h2 id="v0-11-1">Version 0.11.1 (28 novembre 2026)</h2>
+<p>Une version de correction&#8239;: rien d'autre ne change, toutes les nouveautés de la 0.11.0 sont là.</p>
+
+<h3 id="reglages-defilement">Les Réglages tiennent dans l'écran</h3>
+<p>Sur certains écrans, la fenêtre <b>Réglages</b> de la 0.11.0 était plus haute que l'écran. Les derniers réglages de l'onglet <b>Barre et voix</b> (<q>Copier la sélection par Ctrl+C…</q>, <b>Démarrage</b>, <b>Plusieurs élèves</b>) restaient cachés sous les boutons, hors de portée.</p>
+<p>Maintenant, chaque onglet a une barre de défilement quand il est plus haut que l'écran&#8239;: la molette de la souris montre la suite, et les boutons <b>Enregistrer</b> et <b>Annuler</b> restent toujours visibles. Au clavier, la touche <kbd>Tab</kbd> fait défiler jusqu'au réglage choisi. L'<b>Espace enseignant</b> défile de la même façon.</p>
+<figure class="capture"><img src="img/reglages-defilement.png" width="954" height="768" alt="La fenêtre Réglages de Pépite, onglet Barre et voix, au-dessus de la barre des tâches de Windows. Le contenu a défilé jusqu'en bas, avec une barre de défilement à droite : Voix, Lecture avec la liste Copier la sélection par Ctrl+C (Dans LibreOffice Writer seulement), Démarrage, et Plusieurs élèves avec le bouton Activer la gestion enseignant. Les boutons Enregistrer et Annuler sont visibles en bas."><figcaption>Les Réglages sur un écran 1366 × 768, défilés jusqu'en bas&#8239;: «&#8239;Plusieurs élèves&#8239;» est visible, et les boutons aussi.<br>Pictogrammes&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
+
+<h3 id="aide-libreoffice">L'aide sur LibreOffice, à jour</h3>
+<p>Dans l'aide, la page <b>Un souci&#8239;?</b>, partie <b>Dans LibreOffice</b>, disait encore que Pépite copie la sélection de Writer, et qu'un mot coupé par la sélection reste coupé. Ce n'est plus vrai depuis la 0.11.0&#8239;: Pépite lit la sélection directement, sans toucher au presse-papiers, et un mot coupé est lu en entier. Il ne copie la sélection que si la lecture directe échoue, et jamais dans Calc. L'aide et le fichier LISEZ-MOI le disent maintenant. Dans l'aide&#8239;: <a href="{LATEST}/aide/questions.html#libreoffice">Dans LibreOffice</a>&#8239;; voir aussi <a href="../libreoffice/index.html#lire">Pépite dans LibreOffice Writer</a>.</p>
+
+<h2 id="v0-11-0">Version 0.11.0 (28 novembre 2026)</h2>
+
+<h3 id="mots-colles">Encore plus de mots collés</h3>
 <p>Beaucoup d'élèves écrivent comme ils entendent, sans couper les mots. Pépite les retrouve, en vert&#8239;: <q>jtaime</q> → <b>je t'aime</b>, <q>ilya</q> → <b>il y a</b>, <q>et cé</q> → <b>c'est</b>. Aussi des expressions&#8239;: <q>parceque</q> (parce que), <q>parcontre</q>, <q>quelquechose</q>, <q>toutdesuite</q>, <q>keske</q> (qu'est-ce que), <q>silteplai</q> (s'il te plaît)…</p>
 <figure class="capture"><img src="img/mots-colles-jtaime.png" width="190" height="169" alt="Le Bloc-notes avec le texte « jtaime » et, dessous, la barre de Pépite : une seule case verte, Je t'aime, avec une image de deux personnes et des cœurs."><figcaption>«&#8239;jtaime&#8239;» en début de texte&#8239;: Pépite propose «&#8239;Je t'aime&#8239;», avec la majuscule.<br>Pictogramme&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
 <p>Quand l'élève finit un mot collé, le rond devient <b>≈</b>&#8239;; <kbd>F9</kbd> remplace le mot par les mots séparés, avec leurs espaces. Un mot qui existe vraiment n'est jamais coupé&#8239;: <q>entrain</q> ou <q>parce</q> restent comme l'élève les a écrits.</p>
 <figure class="capture"><img src="img/mots-colles-parceque.png" width="478" height="169" alt="Le Bloc-notes avec le texte « parceque » ; dans la barre, le rond bleu ≈ sur la touche F9, puis Parce que en premier, sur la touche F1."><figcaption>Après «&#8239;parceque&#8239;» et une espace, <kbd>F9</kbd> propose «&#8239;Parce que&#8239;».</figcaption></figure>
 <p class="petit">Le rond ≈ est expliqué dans l'aide&#8239;: <a href="{LATEST}/aide/orthographe.html#peut-etre">≈ bleu&#8239;: s'écrit peut-être autrement</a>.</p>
 
-<h2 id="ne">Le «&#8239;ne&#8239;» oublié</h2>
+<h3 id="ne">Le «&#8239;ne&#8239;» oublié</h3>
 <p>À l'oral, on dit <q>il veut pas</q>&#8239;; à l'écrit, il faut <q>il ne veut pas</q>. Quand une phrase a <q>pas</q>, <q>jamais</q>, <q>rien</q>, <q>personne</q> ou <q>plus</q> sans <q>ne</q>, le rond devient <b>ne</b>, sur fond ambre.</p>
 <figure class="capture"><img src="img/ne-rond.png" width="508" height="169" alt="Le Bloc-notes avec le texte « mon cousin veu pa » ; à gauche de la barre de Pépite, un rond ambre marqué ne, sur la touche F9."><figcaption>«&#8239;mon cousin veu pa&#8239;»&#8239;: le rond ambre <b>ne</b>.</figcaption></figure>
 <p>Un clic sur le rond, ou <kbd>F9</kbd>&#8239;: Pépite propose le groupe de mots corrigé. L'élève le choisit, et ses mots sont remplacés&#8239;: <q>mon cousin veu pa</q> devient <q>mon cousin ne veut pas</q>. Pépite corrige aussi les mots mal écrits du groupe.</p>
 <figure class="capture"><img src="img/ne-groupe.png" width="853" height="169" alt="Après F9, la barre de Pépite : le rond ne, puis ne veut pas en premier, sur la touche F1, puis Pa, pas, passe, passent et passes."><figcaption>Après <kbd>F9</kbd>&#8239;: «&#8239;ne veut pas&#8239;» en premier.<br>Pictogrammes&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
 <p>Aussi <q>c'est pas</q> → <q>ce n'est pas</q>, <q>on a jamais</q> → <q>on n'a jamais</q>. Pas de rond dans <q>il fait un pas</q> ou <q>il est plus grand</q>. Le rond peut se tromper (<q>j'ai pas mal de devoirs</q>)&#8239;: relire la phrase avec l'élève reste utile. Dans l'aide&#8239;: <a href="{LATEST}/aide/orthographe.html#ne">ne ambre&#8239;: il manque peut-être ne</a>.</p>
 
-<h2 id="trait-d-union">Les noms avec un trait d'union</h2>
+<h3 id="trait-d-union">Les noms avec un trait d'union</h3>
 <p>L'élève tape <q>saint-n</q>&#8239;: la barre propose <b>Saint-Nicolas</b> en premier. Il le choisit, et <q>saint-n</q> devient <q>Saint-Nicolas</q>, <b>avec la majuscule</b>. Aussi <q>Jean-B</q> (Jean-Baptiste), <q>Saint-P</q> (Saint-Pierre-et-Miquelon). Un dessin de saint Nicolas accompagne le nom&#8239;: c'est un dessin original de Pépite, libre (CC0 1.0).</p>
 <figure class="capture"><img src="img/saint-nicolas.png" width="1048" height="169" alt="Le Bloc-notes avec le texte « je vais à saint-n » ; la barre de Pépite propose Saint-Nicolas en premier, avec le dessin d'un saint Nicolas en habit rouge, crosse et mitre, puis Saint-Nazaire, ne, n', non, nom, nous et notre."><figcaption>«&#8239;je vais à saint-n&#8239;»&#8239;: «&#8239;Saint-Nicolas&#8239;» en premier, avec son dessin.<br>Dessin de saint Nicolas&#8239;: Pépite, CC0 1.0. Autres pictogrammes&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
 <p>Les mots avec un trait d'union restent proposés comme avant&#8239;: <q>dis-m</q> propose toujours <b>moi</b>. Dans LibreOffice Calc et Impress, où Pépite ne peut pas lire le texte, il écrit seulement la fin du mot (<q>saint-Nicolas</q>)&#8239;: la majuscule est à corriger à la main.</p>
 
-<h2 id="jamais">Des mots jamais proposés</h2>
+<h3 id="jamais">Des mots jamais proposés</h3>
 <p>Pépite ne propose jamais certains mots blessants ou grossiers. Un élève qui en tape un l'écrit normalement&#8239;: Pépite ne l'empêche pas, il ne le suggère pas.</p>
 <p>L'enseignant peut ajouter ses propres mots&#8239;: dans l'<b>Espace enseignant</b>, onglet <b>Mots</b>, profil <b>«&#8239;Classe&#8239;»</b>, la liste <b>«&#8239;Mots à ne jamais proposer&#8239;»</b>. Ces mots valent pour tous les élèves du poste&#8239;; un élève ne voit pas la liste et ne peut pas la changer. Une école peut aussi en ajouter par son fichier de configuration. Dans l'aide&#8239;: <a href="{LATEST}/aide/enseignants.html#lecons">Listes de mots et leçons</a>.</p>
 
-<h2 id="installation">Une mise à jour plus simple</h2>
+<h3 id="installation">Une mise à jour plus simple</h3>
 <p>L'installation de la nouvelle version reconnaît Pépite déjà installé&#8239;: <q>Pépite 0.10.2 est déjà installé&#8239;: il sera mis à jour en 0.11.0</q>. Elle rappelle les choix actuels, et deux clics suffisent&#8239;: <b>Mettre à jour</b>, puis <b>Terminer</b>. Les réglages, les profils des élèves et leurs mots sont gardés&#8239;; au premier démarrage, Pépite en fait aussi une copie dans le dossier des sauvegardes.</p>
 <figure class="capture"><img src="img/installation-mise-a-jour.png" width="596" height="462" alt="La fenêtre Installation - Pépite 0.11.0, page Mise à jour de Pépite : Pépite 0.10.2 est déjà installé, il sera mis à jour en 0.11.0. Vos réglages, les profils des élèves et leurs mots sont gardés. Suivent le dossier, les composants et les tâches actuels, la case Modifier les choix, et les boutons Mettre à jour et Annuler."><figcaption>La première page de l'installation, sur un ordinateur où la 0.10.2 était installée.</figcaption></figure>
 <p>Sur un écran agrandi (150&#8239;%, 200&#8239;%), les cases à cocher de l'installation ne sont plus coupées à moitié. Dans l'aide&#8239;: <a href="{LATEST}/aide/installation.html#mettre-a-jour">Mettre à jour</a>.</p>
 
-<h2 id="corrections">Corrections</h2>
+<h3 id="corrections">Corrections</h3>
 <ul>
   <li><b>LibreOffice, la fenêtre du mot de passe</b>&#8239;: Pépite ne montre plus, et ne lit plus, ce qui est tapé dans la fenêtre <q>Saisir le mot de passe</q>. Jusqu'à la version 0.10.2, les lettres pouvaient apparaître dans la barre, et dans le journal de diagnostic quand il était activé. Voir aussi <a href="../libreoffice/index.html#mot-de-passe">Pépite dans LibreOffice Writer</a>.</li>
   <li><b>Word, <kbd>Ctrl</kbd>+<kbd>A</kbd> sur un long document</b>&#8239;: la barre de lecture lit de nouveau la sélection.</li>

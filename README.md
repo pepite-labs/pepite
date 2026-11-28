@@ -26,7 +26,7 @@ mots personnels restent sur l'ordinateur. Les champs de mot de passe ne sont jam
 - Installation pour vous seul, ou pour tous les utilisateurs de l'ordinateur (écoles : installation silencieuse et fichier
   de configuration de l'établissement, voir `installer/DEPLOIEMENT.txt`).
 
-0.11.0 est une version de test publique (bêta : préversion, non signée), sous .NET 10 ; la première version stable
+0.11.1 est une version de test publique (bêta : préversion, non signée), sous .NET 10 ; la première version stable
 suivra les retours des testeurs.
 
 ## Licences

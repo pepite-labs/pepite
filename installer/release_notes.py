@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """French release notes of a GitHub pre-release (plan 13, A5). Stdlib only; run with ``python -I``.
 
-    python -I installer/release_notes.py --version 0.11.0 --sums <SHA256SUMS.txt> --repo pepite-labs/pepite
+    python -I installer/release_notes.py --version 0.11.1 --sums <SHA256SUMS.txt> --repo pepite-labs/pepite
                                          --out <notes.md> [--notes installer/notes/<version>.txt] [--signed]
 
 Writes the body of the release (Markdown, French): the test-version banner, what is new (``installer/notes/<ver>.txt``),

@@ -82,6 +82,32 @@ public static class Elision
     /// apostrophe (<see cref="Styled"/> writes the document's).</summary>
     public static string Join(string bare, string word) => bare + "'" + word;
 
+    // ---- 0.11.0: glued words follow-up (plan glued-words-followup.md)
+    /// <summary>0.11.0 (A): the bare forms after which « est » is looked up under the one-symbol sound <c>e</c> (« cé » →
+    /// c'est, « nè » → n'est, « kè » → qu'est): Lexique writes « est » <c>E</c>, a key too short to be indexed, and the key
+    /// <c>e</c> also holds « es » / « ai ». Only « est » — « et » shares the sound, and « c et » is corpus noise.</summary>
+    public static readonly IReadOnlySet<string> EstForms = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "c", "s", "n", "qu" };
+
+    /// <summary>0.11.0 (C): the clitics a subject pronoun may glue before a word (« jtaime » → je t'aime), as indexes into
+    /// <see cref="SplitForms"/>: m t s n l.</summary>
+    public static readonly IReadOnlyList<int> Split3Clitics = new[] { 1, 2, 3, 5, 6 };
+
+    /// <summary>0.11.0 (C): the sound of each subject pronoun at the start of a glued word, in the alphabet of
+    /// <see cref="PhoneticKey.Fold"/>, with the subjects it stands for (« jemapelle » → <c>je</c> + <c>mapel</c>, « jtaime » →
+    /// <c>j</c> + <c>tem</c>; « il » and « ils », « elle » and « elles » sound alike: the corpus counts choose). A glued subject
+    /// keeps letters its fold alone drops: the mute e (« elle » <c>ele</c>), the plural s before a consonant (« ilslont »
+    /// <c>ils</c>, « vousmavez » <c>vus</c>), the n of « on » before m / n (« onma » <c>on</c>).</summary>
+    public static readonly IReadOnlyList<(string Sound, string[] Subjects)> SubjectSounds = new (string, string[])[]
+    {
+        ("je", new[] { "je" }), ("j", new[] { "je" }), ("tu", new[] { "tu" }), ("il", new[] { "il", "ils" }), ("ils", new[] { "ils" }),
+        ("el", new[] { "elle", "elles" }), ("ele", new[] { "elle", "elles" }), ("els", new[] { "elles" }), ("eles", new[] { "elles" }),
+        ("O", new[] { "on" }), ("on", new[] { "on" }), ("nu", new[] { "nous" }), ("nus", new[] { "nous" }), ("vu", new[] { "vous" }),
+        ("vus", new[] { "vous" }),
+    };
+
+    /// <summary>0.11.0: the subject pronouns of <see cref="SubjectSounds"/>, each once.</summary>
+    public static readonly IReadOnlyList<string> Subjects = new[] { "je", "tu", "il", "ils", "elle", "elles", "on", "nous", "vous" };
+
     /// <summary>0.10.2: a joined word — a bare form, an apostrophe, a word (<c>t'aime</c>, <c>J’ai</c>, <c>qu'il</c>); never
     /// an elided word alone (<c>l'</c>) nor « aujourd'hui » / « quelqu'un » (their first part is no bare form).</summary>
     public static bool IsJoined(string? w) => IsJoined(w, out _, out _);

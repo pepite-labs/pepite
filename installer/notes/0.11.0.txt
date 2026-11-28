@@ -22,20 +22,49 @@ NOUVEAU DANS LA 0.11.0 : LES SONS « CH » ET « J »
     prononcent pareil.
   - Quand tu finis « chardin », le rond devient ≈ (et non plus ?) ;
     F9 propose « jardin ».
+  - Pour les adultes : Réglages -> Mots -> « Sons que l'élève
+    confond ». « ch / j » est coché au départ ; « f / v », « k / g »,
+    « t / d » et « p / b » se cochent pour un élève, d'après le bilan
+    du ou de la logopède (« foiture » propose alors « voiture »).
+    Réglé pour « Classe », le choix vaut pour chaque élève qui n'a
+    pas fait le sien ; le fichier de l'établissement peut le bloquer
+    (« words.soundPairs », voir DEPLOIEMENT.txt).
   - Pour les adultes, ce qui change et pourquoi :
     https://pepite-labs.github.io/pepite/nouveautes/sons-confondus/
 
+NOUVEAU DANS LA 0.11.0 : LIBREOFFICE WRITER
+  - Pépite lit le texte de LibreOffice Writer (version 25.2 ou plus
+    récente), sans rien installer ni régler.
+  - La barre s'affiche près du curseur.
+  - Tu cliques dans un mot et tu choisis un mot de la barre : le
+    mot entier est remplacé.
+  - Un mot choisi avec le rond ≈, les mots collés (« ilya ») et le
+    rond « ne » remplacent les mots mal écrits, comme dans Word.
+  - Quand tu modifies une phrase, Pépite te relit le mot ou la
+    phrase changés (une correction automatique de LibreOffice est
+    suivie).
+  - Devant « ! ? : ; », l'espace est celle de LibreOffice ; s'il
+    n'en met pas (un paragraphe en anglais, par exemple), Pépite
+    ajoute la sienne.
+  - Calc et Impress : Pépite suit seulement les touches tapées.
+
 NOUVEAU DANS LA 0.11.0 : LIRE UN TEXTE DANS LIBREOFFICE
   - Dans LibreOffice Writer, la lecture d'un texte sélectionné marche
-    maintenant d'office : Pépite copie la sélection (comme Ctrl+C), la
-    lit, puis remet le presse-papiers comme avant.
+    maintenant d'office : Pépite lit la sélection directement, même
+    sur plusieurs paragraphes (souris, double ou triple clic, Maj +
+    flèches, Ctrl+A), sans toucher au presse-papiers. Il copie la
+    sélection (comme Ctrl+C, puis remet le presse-papiers comme
+    avant) seulement si la lecture directe échoue.
   - Le réglage « Copier la sélection par Ctrl+C… » a maintenant trois
     choix : « Dans LibreOffice Writer seulement » (au départ),
-    « Partout » ou « Jamais ».
+    « Partout » ou « Jamais ». Dans Writer, il ne sert plus que si la
+    lecture directe échoue.
   - Jamais dans LibreOffice Calc, même avec « Partout » : la feuille
     n'est jamais modifiée.
-  - Un mot coupé par la sélection à la souris est lu coupé :
-    sélectionne des mots entiers.
+  - Un mot coupé par la sélection à la souris est lu en entier.
+  - Si LibreOffice reste bloqué un moment (par exemple à la première
+    ouverture de « Enregistrer sous »), Pépite suit seulement les
+    touches quelques secondes, puis relit le texte comme avant.
 
 NOUVEAU DANS LA 0.11.0 : DES MOTS JAMAIS PROPOSÉS
   - Pépite ne propose jamais certains mots blessants ou grossiers ;
@@ -47,13 +76,86 @@ NOUVEAU DANS LA 0.11.0 : DES MOTS JAMAIS PROPOSÉS
     l'établissement peut en ajouter aussi (« motsExclus », voir
     DEPLOIEMENT.txt). La liste est gardée dans le fichier .pepite.
 
+NOUVEAU DANS LA 0.11.0 : MISE À JOUR PLUS SIMPLE
+  - Pour les adultes : l'installation de la nouvelle version dit
+    « Pépite 0.10.2 est déjà installé : il sera mis à jour en
+    0.11.0 » et rappelle les choix actuels. Deux clics : « Mettre à
+    jour », puis « Terminer ». « Modifier les choix » ramène les
+    pages des composants et des tâches.
+  - Au premier démarrage de chaque nouvelle version, Pépite copie
+    les profils et les réglages dans le dossier des sauvegardes.
+  - Une version plus ancienne que celle installée est refusée
+    (désinstaller d'abord, en gardant les réglages). Une mise à
+    jour silencieuse relance le Pépite qui était ouvert ; /NOLANCER
+    l'empêche (voir DEPLOIEMENT.txt).
+
+NOUVEAU DANS LA 0.11.0 : ENCORE PLUS DE MOTS COLLÉS
+  - Tu colles plusieurs mots ? Pépite les retrouve : « jtaime »
+    propose « je t'aime », « ilya » propose « il y a », « et cé »
+    propose « c'est », en vert.
+  - Aussi des expressions : « parceque » (parce que), « parcontre »,
+    « quelquechose », « toutdesuite », « keske » (qu'est-ce que),
+    « silteplai » (s'il te plaît)…
+  - Quand tu finis un mot collé, le rond devient ≈ ; F9 remplace
+    le mot par les mots séparés, avec leurs espaces.
+  - Un mot qui existe vraiment n'est pas coupé : « entrain »,
+    « jeté », « parce » restent comme tu les as écrits.
+
+NOUVEAU DANS LA 0.11.0 : LE « NE » OUBLIÉ
+  - Tu écris « il veut pas » ? À l'écrit, il faut « ne ». Le rond
+    devient « ne », sur fond ambre ; clique dessus ou appuie sur F9 :
+    Pépite propose « il ne veut pas ». Choisis-le : tes mots sont
+    corrigés.
+  - Aussi « c'est pas » (ce n'est pas), « je l'ai pas » (je ne l'ai
+    pas), « on a jamais » (on n'a jamais), « j'aime plus. » (je
+    n'aime plus.), et même « mon cousin veu pa » (ne veut pas).
+  - Pas de rond pour « il fait un pas », « il est plus grand »,
+    « de rien », « une personne ». Il peut se tromper sur « j'ai
+    pas mal de… » : relis toujours ta phrase.
+  - Pour « plus », seulement avant un point (ou ! ?) ou la fin de
+    la ligne : « j'en veux plus, merci » reste comme il est.
+  - Le rond « ne » marche aussi dans LibreOffice Writer. Pas dans
+    Calc ni Impress : Pépite ne peut pas y lire le texte, il ne
+    pourrait pas corriger les mots.
+
+NOUVEAU DANS LA 0.11.0 : LES NOMS AVEC UN TRAIT D'UNION
+  - Tu tapes « saint-n » ? La barre propose « Saint-Nicolas » en
+    premier, avec sa majuscule : choisis-le, et « saint-n » devient
+    « Saint-Nicolas ». Aussi « Jean-B » (Jean-Baptiste),
+    « Saint-P » (Saint-Pierre-et-Miquelon).
+  - Tu tapes « saint » sans le trait d'union : « Saint-Marin » est
+    proposé à la dernière place de la barre.
+  - « dis-m » propose toujours « moi » en premier, « a-t-i »
+    propose « il ».
+  - Dans Calc et Impress, Pépite ne peut pas lire le texte : il
+    écrit seulement la fin du mot (« saint-Nicolas ») ; corrige la
+    majuscule toi-même.
+
+NOUVEAU DANS LA 0.11.0 : UN DESSIN POUR SAINT-NICOLAS
+  - Quand Pépite propose « Saint-Nicolas », un dessin de saint
+    Nicolas est au-dessus du mot (dessin original de Pépite, libre :
+    CC0 1.0). « Sint-Niklaas », le nom néerlandais de la commune,
+    n'a pas de dessin.
+
 CORRIGÉ DANS LA 0.11.0
+  - Dans LibreOffice, la fenêtre « Saisir le mot de passe » : Pépite
+    ne montre plus, et ne lit plus, ce qui y est tapé. Jusqu'à la
+    version 0.10.2, les lettres pouvaient apparaître dans la barre
+    (et dans le journal de diagnostic, quand il était activé).
   - LibreOffice : après un mot choisi dans la barre, « ! ? : ; »
     n'a plus deux espaces devant (celle de Pépite et celle de
     LibreOffice) : seule celle de LibreOffice reste.
   - LibreOffice est beaucoup moins ralenti : la barre suit la frappe
-    sans retard. Elle s'affiche près de la souris (LibreOffice ne dit
-    pas où est le curseur).
+    sans retard.
+  - Dans Word, Ctrl+A sur un long document : la barre de lecture lit
+    de nouveau la sélection (le défaut était aussi dans la 0.10.2).
+  - Quand une fenêtre s'ouvre par-dessus ton texte, Pépite lit bien
+    le texte de la fenêtre qui est devant (le défaut était aussi dans
+    la 0.10.2).
+  - Pour les adultes : sur un écran agrandi (150 %, 200 %), les
+    cases à cocher de l'installation ne sont plus coupées à moitié.
+    La dernière page ne parle plus d'une icône sur le Bureau quand
+    il n'y en a pas : « Pépite se trouve dans le menu Démarrer ».
 
 À TESTER (merci de noter ce qui ne va pas)
   T1. Avec le Narrateur : tape « la mai » dans le Bloc-notes, mets le
@@ -69,8 +171,10 @@ CORRIGÉ DANS LA 0.11.0
       puis une espace : le rond reste-t-il ✓ ?
   T5. Dans LibreOffice Writer, sélectionne une phrase à la souris,
       puis un mot par un double-clic, puis tout avec Ctrl+A : la barre
-      de lecture apparaît-elle à chaque fois, et ▶ la lit-il ? Après,
-      Ctrl+V colle-t-il toujours ce que tu avais copié avant ?
+      de lecture apparaît-elle à chaque fois, et ▶ la lit-il ? Une
+      sélection qui coupe un mot le lit-elle en entier ? Une sélection
+      sur trois paragraphes est-elle lue en entier ? Après, Ctrl+V
+      colle-t-il toujours ce que tu avais copié avant ?
   T6. Dans Writer, tape « Bonj », choisis « Bonjour » dans la barre,
       puis tape « ! » : n'y a-t-il qu'une seule espace devant « ! » ?
       Dans le Bloc-notes, la même chose donne-t-elle aussi une seule
@@ -87,3 +191,62 @@ CORRIGÉ DANS LA 0.11.0
       entier : s'écrit-il normalement ? Dans le profil d'un élève, la
       liste « Mots à ne jamais proposer » est-elle absente, et le mot
       a-t-il disparu de « Mots de la classe » ?
+  T9. Dans Réglages -> Mots, coche « f / v » sous « Sons que l'élève
+      confond » et enregistre. Dans le Bloc-notes, tape « la foiture » :
+      « voiture » est-il proposé en vert ? Décoche « ch / j » et
+      enregistre : après « chardin » et une espace, le rond est-il
+      un ? rouge ?
+  T10. Installe la 0.11.0 par-dessus la 0.10.2 : la première page
+      dit-elle « mis à jour en 0.11.0 », et deux clics (« Mettre à
+      jour », « Terminer ») suffisent-ils ? Les profils et les mots
+      sont-ils toujours là ? Sur un écran agrandi (150 % ou plus), les
+      cases à cocher des pages de l'installation sont-elles entières ?
+  T11. Dans le Bloc-notes, tape « jtaime » : « je t'aime » est-il
+      proposé en vert ? Tape « Ilya » au début d'une phrase : « Il y
+      a » est-il proposé, avec sa majuscule ? Choisis-le : la barre
+      propose-t-elle ensuite la suite de « il y a » ?
+  T12. Tape « parceque » puis une espace : le rond est-il ≈, et F9
+      remplace-t-il le mot par « parce que » ? Tape « et cé » :
+      « c'est » est-il proposé ? Et « il sé » : « s'est » ?
+  T13. Dans le Bloc-notes, tape « mon cousin veu pa » puis une
+      espace : le rond devient-il « ne », sur fond ambre ? F9
+      propose-t-il « ne veut pas » ? Choisis-le : la phrase
+      devient-elle « mon cousin ne veut pas », et Pépite le dit-il ?
+  T14. Tape « C'est pas » au début d'une phrase, puis « j'aime
+      plus. » et une espace : F9 propose-t-il « Ce n'est pas », puis
+      « je n'aime plus » ? Tape « il fait un pas » et « il est plus
+      grand » : n'y a-t-il aucun rond « ne » ?
+  T15. Dans LibreOffice Writer, tape quelques mots : la barre
+      est-elle juste sous la ligne que tu tapes (pas près de la
+      souris) ? Va à la ligne et continue : la suit-elle ?
+  T16. Dans Writer, écris « la maison est », clique entre « mai » et
+      « son », choisis « maison » : obtiens-tu « la maison est »,
+      sans lettre en trop ? Tape « la maizon » et une espace, F9,
+      choisis « maison » : le mot est-il remplacé ?
+  T17. Dans Writer, tape « mon cousin veu pa » et une espace : le
+      rond « ne » apparaît-il, et le groupe choisi remplace-t-il les
+      mots ? Mets un paragraphe en anglais (Outils -> Langue -> Pour
+      le paragraphe -> Anglais), tape « Bonj », choisis « Bonjour »,
+      tape « ! » : Pépite met-il une espace fine devant « ! », une
+      seule ?
+  T18. Dans Writer, Fichier -> Enregistrer sous, coche « Enregistrer
+      avec mot de passe » : dans la fenêtre du mot de passe, la barre
+      reste-t-elle cachée et Pépite ne dit-il rien ?
+  T19. Dans le Bloc-notes puis dans Word, tape « je vais à saint-n » :
+      « Saint-Nicolas » est-il le premier mot de la barre ? Choisis-le :
+      obtiens-tu « je vais à Saint-Nicolas » (avec la majuscule, sans
+      « saint- » en double) ? Tape ensuite « dis-m » : « moi » est-il
+      toujours proposé en premier ?
+  T20. Images des noms propres activées, tape « Saint-Ni » : le
+      dessin de saint Nicolas est-il au-dessus de « Saint-Nicolas » ?
+      Tape « Sint-Ni » : « Sint-Niklaas » est-il proposé sans dessin ?
+  T21. Dans LibreOffice Writer, choisis Fichier -> Enregistrer sous
+      (Ctrl+Maj+S), attends un peu, ferme la fenêtre (Échap), puis tape
+      quelques mots : la barre revient-elle sous le texte tapé après
+      quelques secondes au plus ?
+  T22. Dans les réglages, mets « Copier la sélection par Ctrl+C… » sur
+      « Jamais », puis sélectionne une phrase dans Writer : la barre de
+      lecture la lit-elle quand même ?
+  T23. Dans Word, ouvre un long document (plusieurs pages) et appuie
+      sur Ctrl+A : la barre de lecture apparaît-elle, et ▶ lit-il le
+      texte ?

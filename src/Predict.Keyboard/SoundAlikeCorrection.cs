@@ -97,6 +97,111 @@ internal static class SoundAlikeCorrection
         return true;
     }
 
+    // ---- 0.11.0 (plan negation): the group tile of the « ne » marker
+    /// <summary>What the « ne » marker's group tile is about (UI thread): the group as typed (<see cref="Original"/>, its
+    /// separators included), the separators typed after it (<see cref="Tail"/>), the corrected group (straight apostrophes),
+    /// the tracker version and the window when the list was shown, and that list.</summary>
+    internal sealed record GroupTarget(string Original, string Tail, string Replacement, long Version, IntPtr Fg,
+                                       IReadOnlyList<Predict.Core.Suggestion> List, string Rule);
+
+    /// <summary>
+    /// The decision after the read of a group replacement (pure): only when the document read is Ok and ends with the group
+    /// and its tail (<paramref name="agrees"/>) — anything else does NOTHING (plan negation, § 3): the keys alone never delete
+    /// several words, so the keys-only allow-list (<see cref="KeysOnlyHosts"/>) and the hosts that cannot be read
+    /// (LibreOffice: <see cref="NeverKeysOnly"/>) get nothing, and a group is never inserted at the caret.
+    /// </summary>
+    public static Action DecideGroup(ReadStatus status, bool agrees) =>
+        status == ReadStatus.Ok && agrees ? Action.Replace : Action.Nothing;
+
+    /// <summary>
+    /// Does the document text before the caret end with the group <paramref name="span"/> and then <paramref name="tail"/>
+    /// — the letters in any case, ' and ’ alike (an app may curl them), a line break as <c>\r\n</c>, <c>\n</c> or <c>\r</c>,
+    /// every other separator exactly — with no letter glued before? <paramref name="docSpan"/>: the group as the document
+    /// has it.
+    /// </summary>
+    public static bool DocumentEndsWith(string before, string span, string tail, out string docSpan)
+    {
+        docSpan = "";
+        if (string.IsNullOrEmpty(before) || string.IsNullOrEmpty(span) || string.IsNullOrEmpty(tail)) return false;
+        int at = before.Length;
+        for (int k = tail.Length - 1; k >= 0; k--)
+        {
+            char c = tail[k];
+            if (at == 0) return false;
+            if (IsLineBreak(c))
+            {
+                if (!IsLineBreak(before[at - 1])) return false;
+                at -= at >= 2 && before[at - 2] == '\r' && before[at - 1] == '\n' ? 2 : 1;
+            }
+            else if (Same(before[at - 1], c)) at--;
+            else return false;
+        }
+        int start = at - span.Length;
+        if (start < 0) return false;
+        for (int i = 0; i < span.Length; i++) if (!Same(before[start + i], span[i])) return false;
+        if (start > 0 && Predict.Core.SpellingIndicator.IsWordChar(before[start - 1])) return false;
+        docSpan = before.Substring(start, span.Length);
+        return true;
+
+        static bool Same(char a, char b) =>
+            a == b || Predict.Core.Elision.IsApostrophe(a) && Predict.Core.Elision.IsApostrophe(b) || char.ToLowerInvariant(a) == char.ToLowerInvariant(b);
+    }
+
+    // ---- 0.11.0 (plan hyphen-names): a compound name tile that rewrites the head (« saint-n » → « Saint-Nicolas »)
+    /// <summary>What a compound tile is about (UI thread, set by the update that showed it): the head as typed, the text it
+    /// replaces (<see cref="Span"/>: head, hyphen, letters typed after it), the tracker version and the window, and the bar.</summary>
+    internal sealed record CompoundTarget(string Head, string Span, long Version, IntPtr Fg, IReadOnlyList<Predict.Core.Suggestion> List);
+
+    /// <summary>
+    /// The decision after the read of a compound replacement (pure). Ok and the document ends with the span → replace the
+    /// span by the whole name. Ok but the document differs, Timeout, a selection, Unavailable → the ending goes in at the
+    /// caret (« saint-Nicolas »: the head is never deleted unseen) — Unavailable on the keys-only allow-list
+    /// (<see cref="KeysOnlyHosts"/>, empty in the product) replaces from the keys. Stale (a key or a jump came first) or a
+    /// password field → nothing.
+    /// </summary>
+    public static Action DecideCompound(ReadStatus status, bool agrees, bool keysOnlyAllowed) => status switch
+    {
+        ReadStatus.Stale or ReadStatus.Password => Action.Nothing,
+        ReadStatus.Ok => agrees ? Action.Replace : Action.Insert,
+        // as the ≈ path: the keys alone only over a separator such hosts do not rewrite (the span's own « - »)
+        ReadStatus.Unavailable => keysOnlyAllowed && KeysOnlyCertain('-') ? Action.ReplaceKeysOnly : Action.Insert,
+        _ => Action.Insert,
+    };
+
+    /// <summary>Does the document text before the caret end with <paramref name="span"/> (letters in any case: an app may
+    /// have capitalised it) right at the caret, with no letter or hyphen glued before? <paramref name="docSpan"/>: the span as
+    /// the document has it.</summary>
+    public static bool DocumentEndsWithSpan(string before, string span, out string docSpan)
+    {
+        docSpan = "";
+        if (string.IsNullOrEmpty(before) || string.IsNullOrEmpty(span) || before.Length < span.Length) return false;
+        int start = before.Length - span.Length;
+        if (string.Compare(before, start, span, 0, span.Length, StringComparison.OrdinalIgnoreCase) != 0) return false;
+        if (start > 0 && (Predict.Core.SpellingIndicator.IsWordChar(before[start - 1]) || before[start - 1] == '-')) return false;
+        docSpan = before.Substring(start);
+        return true;
+    }
+
+    /// <summary>The corrected group with a capital first letter when it opens a sentence (« c'est pas » at a start → « Ce
+    /// n'est pas ») or when the document has one there (<paramref name="docSpan"/>: the app may have capitalised « C'est
+    /// pas »); otherwise as the detector gave it (it keeps the typed capital).</summary>
+    public static string CasedGroup(string replacement, bool sentenceStart, string? docSpan = null)
+    {
+        if (string.IsNullOrEmpty(replacement) || !char.IsLower(replacement[0])) return replacement;
+        bool upper = sentenceStart || docSpan is { Length: > 0 } d && char.IsUpper(d[0]);
+        return upper ? char.ToUpperInvariant(replacement[0]) + replacement[1..] : replacement;
+    }
+
+    /// <summary>The apostrophe the replacement is written with: the document's (a curled one in the group read), else
+    /// <paramref name="fallback"/> (the tracker's <see cref="WordTracker.ApostropheStyle"/>).</summary>
+    public static char ApostropheOf(string docSpan, char fallback) =>
+        docSpan.IndexOf('’') >= 0 ? '’' : docSpan.IndexOf('\'') >= 0 ? '\'' : fallback;
+
+    /// <summary>The keys of a group replacement: <see cref="Build(int, string, char, UIntPtr)"/> over the group and its tail
+    /// (the tail's last separator plays the word's separator: a line break is never deleted nor retyped).</summary>
+    public static Native.INPUT[] BuildGroup(string original, string tail, string replacement, UIntPtr marker) =>
+        Build(original.Length + tail.Length - 1, replacement + tail[..^1], tail[^1], marker);
+
     /// <summary>The correction with the capital of the original word, when it had one (« Maizon » → « Maison »), all
     /// capitals when it was all capitals (« MAIZON » → « MAISON »); the correction's own capitals (a name) are kept.</summary>
     public static string CasedLike(string correction, string original)
@@ -123,5 +228,40 @@ internal static class SoundAlikeCorrection
         list.AddRange(inner);
         list.Add(arrows[2]); list.Add(arrows[3]);
         return list.ToArray();
+    }
+}
+
+/// <summary>
+/// 0.11.0 (plan negation, owner 2026-11-27): which windows' text the keyboard can read for a group replacement — the « ne »
+/// marker is shown only where choosing its group can replace the words (the replacement needs a read). A window never read
+/// yet follows its host: a host known not to give its text (LibreOffice today: <see cref="HostApps.UiaTextUnavailable(IntPtr)"/>)
+/// starts unreadable, any other readable. Any Ok read makes it readable (a LibreOffice window that becomes readable gets the
+/// marker back by itself); only the group's own correction read coming back Unavailable makes it unreadable (re-review: a
+/// focus or caret read is Unavailable for reasons of content or timing in readable apps — the caret after « 2024 », no
+/// focused element yet, Word busy — and must not hide the marker). Keyed by window and process id (a recycled handle in
+/// another process is « never read »). Thread-safe; bounded (cleared when full).
+/// </summary>
+internal sealed class ReadableWindows
+{
+    private readonly Dictionary<IntPtr, (uint Pid, bool Ok)> _known = new();
+    private readonly object _gate = new();
+
+    /// <param name="groupRead">the read of a « ne » group replacement (the only read whose Unavailable is learned).</param>
+    public void Note(IntPtr fg, uint pid, ReadStatus status, bool groupRead)
+    {
+        if (fg == IntPtr.Zero) return;
+        bool? ok = status == ReadStatus.Ok ? true : status == ReadStatus.Unavailable && groupRead ? false : null;
+        if (ok is not { } v) return;
+        lock (_gate)
+        {
+            if (_known.Count >= 64 && !_known.ContainsKey(fg)) _known.Clear();
+            _known[fg] = (pid, v);
+        }
+    }
+
+    /// <param name="unreadableHost">the window's host is known not to give its text (before any read of it).</param>
+    public bool MayReplace(IntPtr fg, uint pid, bool unreadableHost)
+    {
+        lock (_gate) return _known.TryGetValue(fg, out var k) && k.Pid == pid ? k.Ok : !unreadableHost;
     }
 }

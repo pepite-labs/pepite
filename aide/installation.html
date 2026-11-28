@@ -83,7 +83,12 @@
 <p>Cette section restera ici tant que l'installation n'est pas signée.</p>
 
 <h2 id="mettre-a-jour">Mettre à jour</h2>
-<p>Lancez l'installation de la nouvelle version. Pépite est fermé pendant la mise à jour ; vos choix, les réglages et les profils sont gardés. Pépite ne se met jamais à jour tout seul.</p>
+<p>Lancez l'installation de la nouvelle version. Elle dit <q>Pépite 0.10.2 est déjà installé : il sera mis à jour en 0.11.0</q> (avec vos numéros de version) et rappelle le dossier, les composants et les tâches de l'installation actuelle. Cliquez sur <b>Mettre à jour</b>, puis sur <b>Terminer</b> : c'est tout. Pépite est fermé pendant la mise à jour ; vos choix, les réglages et les profils sont gardés. Pépite ne se met jamais à jour tout seul.</p>
+<ul>
+  <li>Pour changer les composants ou les tâches, cochez d'abord <b>Modifier les choix</b> : les pages habituelles reviennent.</li>
+  <li>Au premier démarrage de la nouvelle version, Pépite copie les profils et les réglages dans le dossier des sauvegardes (voir <a href="#donnees">Où sont les données ?</a>).</li>
+  <li>Une version plus ancienne que celle installée est refusée. Pour revenir en arrière, désinstallez d'abord Pépite en répondant <b>Non</b> à la question sur les réglages (ils sont gardés), puis lancez l'installation de l'ancienne version.</li>
+</ul>
 
 <h2 id="desinstaller">Désinstaller</h2>
 <p><b>Paramètres</b> Windows → <b>Applications</b> → <b>Applications installées</b> → <b>Pépite</b> → <b>Désinstaller</b>.</p>
@@ -92,7 +97,7 @@
 <h2 id="donnees">Où sont les données ?</h2>
 <ul>
   <li>Réglages, profils et mots des élèves : <samp>%APPDATA%\Pepite-Prediction</samp>, pour chaque compte Windows.</li>
-  <li>Une sauvegarde par jour des profils : <samp>%LOCALAPPDATA%\Pepite-Prediction\sauvegardes</samp>.</li>
+  <li>Une sauvegarde par jour des profils, et une au premier démarrage de chaque nouvelle version : <samp>%LOCALAPPDATA%\Pepite-Prediction\sauvegardes</samp>.</li>
   <li>Configuration de l'établissement, facultative : <samp>%PROGRAMDATA%\Pepite-Prediction\settings.json</samp>.</li>
   <li>Pépite n'écrit rien dans son dossier d'installation.</li>
 </ul>

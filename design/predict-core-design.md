@@ -222,7 +222,8 @@ restricted figure; `NamesRecognisedFrom = 99` gives the 0.10.1 results. Pack 202
 first names of all time into tier 1 (rang max(recent, lowest recent-tier rang, 0.5 × all-time): Roger 481st, Martine 523rd).
 `Check`: a pack form is Known; the same letters as a pack form in another case or without
 accents are SoundsLike. `KnowsAny` includes exact pack forms. Measures: [evaluation.md](../development/evaluation.md) §
-Names pack.
+Names pack. **0.11.0**: hyphenated names after the hyphen is typed (« saint-n » → « Saint-Nicolas ») and in the last place
+for a word that starts one (« saint » → « Saint-Marin »): § 5k.
 
 ## 5e. Grammar data and grammatical prediction (plan 11: 10D-0 data, 10D-1 agreement, 0.9.0)
 
@@ -409,6 +410,61 @@ Weights and gates: [evaluation.md](../development/evaluation.md) § Glued words.
 p99 12.7–13.6 µs, `--bench-split` p99 0.6 ms once warm; its isolated maxima (12–26 ms) also occur with splits off
 (10–17 ms): pre-existing, accepted by the owner (2026-11-18), investigated separately (TODO: GC or scheduling).
 
+### 0.11.0 — « cé », « jtaime », « ilya » (plan glued-words-followup, owner 2026-11-27)
+
+Three narrow kinds on the same machinery, each with its switch (`EstSplits`, `Split3`, `Expressions`; on by default;
+`Splits = false` turns them all off; the three off give the 0.10.2 results byte for byte). They share the one cap
+`SplitMax` = 2 of glued tiles, kind Phonetic (green), no capital inside a sentence, nothing when an apostrophe / hyphen
+is typed.
+
+```
+ typed fold f ─┬─ 0.10.2: bare sound + rest ──► word (exact for one symbol, prefix range) ─► b'w      [any typed word, SplitKnown]
+               │    + A: rest = e after c s n qu ──► « est » (Lexique's `E` is too short to be indexed)
+               │    + A: « ce » / « se » typed in full (f = s) ──► c'est / s'est (+ the literal-prefix bonus)
+               ├─ C: subject sound (je j tu il el ele O nu vu) + clitic m t s n l + word ─► « S b'w »  [unknown word, ≥ 4 letters]
+               │     attested c(S, b, w) ≥ 50 in the trigrams preloaded at load (45 contexts)
+               └─ B: f a prefix of an expression's sound key, longer than its first word ─► « il y a »  [unknown word, ≥ 4 letters]
+ finished unknown word ─► Check: the same, on the WHOLE key (B also by its accent-stripped letters), merged by an
+                          estimated frequency ─► ≈ list ─► RankCorrections: any multi-word candidate scored by ChainScore
+```
+
+- **A — « est »** (`Elision.EstForms` = c s n qu; `_estIdx`): when the rest after the bare sound is exactly `e`, « est »
+  joins the words of that key (« es », « ai ») with the same filters and score (`SplitPair`, `Injectable`); « et » never
+  (it shares the sound, and « c et » is corpus noise). The **mute e**: « ce » / « se » fold to `s` (no vowel after the
+  bare sound), so the typed letter's own bare form gets the rest `e` (« ce » → c'est, never s'est; bar only — « ce » is ✓).
+  That tile also gets the **literal-prefix bonus** (`MuteEPrefix`, a deviation from the plan's « same score »: « ce » is the
+  start of « cest »; without it the frequent « ce… » completions kept c'est out of the 25 first candidates).
+  In the bar the sound `e` must be the typed word's last letter, an e, and the word 3 letters at most (« cé », « nè »,
+  « kè », « qué »; another narrowing of the plan: « nei » is the start of neige, a dys guard). `EstFromKnown` (default
+  true; false = no « est » for a typed word that is a word, « ce » / « se » excepted).
+- **C — three words** (`Elision.SubjectSounds`, `Split3Pass`): the fold starts with a subject's sound — also with the
+  letters a glued subject keeps (« je » `je` / `j`, « elle » `el` / `ele`, « ils » `il` / `ils`, « vous » `vu` / `vus`, « on »
+  `O` / `on`) — the rest splits as a glued word over m' t' s' n' l' (a « s' » read `z` after a vowel is read back
+  as `s`: « ellesapelle »), the word is looked up as above (+ « est » after s' n'). Attested: the trigram « subject clitic
+  word » ≥ `Split3MinCount` = 50 (`ReadGluedCounts` on the second connection: 45 contexts, ≈ 2 500 rows, 209 ≥ 50). Score
+  `ChainScore(ctx, [S, b, w]) + grammar(ctx ⊕ S ⊕ b, w) − WSplit3`; tile « S b'w ». Only for a typed word that is no word
+  (`Split3Known` = false, owner Q1), from `Split3From` = 4 letters.
+- **B — expressions** (`GluedExpressions`: 22 B1 rows, 11 B2 rows, ours): at load a row is kept when every token is a
+  lexicon form and its glued letters are no word (« cava », « tues », « tuas » are: ça va, tu es, tu as left out; owner
+  Q2); its n-gram count (≥ `ExprMinCount` = 100) and Check estimate `log10(f(t1) × c(t1..tn) / c(t1, ·) + 1)` are read
+  then. Sound keys (≤ 3): the fold of the glued letters; the tokens' Lexique pronunciations read as one word; the same
+  with the clitics' mute e silent (« eske » → est-ce que, « keske », « toulmonde »). A key equal to a word's whole key is
+  counted (10 on the shipped data), not dropped: the ranking orders them (« parceque » ≈ parce que, then parsec). Bar:
+  from `ExprFrom` = 4 letters, unknown typed word (`ExprKnown` = false), the typed fold a prefix of a key and longer than
+  its first word's part (« il » never shows « il y a »), and not the start of a lexicon word (`ExprNotPrefix`: « Sylv » is
+  Sylvie, not « s'il vous plaît »; the plan's fallback `ExprFrom` = 5 would also lose « ilya »); score `ChainScore − WExpr`.
+  **B2** (« ilest » → il est, « ilé » ≈ il est, `ExprB2`) is **off**: it failed its own gates (plan fallback « drop B2 »).
+- **`ChainScore(ctx, tokens)`** = `Lm(ctx, t1) + Σ k≥2 [Lm(ctx ⊕ t1..tk−1, tk) + Lift k]`, Lift k = ChainLift for each later
+  token (`WLm × (3 − min(have k, reach)) × −log10 α`); a bare form's successors from the load, « subject clitic » ones from
+  the preload, the others from the cached n-gram reads. `RankCorrections` scores any multi-word candidate (no capital,
+  every token a lexicon form) with it, its last word with the agreement term after the others.
+- **D35**: every lexicon token passes `Injectable` (a bare form its entry flag), and **`ExcludedWords.IsExcluded` also
+  tests each space-separated part** (and the part after each apostrophe in it): a listed word is never inside a tile, the
+  safety net included (`Predict.Eval --probe-exclusions` types every listed form glued after a clitic and a subject +
+  clitic too). Side effect: a personal word or name of several words with a listed word in it is now never offered either.
+
+Numbers and gates: [evaluation.md](../development/evaluation.md) § Glued words follow-up (0.11.0).
+
 ## 5h. Sound confusions (0.11.0, plan dys-sound-tolerance, owner 2026-11-26)
 
 Voiced / voiceless confusions are « frequent and persistent » in phonological dysorthographia, and the pairs differ per
@@ -439,7 +495,16 @@ letter edits) bridges.
   themselves, then the tolerant ones among themselves: a confusion never goes ahead of an exact sound-alike.
 - **Weights**: `WTolerant` = 1.5, the only value tried that leaves every curated set identical (0.5 is best on `chj-full`
   top-1, but 0.5 and 1.0 move one `cases-names` rank); held-out KSS unchanged at 1.0 and 1.5 (0.5 not run) (evaluation.md § Sound confusions). **Default `Tolerance = ChJ`, `WTolerant` = 1.5**
-  (owner 2026-11-26, D33); Phase 2 adds the per-profile setting « Sons que l'élève confond ».
+  (owner 2026-11-26, D33).
+- **Per profile (Phase 2, D33)**: the keyboard sets `Tolerance` from the profile's « Sons que l'élève confond »
+  (`words.soundPairs.*`, keyboard-design §6c / §6h): ch/j on by default, f/v, k/g, t/d, p/b ticked per pupil. Measured
+  with each pair (evaluation.md § Sound confusions — the other pairs): `<pair>-full` hit@8 0.91–1.00, the guards never
+  move, KSS ≤ 0.01 pt per pair and −0.10 pt at most with all five (W). `Check` p99 on a loaded host: all five 19.0 µs,
+  ch/j 19.1 µs (`--spelling`; ch/j alone also over 20 µs in other runs): it measures the host, so the plan's fallback
+  « one swap only in Check » is **not applied** (2026-11-27: one call per finished word, all five opt-in, and one swap
+  would miss the double confusions of the pupils who tick several pairs); a quiet-host re-measure is due before release.
+  A word reached through a ticked pair is **green** even when the edit pass scores it higher (owner 2026-11-27: « la
+  dable » → table with t/d ticked; the better score is kept, so the rank does not move).
 - Speed: ≤ 10 extra binary searches per query and per `Check`; `--bench` within noise, `Check` p99 13.5 µs.
 
 ## 5i. Mots exclus (0.11.0, plan offensive-words, D35)
@@ -477,6 +542,97 @@ is accepted, ✓, inserted, echoed and read like any other (owner Q1).
 - **Load log**: counts per category, the file's SHA-256 and the time — never a word.
 - Cost: one array read per scored entry (an excluded entry is cheaper than before: it is not scored), a few hash
   lookups per string candidate; measured in evaluation.md § Mots exclus.
+
+## 5j. The missing « ne » (0.11.0, plan negation, owner 2026-11-17)
+
+Spoken French drops the « ne » of a negation; a pupil who writes by ear writes « il veut pas ». `Negation.Find` (pure,
+`Predict.Core/Negation.cs`) reads the clause just typed and gives the corrected group, or nothing; the engine's entry point
+is `MissingNe(clause, startKnown, plusAllowed)` (`NegationOn`, default on; null without the grammar). `Predict` and `Check`
+never call it: KSS and the ≈ lists are unchanged.
+
+```
+ clause (≤ 12 words since . ! ? … ; : , or a line break; each exact or not) + tail (« ␣ », « .␣ », « ␣! », « .⏎ »)
+   R0  last word: pas jamais rien personne guère, or ≈ to one (« pa », « jamé »); « plus » only when the tail holds
+       . ! ? … or a line end (owner 2026-11-27: not , ; :); never next to ' or -
+   R1  the word before it: a finite verb (French.lex bits) agreeing with R3, or a ≈ word whose first agreeing
+       candidate is one (candidates with a space, an apostrophe or a hyphen are skipped: glued words) — red → nothing;
+       a noun / verb homograph after determiner + adjective is that group's noun (« la pauvre demeure pas ») → nothing
+   R2  0–3 object clitics before the verb (AgreementContext.IsObjectClitic: me te se le la les l lui leur y en nous vous)
+   R3  the subject: a subject pronoun (TryPersons: je … elles, ça, cela, qui → 3s/3p unless « moi / toi … qui »);
+       a noun group — [det] [adj] noun [adj], « N de N » (both numbers), « leur » as a determiner — → 3s / 3p;
+       a capitalised name (pack, personal, or a capitalised word French.lex does not know) → 3s;
+       at a known clause start, a typed imperative → « ne » first;
+       « nous / vous » first at a clause start or after an opener (et, mais, où, que…): a verb that may be an imperative
+       → the n-grams decide « ne vous V » / « vous ne V » (ChainScore, « n » before a vowel, the opener as context) with a
+       margin ≥ NousVousMargin = 1.0 log10, else nothing (owner Q6); otherwise the subject
+   R4  no « ne / n' » in the run; every word from the subject (its determiner) to the negation word exact
+   R5  « ne » (« n' » before a vowel or a mute h), « j' / c' » → « je / ce », the ≈ verb and negation word written right,
+       the first word's capital kept (« Ce n'est pas », « Ne mange pas »); D35: a group holding an excluded word is dropped
+```
+
+- **Guards** for « jamais / rien / personne » (« ever / anything / anyone »): a superlative or comparative, « si »,
+  « sans », « avant », another negation word (« ne », « n' », « pas » too: « il ne dit pas qu'il a rien vu »), or
+  « est-ce » before the subject → nothing (« le meilleur ami qu'il ait
+  jamais eu », « est-ce qu'il peut rien comprendre »). « que » alone is no guard (measured: it cost recall, no precision).
+- **« s'il » / « l'on »**: « s' » before « il / ils » is « si », « l' » before « on » is euphonic — the pronoun run stops
+  there. « qui », « ça », « cela » end the run too (« ce qui serait pas »).
+- **Output**: `NegationFix(From, Original, Replacement, Rule, Negation, VerbFixed, NegFixed)`: the words `From`..last are
+  replaced, `Original` their exact text (separators between them included), `Replacement` with straight apostrophes
+  (the keyboard writes the document's). `Negation.ClauseOf(text, exactFrom, textStartKnown, …)` builds the clause from a
+  text exactly as the keyboard's tracker does (an xUnit test checks both agree); Eval and the Cli use it.
+- **Known false alarm** (accepted, plan): « j'ai pas mal de » (« a lot of ») gets « je n'ai pas mal de ».
+- **Cost**: a few dictionary lookups and `Check` calls per finished word; the « nous / vous » case reads a few n-gram rows
+  (cached). `Predict.Cli --bench-negation`: p99 ≈ 17 µs (evaluation.md § Négation).
+- **Out of scope** (fuller scope, 10D-2): an adverb in between (« veut toujours pas »), « y a pas » / « faut pas » without
+  « il », « pour pas + infinitive », « ne … que », « personne / rien » as subject, glued subjects (« jai pas »), the
+  sentence-end re-offer, a direct bar tile, a per-profile setting.
+
+## 5k. Compounds after a typed hyphen (0.11.0, plan hyphen-names, owner 2026-11-27)
+
+« saint-n » gave « ne, non, nom… »: a typed `-` ends the word (keyboard tracker, `SpellingIndicator.IsWordChar`), so the
+letters after it were predicted alone — not a regression, a gap since the start. Two parts, each with its switch (both off
+= the results without them, byte for byte; Predict.Eval / Cli `--no-hyphen`, `--no-compound-slot`):
+
+```
+ « je vais à saint-n »                       head = « saint » (HyphenHead.Find, as the tracker finds it)
+   compounds  = Predict(« saint-n », no context, k + 4, literal prefixes only,
+                        sentenceStart: head not capitalised inside a sentence)     ≤ min(k, HyphenMax = 5) of them
+                → names (pack forms, capitalised personal words): Saint-Nicolas, Saint-Nazaire (their own form)
+                → lexicon compounds: saint-nectaire (head as typed)
+   today      = Predict(« n », context, k)   (PredictNext when nothing is typed after the hyphen)
+   bar        = names + today's top-1 + (today's others ⋈ lexicon compounds, merged by score, today's order kept)
+                − today's words a name writes (« nicolas ») − lexicon compounds whose ending is a today word (« être »)
+                + the exact typed word kept in the bar (Present rule)              → Net (one ExcludedWords snapshot)
+```
+
+- **`PredictAfterHyphen(head, typed, context, k, sentenceStart, headNeutral, exactMark)`** (`HyphenCompounds`, on): the
+  compounds are found by the ordinary prefix machinery on « head-typed » with no context, literal prefixes only (no sound,
+  tolerant, edit or split pass); a capitalised head inside a sentence asks as a capital does (names lifted, the recognised
+  tier open), any other head as at a sentence start — so a lowercase « saint- » gets the names' full share, not
+  `NameLowercaseShare` (the hyphen already says « compound »). **Only names go ahead of today's list** (review 2026-11-27):
+  a lexicon compound found without context is merged with today's list by score and never ahead of its first word
+  (« il va-[t] » keeps today's order, « va-tout » after it; « qu'est-[c] » → « ce »), and one whose ending is one of
+  today's words is dropped — that word writes the same text after the head (« peut-ê » → « être »). A misspelt compound
+  the bar writes better is denied in code (`MisspeltCompound`: « est-ce-que », no data change). A name or capitalised
+  personal word keeps its own form (« Saint-Nicolas »: the keyboard replaces the head, read first); a lexicon compound is
+  written with the head as typed and its ending cased like the typed letters (« Porte-m » → « Porte-monnaie »,
+  « PORTE-M » → « PORTE-MONNAIE »). A restricted figure (D30) needs a capitalised head inside a sentence and 3 letters
+  after the hyphen (`NamesLexicon.IsRestricted`). An empty head, one over `HyphenHeadMax` (40), or no compound → today's
+  list unchanged; no compound name slot for the letters after a hyphen. **`HyphenMax` = 5** (the plan's fallback):
+  before the review every compound went first and a head with many of them (« ex- », « sous- », « vice- ») filled the 8
+  tiles (`--hyphen-report` E2 hit@8 −11.9 pt). The inversion pronouns keep their place (pronoun subset unchanged on the
+  four held-out sets).
+- **Compound name slot** (`CompoundNameSlot`, on): after the ranking and the exact typed word rule, a typed word with no
+  name-marking capital (lowercase inside a sentence, or any case at a sentence start), letters only, ≥ 4, with no name
+  « typed-… » in the first `ExactBar` places, gets the best such name in the bar's last place (just before the Present
+  rule's typed word when it holds it): a capitalised personal word first (the shortest), else the pack's most popular
+  predicted-tier name (then the shortest); never a restricted figure, a variant, or an excluded name unless exempted, and
+  never where the context expects a verb (`AgreementRule.Subject`: « elle marie »). Only on a full bar
+  (`k ≥ ExactBar`), so the top-1 — and KSS — never changes. « saint » → « …, Saint-Marin ». Held-out (`--slot-report`,
+  4–8 letters): it fires in 0.7 % of bars and never pushed a target out of the 8. `CompoundSlotFired` counts the bars it
+  changed (Predict.Eval prints it).
+- **Cost**: one more `Predict` call (no context: no n-gram rows, literal prefixes only) per update after a hyphen;
+  `Predict.Cli --bench-hyphen` (evaluation.md § Noms à trait d'union).
 
 ## 6. Design choices and rejected alternatives
 

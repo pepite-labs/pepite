@@ -160,7 +160,8 @@ internal sealed class ReadingView
         _pictures = pictures;
         _wrap.MaxWidth = double.IsNaN(maxWidth) ? double.PositiveInfinity : maxWidth;
         _scroll.MaxHeight = double.IsNaN(maxHeight) ? double.PositiveInfinity : maxHeight;
-        _tooLong.Visibility = doc.Truncated ? Visibility.Visible : Visibility.Collapsed;
+        _tooLong.Text = doc.Partial ? Strings.ReadPartial : Strings.ReadTooLong;   // phase 2: a partial read has its own words
+        _tooLong.Visibility = doc.Truncated || doc.Partial ? Visibility.Visible : Visibility.Collapsed;
         pics.Arrived += OnPicture;
         _loadStart = Stopwatch.GetTimestamp();
         _maxBatchMs = 0;

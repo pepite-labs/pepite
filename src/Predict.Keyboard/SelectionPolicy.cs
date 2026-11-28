@@ -77,8 +77,49 @@ internal static class SelectionPolicy
         return i > 0 ? s.Substring(0, i) : s;
     }
 
-    /// <summary>The window's own read (UIA / Win32) failed or found no text pattern: may the fallback help?</summary>
-    public static bool WantsFallback(ReadStatus selectionRead) => selectionRead == ReadStatus.Unavailable;
+    /// <summary>
+    /// The reader's character limit on a selection read: a text not cut yet and at the limit → cut at a word boundary
+    /// (<c>Cut</c>, the message); a text the IA2 read already cut cleanly (at a word, never inside a surrogate pair) is never
+    /// re-cut — only capped if the D26 completion made it longer than the limit.
+    /// </summary>
+    public static (string Text, bool Cut) Limit(string text, bool alreadyCut, int maxChars)
+    {
+        if (alreadyCut) return (text.Length > maxChars ? text.Substring(0, maxChars) : text, true);
+        return text.Length >= maxChars ? (CutAtWord(text), true) : (text, false);
+    }
+
+    /// <summary>The window's own read (UIA / Win32 / IA2) failed or found no text pattern — or, LibreOffice phase 2, the IA2
+    /// walk read only part of the selection (<paramref name="partial"/>): may the fallback help?</summary>
+    public static bool WantsFallback(ReadStatus selectionRead, bool partial = false) =>
+        selectionRead == ReadStatus.Unavailable || (partial && selectionRead == ReadStatus.Ok);
+
+    /// <summary>
+    /// LibreOffice phase 2: what a caret read asks of the selection reader. <paramref name="ask"/> = read the selection
+    /// (after Shift + navigation 250 ms later: a held Shift+→ is not read at every step); <paramref name="clipboard"/> = the
+    /// reader may fall back to the Ctrl+C copy.
+    /// <list type="bullet">
+    /// <item>a <c>Selection</c> from any source is read directly; one reported by IA2 (Writer) may still fall back to the
+    /// copy when the setting, the gesture and the window allow it (the IA2 read failed or was partial) — owner 2026-11-27:
+    /// the setting now governs only that safety net;</item>
+    /// <item>no text pattern (<c>Unavailable</c>) → the copy, under the same rules (delay 30 ms: the app processes the key
+    /// first);</item>
+    /// <item>anything else → nothing to ask (no selection, a password field, a failed read).</item>
+    /// </list>
+    /// </summary>
+    public static (bool Ask, bool Clipboard, int DelayMs) Route(ReadStatus caretRead, string? source, bool gesture, bool shiftReason,
+                                                              bool? setting, LibreOfficeModule module, bool passwordSuppressed)
+    {
+        bool copy = MayUseClipboard(setting, module, gesture, passwordSuppressed, ReadStatus.Unavailable);
+        if (caretRead == ReadStatus.Selection)
+            return (true, source == LibreOfficeText.Src && copy, shiftReason ? 250 : 0);
+        if (caretRead == ReadStatus.Unavailable && copy) return (true, true, shiftReason ? 250 : 30);
+        return (false, false, 0);
+    }
+
+    /// <summary>The module matters only when a copy could follow (one window lookup otherwise saved).</summary>
+    public static bool NeedsModule(ReadStatus caretRead, string? source, bool gesture, bool? setting) =>
+        setting != false && gesture &&
+        (caretRead == ReadStatus.Unavailable || (caretRead == ReadStatus.Selection && source == LibreOfficeText.Src));
 }
 
 /// <summary>Saved clipboard content (every format that can be restored).</summary>

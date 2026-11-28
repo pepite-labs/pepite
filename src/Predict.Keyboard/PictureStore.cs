@@ -134,9 +134,17 @@ internal sealed class PictureStore : IDisposable
 
     /// <summary>0.10.2 (glued words, owner Q6): the form a tile's picture is looked up by — the main word of a joined tile
     /// (« l'école » → « école »), but a name keeps its full form (review: « N'Diaye », « M'Bappé », « D'Artagnan » look like
-    /// joined words).</summary>
-    public static string PictureForm(Predict.Core.Suggestion s) =>
-        !s.Name && Predict.Core.Elision.IsJoined(s.Word, out _, out var main) ? main : s.Word;
+    /// joined words). 0.11.0 (glued words follow-up): a tile of several words shows the main word of its last part when that
+    /// part is a joined form (« je t'aime » → « aime », a green tile only); any other keeps its full form (« il y a »), which no shipped picture
+    /// has (the pictures are single words) — only a teacher's picture of that exact form (a personal word with spaces).</summary>
+    public static string PictureForm(Predict.Core.Suggestion s)
+    {
+        if (s.Name) return s.Word;
+        int sp = s.Word.LastIndexOf(' ');
+        if (sp >= 0)   // only the engine's glued tiles (green); a personal « chemin d'accès » keeps its full form
+            return s.Kind == Predict.Core.MatchKind.Phonetic && Predict.Core.Elision.IsJoined(s.Word[(sp + 1)..], out _, out var last) ? last : s.Word;
+        return Predict.Core.Elision.IsJoined(s.Word, out _, out var main) ? main : s.Word;
+    }
 
     /// <summary>Is there a picture for this word? Any thread; false until the word list is loaded.</summary>
     public bool Has(string word) => _words is { } w && w.ContainsKey(Key(word));

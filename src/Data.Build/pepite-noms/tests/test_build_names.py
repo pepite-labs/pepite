@@ -276,5 +276,79 @@ class Review(unittest.TestCase):
             self.assertEqual(bn.checked(p, bn.sha256_file(p)), p)
 
 
+class Drawings(unittest.TestCase):
+    """Pépite's own drawings (owner 2026-11-27, D30 amended): Saint-Nicolas, CC0 1.0, not on « Sint-Niklaas »."""
+
+    def lock(self):
+        with open(bn.LOCK, encoding="utf-8") as f:
+            return json.load(f)
+
+    def entries(self):
+        return [{"nom": "Saint-Nicolas", "categorie": "commune-be", "source": "statbel-refnis", "rang": 0.05,
+                 "variantes": ["Sint-Niklaas"]},
+                {"nom": "Belgique", "categorie": "pays", "rang": 0.1, "image": "images/pays/be.png", "licence": "MIT"},
+                {"nom": "Hitler", "categorie": "personnage", "rang": 0.001, "niveau": 2, "restreint": True}]
+
+    def test_lock_pins_the_committed_saint_nicolas_drawing(self):
+        lock = self.lock()
+        files = lock["dessins"]["files"]
+        self.assertEqual([d["nom"] for d in files], ["Saint-Nicolas"])
+        d = files[0]
+        self.assertEqual(d["licence"], "CC0 1.0")
+        self.assertIs(d["variantes"], False)
+        self.assertEqual(bn.sha256_file(os.path.join(bn.HERE, *d["file"].split("/"))), d["sha256"])
+        self.assertIn("Dessin de Saint-Nicolas : Pépite (dessin original, réalisé avec l'aide de Claude), CC0 1.0",
+                      lock["dessins"]["attribution_fr"])
+
+    def test_committed_svg_is_clean(self):
+        with open(os.path.join(bn.HERE, "images", "saint-nicolas.svg"), encoding="utf-8") as f:
+            svg = f.read()
+        for bad in ("<metadata", "inkscape", "sodipodi", "href", "<image", "<script", ":\\", "/Users/", "/home/"):
+            self.assertNotIn(bad, svg)
+        self.assertIn("CC0 1.0", svg)
+
+    def test_drawing_goes_to_the_name_and_not_its_variants(self):
+        es = self.entries()
+        out = bn.apply_drawings(es, self.lock())
+        self.assertEqual(len(out), 1)
+        e, svg = out[0]
+        self.assertIs(e, es[0])
+        self.assertTrue(os.path.isfile(svg))
+        self.assertEqual(e["image"], "images/pepite/saint-nicolas.png")
+        self.assertEqual((e["source"], e["licence"]), ("pepite", "CC0 1.0"))
+        self.assertIn("Claude", e["auteur"])
+        self.assertIs(e["image_variantes"], False)
+        self.assertEqual(e["variantes"], ["Sint-Niklaas"])          # still recognised, only the picture stays off
+        self.assertIn("pepite", bn.sources_table(self.lock()))
+        self.assertIn("Dessin de Saint-Nicolas", bn.attribution(self.lock()))
+
+    def test_drawing_refusals(self):
+        lock = self.lock()
+        d = lock["dessins"]["files"][0]
+        for change, entries in (({"nom": "Saint-Absent"}, self.entries()),            # no such entry
+                                ({"nom": "Belgique"}, self.entries()),                # already a flag
+                                ({"nom": "Hitler"}, self.entries()),                  # a restricted figure
+                                ({"licence": "CC BY-SA 4.0"}, self.entries()),        # share-alike: not in the pack
+                                ({"sha256": "0" * 64}, self.entries()),               # not the committed file
+                                ({"image": "../x.png"}, self.entries())):
+            lk = dict(lock, dessins=dict(lock["dessins"], files=[dict(d, **change)]))
+            with self.assertRaises(SystemExit, msg=str(change)):
+                bn.apply_drawings(entries, lk)
+
+    def test_variants_kept_when_allowed(self):
+        lock = self.lock()
+        lk = dict(lock, dessins=dict(lock["dessins"], files=[dict(lock["dessins"]["files"][0], variantes=True)]))
+        es = self.entries()
+        bn.apply_drawings(es, lk)
+        self.assertNotIn("image_variantes", es[0])
+
+    def test_diff_report_lists_the_new_picture(self):
+        prev = [{"nom": "Saint-Nicolas", "categorie": "commune-be", "rang": 0.05, "variantes": ["Sint-Niklaas"]}]
+        cur = [dict(prev[0], image="images/pepite/saint-nicolas.png", image_variantes=False)]
+        r = bn.diff_report(prev, cur, "2026.3")
+        self.assertIn("Image ajoutée (1) : Saint-Nicolas (pas sur ses variantes : Sint-Niklaas)", r)
+        self.assertIn("Image retirée (1) : Saint-Nicolas", bn.diff_report(cur, prev, "2026.4"))
+
+
 if __name__ == "__main__":
     unittest.main()

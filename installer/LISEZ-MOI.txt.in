@@ -78,11 +78,19 @@ INSTALLER
      cliquez sur la flèche « ^ ».
 
   Mettre à jour : lancez simplement l'installation de la nouvelle
-  version. Pépite est fermé pendant la mise à jour ; vos choix, les
-  réglages et les profils sont gardés. Avant la 0.10.0, Pépite
-  était un dossier à copier : quittez l'ancien Pépite, installez la
-  nouvelle version, puis supprimez l'ancien dossier (les réglages ne
-  sont pas dedans, ils sont gardés).
+  version. Elle dit « Pépite <ancienne version> est déjà installé :
+  il sera mis à jour en <nouvelle version> » : cliquez sur « Mettre
+  à jour », puis sur « Terminer ». Pépite est fermé pendant la mise
+  à jour ; vos choix, les réglages et les profils sont gardés. Pour
+  changer les composants ou les tâches, cochez d'abord « Modifier
+  les choix ». Au premier démarrage de la nouvelle version, Pépite
+  copie les profils dans le dossier des sauvegardes. Une version
+  plus ancienne que celle installée est refusée : désinstallez
+  d'abord Pépite (en gardant les réglages), puis installez-la.
+  Avant la 0.10.0, Pépite était un dossier à copier : quittez
+  l'ancien Pépite, installez la nouvelle version, puis supprimez
+  l'ancien dossier (les réglages ne sont pas dedans, ils sont
+  gardés).
 
 
 DÉMARRER AVEC WINDOWS
@@ -136,12 +144,18 @@ UTILISER
     Échap cache la barre. Le rond à gauche des mots est
     l'indicateur d'orthographe (F9 ou clic pour ≈ et ?).
   - Lire un texte : sélectionnez-le, puis « Lire » ou Espace / F9.
-  - LibreOffice Writer : la lecture d'une sélection passe par une
-    copie (Ctrl+C), faite d'office, puis le presse-papiers est remis
-    comme avant (jamais dans LibreOffice Calc : la feuille n'est
-    jamais modifiée). La barre s'affiche près de la souris ; devant
-    « ! ? : ; », l'espace est celle de LibreOffice ; un mot corrigé
-    avec ≈ est ajouté sans remplacer l'ancien.
+  - LibreOffice Writer (version 25.2 ou plus récente ; testé avec
+    les 25.2.7 et 26.8.3) : Pépite lit le texte autour du curseur,
+    rien à installer ni à régler. La barre s'affiche près du
+    curseur, un mot est remplacé en entier, ≈ et « ne » remplacent
+    les mots corrigés. Devant « ! ? : ; », l'espace est celle de
+    LibreOffice ; s'il n'en met pas, Pépite ajoute la sienne. La
+    lecture d'une sélection passe par une copie (Ctrl+C), faite
+    d'office, puis le presse-papiers est remis comme avant (jamais
+    dans LibreOffice Calc : la feuille n'est jamais modifiée). Calc
+    et Impress : touches seulement. LibreOffice lancé avec
+    SAL_ACCESSIBILITY_ENABLED=0 : touches seulement aussi, sans
+    barre dans les fenêtres de dialogue de LibreOffice.
   - Dans un champ de mot de passe, rien n'est proposé ni lu.
   - Aide : menu de l'icône -> « Aide », bouton « ? » ou touche F1 dans
     les Réglages. Des pages simples, pour les élèves (« tu ») et pour
@@ -210,11 +224,12 @@ CRÉDITS ET LICENCES
   Polices : OpenDyslexic (Abbie Gonzalez), Lexend, Andika (SIL) -
   SIL Open Font License 1.1 ; licences dans le dossier « fonts ».
   Noms propres : paquet de données ouvertes « Noms propres (données
-  ouvertes) », édition 2026.2, licence CC BY 4.0 ; sources, auteurs
+  ouvertes) », édition 2026.3, licence CC BY 4.0 ; sources, auteurs
   et licences : noms\LICENCE.txt et noms\SOURCES.md (Insee, Statbel,
-  Unicode CLDR, Wikidata, flag-icons, Wikimedia Commons). Statbel et
-  l'Insee ne cautionnent pas Pépite ni l'usage fait de leurs
-  données.
+  Unicode CLDR, Wikidata, flag-icons, Wikimedia Commons). Dessin de
+  Saint-Nicolas : Pépite (dessin original, réalisé avec l'aide de
+  Claude), CC0 1.0. Statbel et l'Insee ne cautionnent pas Pépite ni
+  l'usage fait de leurs données.
   Installation : Inno Setup (jrsoftware.org).
 
 

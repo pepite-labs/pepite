@@ -107,6 +107,12 @@ internal sealed class KeyboardController : IDisposable
     private FieldProbe? _fieldProbe;
     private FieldProbe? _editProbe;                      // D23: the field the session's edits are typed into (plan 06 review)
     private CaretTextReader? _reader;
+    // LibreOffice phase 1: Writer's text through IAccessible2 (null until Start); its prefetch worker (a focus event
+    // resolves the paragraph, no text, so the jump read that follows is warm)
+    private LibreOfficeText? _lo;
+    private ReadQueue? _loPrefetch;
+    /// <summary>false = <c>--no-ia2</c> (test switch): IAccessible2 is never called. Set before <see cref="Start"/>.</summary>
+    public bool Ia2Enabled { get; set; } = true;
     private SelectionReader? _selection;                 // plan 07
     private readonly ReadingMode? _reading;              // plan 07 (UI thread; Active is read by the hook)
     private volatile bool _readingOn = true;
@@ -159,8 +165,19 @@ internal sealed class KeyboardController : IDisposable
     private SpellingCheck _markCheck = SpellingCheck.Unknown;   // UI thread: its check (≈: the sound-alike words)
     // 0.8.3: the ≈ list shown by the marker and the finished word it may replace (UI thread; null once the bar changed)
     private SoundAlikeCorrection.Target? _correction;
+    // 0.11.0 (plan negation): the « ne » fix of the finished word (UI thread: Update), the group tile shown from it, and the
+    // group replacement waiting for its read (_sync)
+    private (NegationFix Fix, string Tail, long Version)? _negation;
+    private SoundAlikeCorrection.GroupTarget? _group;
+    private (SoundAlikeCorrection.GroupTarget? Fix, long Id, string? Heard) _pendingGroup;
+    private readonly ReadableWindows _readable = new();   // owner 2026-11-27: no « ne » marker where choosing cannot replace
     private ReadQueue? _correctRead;                        // 0.8.3: the read that checks the document before a replacement
     private (SoundAlikeCorrection.Target? Fix, string Word, long Id, bool KeysOnly, string? Heard) _pendingFix;   // (_sync) the replacement waiting for its read (Heard: listen before inserting)
+    // 0.11.0 (plan hyphen-names): the head the bar's compound tiles complete (UI thread: Update), and the compound replacement
+    // waiting for its read (_sync)
+    private SoundAlikeCorrection.CompoundTarget? _compound;
+    private (SoundAlikeCorrection.CompoundTarget? Fix, string Whole, string Ending, long Id, bool KeysOnly, string? Heard,
+             PunctuationSpacing Mode, bool Adaptive, bool AdaptiveLo) _pendingCompound;
     private long _fixIds;                                   // (_sync)
     private EchoEvent? _fixEcho;                            // (_sync) a correction's word echo when « Lire le mot inséré » is off
     private const string ReasonCorrect = "correct";
@@ -173,6 +190,9 @@ internal sealed class KeyboardController : IDisposable
     // bumps the generation (hook thread) and so cancels it
     private long _lineEndGen;
     private DispatcherTimer? _lineEndTimer;                // UI thread
+    // LibreOffice phase 1 (review): a bar placed at a reused IA2 caret point (ia2-recent, < 100 ms old) is placed again
+    // once typing pauses, so it never stays at a stale point after a line wrap or Enter (UI thread; restarted per update)
+    private DispatcherTimer? _caretRefresh;
     private long _lineEndProbeId = -1;                     // (_sync) the field probe asked for a line-end marker
     private long _lineEndAccepted = -1;                    // (_sync) tracker version whose line-end word LineEndMark accepted
     public const int LineEndDelayMs = 130;                 // after Enter: the app has handled it (a dialog closed, a field changed)
@@ -186,13 +206,20 @@ internal sealed class KeyboardController : IDisposable
     private EditSession? _session;                         // (_sync) D23 edit session (plan 06)
     private volatile bool _reread = true;                  // setting « Relire le mot / la phrase modifié(e) »
     private const string ReasonDelete = "del";
+    // LibreOffice phase 1 (D23 after the host's own changes): one read SettlePolicy.DelayMs after a separator / Enter in a
+    // Writer window where IA2 answers, skipped without any COM call if anything was typed since (version check); it
+    // re-seeds the tracker and rebases the session only when the document disagrees with the keys (AutoCorrect, word
+    // completion). Its own queue: jump reads and selection decisions are not affected
+    private ReadQueue? _settleRead;
+    private const string ReasonSettle = "settle";
     private const string ReasonBackspace = "bksp";      // a Backspace left the word: only the tracker (and a lost echo) use it
     // D22 adaptive Word rule (all under _sync): the window armed in "app may space ; : ! ?" mode, the user's setting
     // then, what each such window was seen to do (true = adds its own space), the read-back waiting for an answer
     private IntPtr _adaptiveFg;
     private PunctuationSpacing _adaptiveSetting;
     private readonly Dictionary<IntPtr, bool> _appAddsSpace = new();
-    private (char Punct, bool Ours, IntPtr Fg, long Version) _pendingCheck;
+    private readonly PendingReadBack _pendingCheck = new();   // (_sync) the D22 read-back waiting for its answer
+    private bool _adaptiveLo;   // the window armed in adaptive mode is LibreOffice Writer (read back through IA2)
     private ReadQueue? _punctCheck;
     // D17 amendment (2026-11-14): a sentence end typed after a jump into the sentence says the whole sentence, read from
     // the document by its own queue (typing does not make that read stale, a jump does: _jumps)
@@ -226,12 +253,22 @@ internal sealed class KeyboardController : IDisposable
         _win.ListenRequested += OnListenRequested;
     }
 
+    private bool _soundPairsLogged;
+
     /// <summary>Settings that the controller uses (UI thread).</summary>
     public void Configure(AppSettings s)
     {
         _wordCount = s.WordCount;
         _barFits = s.WordCount;
         _engine.ExactBar = s.WordCount;   // 0.10.2: the exact typed word goes in the bar's last slot at worst, not in a spare
+        // D33: « Sons que l'élève confond » of the active profile (Configure runs again on a profile switch / « Classe » change)
+        var pairs = s.Sounds.ToEngine();
+        if (pairs != _engine.Tolerance || !_soundPairsLogged)
+        {
+            _engine.Tolerance = pairs;
+            _soundPairsLogged = true;
+            Log?.Invoke("sound pairs: " + SoundPairsInfo.Describe(pairs));
+        }
         _keysOn = s.Keys == KeyMode.F1F8;
         _punct = (int)s.Punctuation;
         _speakInserted = s.Speech.SpeakInserted;
@@ -302,7 +339,8 @@ internal sealed class KeyboardController : IDisposable
         foreach (var name in new[] { nameof(KeyboardProc), nameof(KeyboardProcCore), nameof(MouseProc), nameof(OnKeyDown),
                                      nameof(Translate), nameof(Jump), nameof(ScheduleUpdate), nameof(HideSoon), nameof(FixAutoSpace),
                                      nameof(OnWinEvent), nameof(OnFocusEvent), nameof(FocusJump), nameof(ProbeEdits),
-                                     nameof(ReadingKey), nameof(ExitReadingSoon), nameof(SelectionGesture) })
+                                     nameof(ReadingKey), nameof(ExitReadingSoon), nameof(SelectionGesture),
+                                     nameof(SettleWanted), nameof(ReadBackPending), nameof(CorrectionArmed) })
             if (typeof(KeyboardController).GetMethod(name, F) is { } m) System.Runtime.CompilerServices.RuntimeHelpers.PrepareMethod(m.MethodHandle);
         var echo = new SpeechEcho { SpeakWords = true, SpeakSentences = true };
         foreach (var c in "l'a b, c.\n") echo.Type(c);
@@ -311,6 +349,11 @@ internal sealed class KeyboardController : IDisposable
         foreach (var c in "a b.") tr.Type(c);
         tr.Backspace(); tr.Accept("l'", false); tr.Reset();
         _ = new FocusFilter().ShouldJump(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 0, 0, false, false);
+        // LibreOffice phase 1: NoteFocus / IsLive / the settle decision and the module test of the focus path (no COM)
+        LibreOfficeText.WarmUp();
+        _ = HostApps.ModuleOf("soffice.bin", "Sans nom 1 — LibreOffice Writer");
+        _ = HostApps.IsFrame(Native.GetForegroundWindow());
+        _ = HostApps.ModuleOf(Native.GetForegroundWindow());   // ProcessNameOf's OpenProcess path (cached per window)
         // the first real calls of the mouse / focus paths: P/Invoke stubs and marshalling are built here, not in a hook
         _ = Native.IsShellOrOwn(Native.GetAncestor(Native.WindowFromPoint(new Native.POINT { X = 1, Y = 1 }), Native.GA_ROOT));
         _ = Native.IsShellOrOwn(Native.GetForegroundWindow());
@@ -332,6 +375,17 @@ internal sealed class KeyboardController : IDisposable
     public void Start()
     {
         WarmUpHookPath();
+        _fgRecheckTimer = new Timer(PostForegroundRecheck);   // WR5: made here, before the hooks (never inside a WinEvent)
+        // LibreOffice phase 1: before the hooks (OnFocusEvent records Writer's focus objects from the first event)
+        _lo = new LibreOfficeText(new ComLoBackend(), Ia2Enabled, Log, root => _loPrefetch?.Request(0, root, 0, "prefetch"));
+        LibreOfficeText.Shared = _lo;
+        if (Ia2Enabled)
+            _settleRead = new ReadQueue(v => { lock (_sync) return v == _tracker.Version; }, OnSettleRead, q => CaretTextReader.ReadAround(q.Fg, Log),
+                                        null, Log, CaretTextReader.StuckMs, KeyboardPolicy.ReadTimeoutMs, "settle-reader");
+        if (Ia2Enabled)
+            _loPrefetch = new ReadQueue(_ => true, (_, _) => { }, q => { _lo.Prefetch(q.Fg); return new ReadResult(ReadStatus.Unavailable, LibreOfficeText.Src, TextContext.Invalid, 0); },
+                                        null, Log, CaretTextReader.StuckMs, KeyboardPolicy.ReadTimeoutMs, "lo-prefetch");
+        else Log?.Invoke("ia2: off (--no-ia2)");
         _fieldProbe = new FieldProbe(PasswordProbe.Check, OnFieldProbe, Log);
         _editProbe = new FieldProbe(EditProbeCheck, OnEditProbe, Log);
         // one harmless request each (no window: Unavailable, no session, stale id): JIT the request / answer paths off the hook
@@ -368,6 +422,7 @@ internal sealed class KeyboardController : IDisposable
             ready.Set();
             while (Native.GetMessage(out var msg, IntPtr.Zero, 0, 0) > 0)
             {
+                if (msg.hwnd == IntPtr.Zero && msg.message == WmForegroundRecheck) { OnForegroundRecheck((long)msg.wParam); continue; }
                 Native.TranslateMessage(ref msg);
                 Native.DispatchMessage(ref msg);
             }
@@ -590,6 +645,7 @@ internal sealed class KeyboardController : IDisposable
                 FinishedWord? lineEnd = null;                                       // plan 10B, owner option B
                 long lineVersion = 0;
                 bool fieldWasClear = _field == FieldClear;                          // the line was typed in a non-password field
+                bool settleEnter = false;
                 lock (_sync)
                 {
                     if (!_suppress)
@@ -598,11 +654,13 @@ internal sealed class KeyboardController : IDisposable
                         lineEnd = _tracker.Finished; lineVersion = _tracker.Version;
                         _session = RereadFlow.OnEnter(_session);   // unproven edits: the focus may move now (D23 privacy)
                         _session?.Type('\n'); ProbeEdits(fg);
+                        settleEnter = SettleWanted('\n', fg);      // LibreOffice: its word completion is accepted by Enter
                     }
                     // Enter often moves the focus (two-step logins: name, Enter, password field): ask again
                     Rearm();
                 }
                 if (e != null) _speaker?.Echo(e, fg);
+                if (settleEnter) _settleRead!.Request(lineVersion, fg, SettlePolicy.DelayMs, ReasonSettle);
                 HideSoon();
                 // the last word of the line gets its mark (owner, 2026-11-14), but only once the app has handled Enter: a
                 // one-shot timer re-checks then that nothing moved (same window, same focused control, no key / jump)
@@ -663,16 +721,78 @@ internal sealed class KeyboardController : IDisposable
         ExitReadingSoon("typing");                         // plan 07: typing replaces the selection, back to predictions
         if (text.Length == 1 && FixAutoSpace(vk, text[0], fg, ctrl || alt)) return true;
         EchoEvent? ev = null;
+        bool settle;
+        long sv;
         lock (_sync)
         {
             foreach (var c in text) { _tracker.Type(c); ev = _echo.Type(c) ?? ev; _session?.Type(c); }
             // the echo says it (the word, or the whole edited sentence with it): not re-read again
             if (ev is { Kind: EchoKind.Word } or { AfterJump: true }) _session?.MarkWordSpoken();
             ProbeEdits(fg);
+            // LibreOffice phase 1: AutoCorrect runs on separators; read again once it has (the version taken here)
+            settle = text.Length == 1 && SettleWanted(text[0], fg);
+            sv = _tracker.Version;
         }
         if (ev != null) Echo(ev, fg);   // an enqueue: the password guard runs on its own thread
+        if (settle) _settleRead!.Request(sv, fg, SettlePolicy.DelayMs, ReasonSettle);
         ScheduleUpdate();
         return false;
+    }
+
+    /// <summary>LibreOffice phase 1 (under _sync; hook thread, O(1): a volatile compare and a few fields): ask a settle
+    /// read after <paramref name="c"/>? Only in a Writer window where IA2 answers, for a separator, and never while our
+    /// auto-space is armed, a D22 read-back is pending or a ≈ / « ne » replacement is armed (<see cref="SettlePolicy"/>).</summary>
+    private bool SettleWanted(char c, IntPtr fg) =>
+        _settleRead != null && _lo is { } lo &&
+        SettlePolicy.ShouldAsk(c, lo.IsLive(fg), _autoSpace.IsArmed(_tracker.Version, fg), ReadBackPending(fg), CorrectionArmed());
+
+    /// <summary>A D22 read-back waits for its answer at the current version (under _sync).</summary>
+    private bool ReadBackPending(IntPtr fg) => _pendingCheck.IsPending(fg, _tracker.Version);
+
+    /// <summary>A ≈ / « ne » replacement is armed for the current version, or waits for its read (under _sync; the targets
+    /// are written on the UI thread: reference reads).</summary>
+    private bool CorrectionArmed()
+    {
+        long v = _tracker.Version;
+        return Volatile.Read(ref _correction) is { } c && c.Version == v || Volatile.Read(ref _group) is { } g && g.Version == v ||
+               _pendingFix.Fix != null || _pendingGroup.Fix != null || _pendingCompound.Fix != null;
+    }
+
+    /// <summary>
+    /// LibreOffice phase 1, the settle read (its own thread): the document after the host's own changes (AutoCorrect, word
+    /// completion). Agrees with the keys → kept. Disagrees, nothing typed since, same window, in budget, and no auto-space /
+    /// read-back / replacement armed → the tracker is seeded (the echo only if blank) and the D23 session rebased — only
+    /// when a session exists, is not left, is in the same window and is not dirty (never a landing, never a selection
+    /// decision). The log has the decision, never the text.
+    /// </summary>
+    private void OnSettleRead(ReadRequest q, ReadResult r)
+    {
+        _readable.Note(q.Fg, PidOf(q.Fg), r.Status, groupRead: false);
+        if (r.Status == ReadStatus.Password) { SuppressPassword(q.Fg, "settle read"); return; }
+        if (r.Status != ReadStatus.Ok) { Log?.Invoke($"settle: skipped({r.Status} {r.Ms} ms)"); return; }
+        string? why = null;
+        long seeded = -1;
+        bool rebase = false;
+        lock (_sync)
+        {
+            if (!KeyboardPolicy.ShouldApply(q.Version, _tracker.Version, q.Fg, Native.GetForegroundWindow(), r.Ms)) why = "typed meanwhile";
+            else if (_autoSpace.IsArmed(_tracker.Version, q.Fg) || ReadBackPending(q.Fg) || CorrectionArmed()) why = "armed";
+            else if (!SettlePolicy.Agrees(r.Ctx.Prefix, r.Ctx.Suffix, r.Ctx.Context, _tracker.Current, _tracker.Context))
+            {
+                var c = r.Ctx;
+                _tracker.Seed(c.Prefix, c.Context, c.Separators, c.Suffix, c.NextChar, r.Source, c.AtSentenceStart, c.Apostrophe);
+                if (_echo.IsBlank) _echo.Seed(c.Prefix, c.AtSentenceStart && c.Context.Count == 0);
+                seeded = _tracker.Version;
+                rebase = _session is { Left: false } s && s.Fg == q.Fg && !s.Dirty;
+            }
+        }
+        Log?.Invoke(why != null ? $"settle: skipped({why}) {r.Ms} ms" : seeded < 0 ? $"settle: agrees {r.Ms} ms"
+                                : $"settle: seeded {r.Ms} ms{(rebase ? ", session rebased" : "")}");
+        if (seeded < 0) return;
+        ScheduleUpdate();
+        if (!rebase) return;
+        try { Reread(q, r, true, seeded); }
+        catch (Exception ex) { Log?.Invoke($"reread error: {ex.GetType().Name}: {ex.Message}"); lock (_sync) _session = null; }
     }
 
     /// <summary>The typing echo (hook thread; the UI thread for an insertion). A sentence end typed after a jump into the
@@ -792,15 +912,17 @@ internal sealed class KeyboardController : IDisposable
     {
         (AutoSpaceFix Fix, string Text) d;
         // Ctrl / Alt / AltGr held: never inject a Backspace under a modifier (Ctrl+Backspace deletes a word)
-        bool adaptive = false, ours = false;
+        bool adaptive = false, ours = false, lo = false;
         lock (_sync)
         {
             d = _autoSpace.OnChar(c, _tracker.Version, fg, (PunctuationSpacing)_punct, ctrlOrAlt);
             if (d.Fix == AutoSpaceFix.Replace && KeyboardPolicy.HighPunct(c) && fg == _adaptiveFg)
             {
                 adaptive = true;
-                // this Word window was seen NOT to add its own space: put ours at once (the read-back still checks)
-                if (_appAddsSpace.TryGetValue(fg, out var adds) && !adds) { d.Text = AppRules.SpaceFor(_adaptiveSetting) + d.Text; ours = true; }
+                lo = _adaptiveLo;
+                // this Word window was seen NOT to add its own space: put ours at once (the read-back still checks); never
+                // in LibreOffice Writer, whose own U+00A0 always goes first (owner Q4)
+                if (!lo && _appAddsSpace.TryGetValue(fg, out var adds) && !adds) { d.Text = AppRules.SpaceFor(_adaptiveSetting) + d.Text; ours = true; }
             }
         }
         if (d.Fix == AutoSpaceFix.Keep) return false;
@@ -829,13 +951,18 @@ internal sealed class KeyboardController : IDisposable
             ProbeEdits(fg);
         }
         Log?.Invoke($"  auto-space: '{c}' -> BS + {Codes(d.Text)} (SendInput {sent}/{expected}, {sendMs.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)} ms)");
+        bool settle = false;
+        long sv = 0;
         if (adaptive)
         {
             // read back what the app produced once it has handled the key (its own thread; the hook never waits)
             long v;
-            lock (_sync) { v = _tracker.Version; _pendingCheck = (c, ours, fg, v); }
+            lock (_sync) { v = _tracker.Version; _pendingCheck.Arm(c, ours, fg, v, lo); }
             _punctCheck?.Request(v, fg, 60, "punct");
         }
+        else
+            lock (_sync) { settle = SettleWanted(c, fg); sv = _tracker.Version; }   // LibreOffice: its AutoCorrect ran on the sign
+        if (settle) _settleRead!.Request(sv, fg, SettlePolicy.DelayMs, ReasonSettle);
         if (ev != null) Echo(ev, fg);
         ScheduleUpdate();
         return true;
@@ -843,15 +970,24 @@ internal sealed class KeyboardController : IDisposable
 
     /// <summary>D22 read-back in Word (read-back thread): one space-like char before the punctuation → done; none →
     /// add ours (unless « Aucune »); two → remove one. Never when anything was typed since (version) or the window
-    /// changed: we never edit text behind the user. Remembers per window whether Word adds its own space.</summary>
+    /// changed: we never edit text behind the user. Remembers per window whether Word adds its own space.
+    /// LibreOffice Writer (phase 1, owner Q1 = yes; read through IA2): the same, except that two spaces are only logged —
+    /// LibreOffice's own U+00A0 is never removed; then a settle read follows (its AutoCorrect ran on the sign).</summary>
     private void OnPunctCheck(ReadRequest q, ReadResult r)
     {
-        (char Punct, bool Ours, IntPtr Fg, long Version) pc;
+        (char Punct, bool Ours, IntPtr Fg, long Version, bool Lo) pc;
         PunctuationSpacing setting;
-        lock (_sync) { pc = _pendingCheck; setting = _adaptiveSetting; }
+        lock (_sync) { pc = _pendingCheck.Current; setting = _adaptiveSetting; }
         if (pc.Version != q.Version || pc.Fg != q.Fg) return;   // superseded by a newer check
-        if (r.Status != ReadStatus.Ok) { Log?.Invoke($"  punct check: {r.Status} {r.Ms} ms, nothing done"); return; }
+        string host = pc.Lo ? " (writer)" : "";
+        if (r.Status != ReadStatus.Ok)
+        {
+            lock (_sync) _pendingCheck.Done(q.Fg, q.Version);
+            Log?.Invoke($"  punct check: {r.Status} {r.Ms} ms, nothing done{host}");
+            return;
+        }
         var check = AppRules.Check(r.Before, pc.Punct);
+        var action = AppRules.ReadBack(check, setting, pc.Lo);
         string what, sent = "";
         Native.INPUT[]? fix = null;
         // The edit is sent INSIDE the lock, right after the re-check, and only when no keyboard event is inside our hook
@@ -879,13 +1015,17 @@ internal sealed class KeyboardController : IDisposable
                     case SpacingCheck.Missing:
                         RememberAdds(q.Fg, false);
                         char sp = AppRules.SpaceFor(setting);
-                        if (sp == '\0') what = "no space (setting none)";
+                        if (action != ReadBackFix.InsertOurs) what = "no space (setting none)";
                         else { fix = Inserter.BuildBeforeLast(false, sp.ToString(), Marker); what = $"the app added none: U+{(int)sp:X4} inserted"; }
                         break;
                     case SpacingCheck.Double:
                         RememberAdds(q.Fg, true);
-                        fix = Inserter.BuildBeforeLast(true, "", Marker);
-                        what = "two spaces (the app added one too): one removed";
+                        if (action == ReadBackFix.RemoveOne)
+                        {
+                            fix = Inserter.BuildBeforeLast(true, "", Marker);
+                            what = "two spaces (the app added one too): one removed";
+                        }
+                        else what = "two spaces: the app's own kept, nothing removed";
                         break;
                     default:
                         what = "text does not end with the punctuation, nothing done";
@@ -895,7 +1035,14 @@ internal sealed class KeyboardController : IDisposable
         }
         }
         finally { Thread.CurrentThread.Priority = prio; }
-        Log?.Invoke($"  punct check '{pc.Punct}' {r.Ms} ms: before=[{Codes(r.Before ?? "")}] {check}: {what}{sent}");
+        Log?.Invoke($"  punct check '{pc.Punct}' {r.Ms} ms: before=[{Codes(r.Before ?? "")}] {check}: {what}{sent}{host}");
+        // answered: no longer pending (review S3–S7: else SettleWanted saw it pending forever and this settle never ran)
+        lock (_sync) _pendingCheck.Done(q.Fg, q.Version);
+        if (!pc.Lo) return;
+        bool settle;
+        long sv;
+        lock (_sync) { settle = q.Version == _tracker.Version && SettleWanted(pc.Punct, q.Fg); sv = _tracker.Version; }
+        if (settle) _settleRead!.Request(sv, q.Fg, SettlePolicy.DelayMs, ReasonSettle);
     }
 
     /// <summary>Per-window memory of the adaptive Word rule, bounded (a long session opens many windows; a forgotten
@@ -968,7 +1115,59 @@ internal sealed class KeyboardController : IDisposable
         try
         {
             if (evt == Native.EVENT_OBJECT_FOCUS) { OnFocusEvent(hwnd, idObject, idChild); return; }
-            OnForeground(hwnd);
+            OnForegroundEvent(hwnd);
+        }
+        catch (Exception ex) { Log?.Invoke("hook error: " + ex.Message); }
+    }
+
+    private long _fgEventGen;       // hook thread: bumped by each foreground event that supersedes a pending re-check
+    private long _fgRecheckFor;     // the generation the pending re-check belongs to (hook thread writes, timer reads)
+    private int _fgRecheckAttempt;  // hook thread: the number of the pending re-check (1..MaxRechecks)
+    private Timer? _fgRecheckTimer; // one-shot, made in Start (never inside a WinEvent); posts WmForegroundRecheck
+    private const uint WmForegroundRecheck = 0x8000 + 0x51;   // WM_APP + n, a thread message of the hook loop
+
+    /// <summary>Timer thread: hand the re-check to the hook thread (its loop runs <see cref="OnForegroundRecheck"/>).</summary>
+    private void PostForegroundRecheck(object? _)
+    {
+        uint t = _hookThreadId;
+        if (t != 0) Native.PostThreadMessage(t, WmForegroundRecheck, (IntPtr)Interlocked.Read(ref _fgRecheckFor), IntPtr.Zero);
+    }
+
+    private void ArmForegroundRecheck(int ms)
+    {
+        try { _fgRecheckTimer?.Change(ms, Timeout.Infinite); }
+        catch (ObjectDisposedException) { }   // stopping: no re-check any more
+    }
+
+    /// <summary>WR5: EVENT_SYSTEM_FOREGROUND (hook thread). The real foreground decides (<see cref="ForegroundEvents"/>):
+    /// an event that names another window (an activation refused for now) never becomes the tracked window; the real
+    /// foreground is looked at again <see cref="ForegroundEvents.RecheckMs"/> later (then up to twice more).</summary>
+    private void OnForegroundEvent(IntPtr hwnd)
+    {
+        var real = Native.GetForegroundWindow();
+        // a frame's inner window (UWP) names the frame as its root: the same window, no re-check
+        var root = hwnd == real || hwnd == IntPtr.Zero ? hwnd : Native.GetAncestor(hwnd, Native.GA_ROOT);
+        var d = ForegroundEvents.Decide(hwnd, root, real, _lastFg, _win.BarHwnd);
+        if (d.NewGeneration) _fgEventGen++;
+        if (d.Recheck)
+        {
+            // only for an event that named another window (no text, no handle)
+            Log?.Invoke($"  foreground event for a window not in front: {(d.Apply != IntPtr.Zero ? "real foreground used, " : "")}re-check in {ForegroundEvents.RecheckMs} ms");
+            Interlocked.Exchange(ref _fgRecheckFor, _fgEventGen);
+            _fgRecheckAttempt = 1;
+            ArmForegroundRecheck(ForegroundEvents.RecheckMs);
+        }
+        if (d.Apply != IntPtr.Zero) OnForeground(d.Apply);
+    }
+
+    /// <summary>The re-check after a foreground event that named another window (hook thread, from its message loop).</summary>
+    private void OnForegroundRecheck(long gen)
+    {
+        try
+        {
+            var r = ForegroundEvents.Recheck(gen, _fgEventGen, Native.GetForegroundWindow(), _lastFg, _win.BarHwnd, _fgRecheckAttempt);
+            if (r.Apply != IntPtr.Zero && OnForeground(r.Apply)) Log?.Invoke($"  foreground re-check {_fgRecheckAttempt}: changed");
+            if (r.RearmMs > 0) { _fgRecheckAttempt++; ArmForegroundRecheck(r.RearmMs); }
         }
         catch (Exception ex) { Log?.Invoke("hook error: " + ex.Message); }
     }
@@ -1018,9 +1217,16 @@ internal sealed class KeyboardController : IDisposable
     {
         if (!_enabled || hwnd == IntPtr.Zero) return;
         var fg = Native.GetForegroundWindow();
-        if (fg != _lastFg) return;                                // a window switch: the foreground path handles it
         var root = Native.GetAncestor(hwnd, Native.GA_ROOT);
         if (root != fg) return;
+        // LibreOffice phase 1: Writer's focus object (one per paragraph) is recorded before any filter — also before the
+        // window-switch check, since a new window's (a dialog's) first focus event may come before its foreground event —
+        // so the first focus of a window counts too; O(1) (a struct write and a prefetch request; the module is the title,
+        // no message). The frame class first: one GetClassName for every other app's focus events, no process lookup.
+        // A LibreOffice dialog with no IA2 answer anyway is a password field for PasswordProbe.
+        if (_lo is { Enabled: true } lo && HostApps.IsFrame(root) && HostApps.ModuleOf(root) is var mod && HostApps.Ia2Focus(mod))
+            lo.NoteFocus(root, hwnd, idObject, idChild, prefetch: mod == LibreOfficeModule.Writer);
+        if (fg != _lastFg) return;                                // a window switch: the foreground path handles it
         if (!_focusFilter.ShouldJump(root, fg, hwnd, idObject, idChild, _mouseDownOutside, Native.IsShellOrOwn(root))) return;
         if (Environment.TickCount64 - _fgJumpTick < 200) return;   // the new window's own first focus
         // 0.8.3 re-review: the focused control may be a terminal (an IDE's console pane) or leave one
@@ -1035,6 +1241,7 @@ internal sealed class KeyboardController : IDisposable
     /// <summary>Result of a caret read (reader thread).</summary>
     private void OnRead(ReadRequest q, ReadResult r)
     {
+        _readable.Note(q.Fg, PidOf(q.Fg), r.Status, groupRead: false);   // 0.11.0: an Ok read shows the « ne » marker again
         if (r.Status == ReadStatus.Password)
         {
             bool had;
@@ -1098,9 +1305,10 @@ internal sealed class KeyboardController : IDisposable
 
     /// <summary>
     /// Plan 07, reader thread: what the latest caret read means for the reading mode. A selection → read its text (after
-    /// Shift + navigation, 250 ms after the last key: a held Shift+→ is not read at every step). No text pattern but a
-    /// selection gesture (drag, double click, Shift+nav, Ctrl+A) and the Ctrl+C fallback on (by default: in LibreOffice,
-    /// <see cref="SelectionPolicy.Fallback"/>; never in Calc) → the fallback. A collapsed
+    /// Shift + navigation, 250 ms after the last key: a held Shift+→ is not read at every step) — LibreOffice phase 2: in
+    /// Writer too, through IA2, the copy only as its safety net (<see cref="SelectionPolicy.Route"/>). No text pattern but a
+    /// selection gesture (drag, double click, Shift+nav, Ctrl+A) and the Ctrl+C fallback on (by default: in LibreOffice
+    /// Writer, <see cref="SelectionPolicy.Fallback"/>; never in Calc) → the fallback. A collapsed
     /// caret, a password field, a failed read → the selection is gone: back to predictions. Stale reads decide nothing (a
     /// newer jump has its own read; typing has left already).
     /// </summary>
@@ -1114,20 +1322,18 @@ internal sealed class KeyboardController : IDisposable
             return;
         }
         bool gesture = Interlocked.Read(ref _selGesture) == q.Version;
-        if (r.Status == ReadStatus.Selection)
-        {
-            _selection.Request(q.Version, q.Fg, q.Reason == ReasonShift ? 250 : 0, false, q.RequestedTick, q.Reason);
-            return;
-        }
         int cfs = _clipboardFallback;
         bool? cfSetting = cfs < 0 ? null : cfs == 1;
-        // 0.11.0: not set = LibreOffice Writer only; never in Calc (the window is looked up only when a copy could follow)
-        var module = cfSetting != false && gesture && r.Status == ReadStatus.Unavailable ? HostApps.ModuleOf(q.Fg) : LibreOfficeModule.None;
-        if (module == LibreOfficeModule.Calc)
+        // LibreOffice phase 2: a selection is read directly from any source (Writer through IA2); the Ctrl+C copy is only
+        // the safety net when the direct read fails (setting « Dans LibreOffice Writer seulement » by default; never in Calc;
+        // the window is looked up only when a copy could follow)
+        var module = SelectionPolicy.NeedsModule(r.Status, r.Source, gesture, cfSetting) ? HostApps.ModuleOf(q.Fg) : LibreOfficeModule.None;
+        if (module == LibreOfficeModule.Calc && r.Status == ReadStatus.Unavailable)
             Log?.Invoke("selection: clipboard fallback refused: Calc");   // a spreadsheet is never modified (Enter would paste)
-        if (SelectionPolicy.MayUseClipboard(cfSetting, module, gesture, _suppress, r.Status))
+        var route = SelectionPolicy.Route(r.Status, r.Source, gesture, q.Reason == ReasonShift, cfSetting, module, _suppress);
+        if (route.Ask)
         {
-            _selection.Request(q.Version, q.Fg, q.Reason == ReasonShift ? 250 : 30, true, q.RequestedTick, q.Reason);
+            _selection.Request(q.Version, q.Fg, route.DelayMs, route.Clipboard, q.RequestedTick, q.Reason);
             return;
         }
         // the selection is gone: leave the reading mode, and forget a selection dismissed with Esc
@@ -1156,7 +1362,7 @@ internal sealed class KeyboardController : IDisposable
             { Log?.Invoke("selection read: overtaken, not shown"); return; }
             _suggCount = 0;
             CancelListen("reading");
-            _reading.OnSelection(q.Fg, text, trigger, r.Source, r.Ms, r.TailAt, r.Cut);
+            _reading.OnSelection(q.Fg, text, trigger, r.Source, r.Ms, r.TailAt, r.Cut, r.Partial);
         });
     }
 
@@ -1183,8 +1389,12 @@ internal sealed class KeyboardController : IDisposable
         EditSession? old;
         EditState? st;
         lock (_sync) { old = _session; st = old?.Snapshot(); }
+        bool settle = q.Reason == ReasonSettle;
+        // a settle read only rebases a session that is still there, not left, same window, not dirty (never a begin or a
+        // landing; its queue's ids are not the caret reader's either)
+        if (settle && (st is null || st.Left || st.Fg != q.Fg || st.Dirty)) return;
         var facts = new ReadFacts(applied && (r.Status is ReadStatus.Ok or ReadStatus.Timeout) && r.Window != null, r.Status == ReadStatus.Password,
-                                  q.Id == _reader!.LatestId, q.Reason == ReasonDelete, q.Fg, r.Window, seededVersion);
+                                  !settle && q.Id == _reader!.LatestId, q.Reason is ReasonDelete or ReasonSettle, q.Fg, r.Window, seededVersion);
         var plan = RereadFlow.Plan(st, facts);                    // tokenising and classifying: off the lock
         if (!plan.Replace) return;
         bool speak;
@@ -1339,7 +1549,8 @@ internal sealed class KeyboardController : IDisposable
     /// <summary>Hide the suggestion bar (posted). The reading view is not hidden here: the next read decides (plan 07).</summary>
     private void HideSoon() => _ui.BeginInvoke(() =>
     {
-        _sugg = Array.Empty<Suggestion>(); _suggCount = 0; _markAction = false; _correction = null;
+        _sugg = Array.Empty<Suggestion>(); _suggCount = 0; _markAction = false; _correction = null; _group = null; _negation = null;
+        _compound = null;
         CancelListen("hidden");   // a jump (click, focus, window switch, navigation) or a password field
         if (_reading is { Active: true }) return;
         _win.HideBar();
@@ -1350,6 +1561,8 @@ internal sealed class KeyboardController : IDisposable
         Interlocked.Exchange(ref _updatePending, 0);
         _markAction = false;
         _correction = null;   // 0.8.3: the bar is rebuilt — a ≈ list shown before it no longer corrects
+        _group = null; _negation = null;   // 0.11.0: the same for the « ne » group tile
+        _compound = null;                  // 0.11.0: and for the compound tiles after a hyphen
         if (_reading is { Active: true }) { _suggCount = 0; CancelListen("reading"); return; }   // plan 07: predictions stay hidden while reading
         if (!Enabled || _suppress || _privateHost) { CancelListen("hidden"); _win.HideBar(); _suggCount = 0; return; }
         if (_field != FieldClear)
@@ -1361,13 +1574,18 @@ internal sealed class KeyboardController : IDisposable
             return;
         }
         bool loggable = _probe != ProbePending;   // typed since the jump and not answered yet: no text in the log
-        string cur, origin, suffix; List<string> ctx; bool after, start, hyphen, neutral; char apostrophe;
+        string cur, origin, suffix; List<string> ctx; bool after, start, hyphen, neutral, headNeutral; char apostrophe;
+        string? head; long version;
         FinishedWord? typing, finished;
         lock (_sync)
         {
             cur = _tracker.Current; ctx = _tracker.Context.ToList(); after = _tracker.AfterSeparator;
             origin = _tracker.Origin; suffix = _tracker.Suffix; start = _tracker.AtSentenceStart;
             hyphen = _tracker.LastSeparator == '-';
+            // 0.11.0 (plan hyphen-names): the word before a typed hyphen, for its compounds (« saint-n » → Saint-Nicolas)
+            head = hyphen ? _tracker.HyphenHead : null;
+            headNeutral = head is not null && _tracker.HyphenHeadNeutral;
+            version = _tracker.Version;
             apostrophe = _tracker.ApostropheStyle;   // 0.10.2: j' or j’, as the document writes it
             neutral = _tracker.CapitalNeutral;   // 0.8.3: « : Mer », « « Je », an unknown context: no name bonus for the capital
             typing = _tracker.Typing;
@@ -1384,27 +1602,73 @@ internal sealed class KeyboardController : IDisposable
             // 0.10.2: the exact typed word rule follows the ✓ while typing exactly — the tracker's own sentence start, not
             // « start || neutral » — and also when the marker setting is off
             bool tick = typing is { } jw && SpellingIndicator.Typing(jw, w => _engine.KnowsForMark(w, jw.SentenceStart)) == SpellingMark.Known;
-            if (cur.Length > 0) s = _engine.Predict(cur, ctx, _wordCount + 3, start || neutral, tick);   // spares: the display step may drop a pseudo-word or merge « Pierre » + « pierre »
+            // 0.11.0: after « head- » the compounds of the head first, then the same list as below
+            if (head is not null && (cur.Length > 0 || after && ctx.Count > 0))
+                s = _engine.PredictAfterHyphen(head, cur, ctx, cur.Length > 0 ? _wordCount + 3 : _wordCount + 1, start || neutral, headNeutral, tick);
+            else if (cur.Length > 0) s = _engine.Predict(cur, ctx, _wordCount + 3, start || neutral, tick);   // spares: the display step may drop a pseudo-word or merge « Pierre » + « pierre »
             else if (after && ctx.Count > 0) s = _engine.PredictNext(ctx, _wordCount + 1);
         }
         catch (Exception ex) { Log?.Invoke("predict error: " + ex.Message); }
 
         // D22: elisions with their apostrophe (l'), capital at the start of a sentence
         // plan 10A: a capitalised personal word and the cased lexicon word with the same text make one tile
-        _sugg = KeyboardPolicy.Shown(s, hyphen, apostrophe, cur, start, _wordCount);
+        var shown = KeyboardPolicy.Shown(s, hyphen, apostrophe, cur, start, _wordCount, head);
+        if (head is not null)
+        {
+            // owner Q2 (2026-11-27: the whole tile): where the head cannot be replaced, what a « Saint-Nicolas » tile shows (one switch)
+            var fg = Native.GetForegroundWindow();
+            bool may = _readable.MayReplace(fg, PidOf(fg), HostApps.UiaTextUnavailable(fg));
+            shown = KeyboardPolicy.CompoundTiles(shown, head, may);
+            _compound = new SoundAlikeCorrection.CompoundTarget(head, head + "-" + cur, version, fg, shown);
+        }
+        _sugg = shown;
         _suggCount = _sugg.Count;
 
         // plan 10B: the spelling marker — ✓ while typing a known word; on the word just finished ✓ ≈ ? (Q8)
         var (mark, markWord, check, checkMs) = SpellingMarkOf(typing, finished);
+        // 0.11.0 (plan negation): a negation typed without « ne » — the « ne » marker wins over ✓ and ≈ on that word
+        string negLog = "";
+        // (not right after « head- »: the bar is about the compound, the head is no finished word yet)
+        if (typing is null && finished is { } nf && head is null && NegationNow() is { } ng)
+        {
+            _negation = ng;
+            mark = SpellingMark.Grammar; markWord ??= nf.Word;
+            negLog = $" negation={ng.Fix.Rule}";
+        }
         _markWord = markWord; _markCheck = check;
-        string marked = mark == SpellingMark.None ? "" : FormattableString.Invariant($" mark={mark} ({checkMs:0.00} ms)");
+        string marked = mark == SpellingMark.None ? "" : FormattableString.Invariant($" mark={mark}{negLog} ({checkMs:0.00} ms)");
         if (loggable) Log?.Invoke($"typed='{cur}' ctx=[{string.Join(" ", ctx)}]{(start ? " start" : "")} src={origin} suffix='{suffix}' -> {string.Join(", ", _sugg.Select(x => x.Word))}  ({Environment.TickCount64 - t0} ms){marked}");
         else Log?.Invoke($"typed=(pending field probe) -> {_sugg.Count} words{marked}");
         // Q10: with no word to propose the bar shows the marker alone for ≈ and ?, never for ✓ alone. While typing, a ✓ word
         // is itself a tile with the exact typed word rule (0.10.2), so this hides the ✓ alone of a finished word (owner Q5)
-        if (_sugg.Count == 0 && mark is not (SpellingMark.SoundsLike or SpellingMark.Unknown)) { CancelListen("hidden"); _win.HideBar(); return; }
+        if (_sugg.Count == 0 && !MarkActs(mark)) { CancelListen("hidden"); _win.HideBar(); return; }
         ShowBar(mark);
         KeepListen();   // same word still at the ringed index: ringed again, else cancelled
+    }
+
+    /// <summary>A marker with an action (click / F9): ≈, ?, and 0.11.0 the « ne » marker.</summary>
+    private static bool MarkActs(SpellingMark mark) => mark is SpellingMark.SoundsLike or SpellingMark.Unknown or SpellingMark.Grammar;
+
+    /// <summary>
+    /// 0.11.0 (plan negation): the « ne » fix for the clause the finished word ends (<see cref="PredictionEngine.MissingNe"/>
+    /// on <see cref="WordTracker.TryClause"/>), with the tail typed after it and the tracker version; null when the spelling
+    /// indicator is off (owner Q5: on together with it), nothing is finished, no rule fires, or (owner 2026-11-27) the
+    /// window's text cannot be read (<see cref="ReadableWindows"/>: choosing the group could do nothing there). UI thread.
+    /// </summary>
+    private (NegationFix Fix, string Tail, long Version)? NegationNow()
+    {
+        if (!_spellingOn) return null;
+        // owner 2026-11-27: hidden where choosing the group could do nothing (the window's text cannot be read)
+        var fg = Native.GetForegroundWindow();
+        if (!_readable.MayReplace(fg, PidOf(fg), HostApps.UiaTextUnavailable(fg))) return null;
+        List<NegToken> clause; bool startKnown, plus; string tail; long v;
+        lock (_sync)
+        {
+            if (!_tracker.TryClause(out clause, out startKnown, out tail, out plus)) return null;
+            v = _tracker.Version;
+        }
+        try { return _engine.MissingNe(clause, startKnown, plus) is { } fix ? (fix, tail, v) : null; }
+        catch (Exception ex) { Log?.Invoke("negation error: " + ex.GetType().Name); return null; }
     }
 
     /// <summary>Plan 10B: the marker for the word being typed or the word just finished (UI thread, a few µs: the
@@ -1430,18 +1694,44 @@ internal sealed class KeyboardController : IDisposable
     private void ShowBar(SpellingMark mark)
     {
         var t1 = Environment.TickCount64;
-        _win.ShowSuggestions(_sugg, mark, _markWord);
+        _win.ShowSuggestions(_sugg, mark, _markWord, groupFirst: _group is { } g && ReferenceEquals(g.List, _sugg));
         var t2 = Environment.TickCount64;
         string src = AppSettings.PositionNames[_win.Position];
         PointI? caret = null;
+        long c0 = System.Diagnostics.Stopwatch.GetTimestamp();
         if (_win.Position == BarPosition.Caret) { var (x, y, s0) = Caret.Get(); caret = new PointI(x, y); src = s0; }   // docked / free: no caret lookup
         var t3 = Environment.TickCount64;
+        // LibreOffice phase 1: every IA2 lookup is timed (the gate: p95 ≤ 5 ms, the UI never waits > 20 ms)
+        if (src.StartsWith(LibreOfficeText.Src, StringComparison.Ordinal))
+            Log?.Invoke(FormattableString.Invariant($"  caret({src}) {(System.Diagnostics.Stopwatch.GetTimestamp() - c0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency:0.00} ms"));
         _win.Place(caret);
+        if (src == "ia2-recent") ArmCaretRefresh();
         _suggCount = Math.Min(_sugg.Count, _win.VisibleCount);   // a bar trimmed to fit the screen shows fewer words
         SyncExactBar();
-        _markAction = mark is SpellingMark.SoundsLike or SpellingMark.Unknown;
+        _markAction = MarkActs(mark);
         if (Environment.TickCount64 - t1 > 100)
             Log?.Invoke($"  slow UI: show {t2 - t1} ms, caret({src}) {t3 - t2} ms, place {Environment.TickCount64 - t3} ms");
+    }
+
+    /// <summary>LibreOffice phase 1: one re-placement of the bar <see cref="LibreOfficeText.CaretThrottleMs"/> + 20 ms after
+    /// the last update that reused a caret point (fast typing keeps pushing it back, so it costs no lookup then). UI thread.</summary>
+    private void ArmCaretRefresh()
+    {
+        _caretRefresh ??= new DispatcherTimer(DispatcherPriority.Background, _ui) { Interval = TimeSpan.FromMilliseconds(LibreOfficeText.CaretThrottleMs + 20) };
+        _caretRefresh.Stop();
+        _caretRefresh.Tick -= OnCaretRefresh;
+        _caretRefresh.Tick += OnCaretRefresh;
+        _caretRefresh.Start();
+    }
+
+    private void OnCaretRefresh(object? sender, EventArgs e)
+    {
+        _caretRefresh!.Stop();
+        if (!_win.Shown || _win.Position != BarPosition.Caret || _reading is { Active: true }) return;
+        var (x, y, src) = Caret.Get();
+        if (!src.StartsWith(LibreOfficeText.Src, StringComparison.Ordinal)) return;   // the window changed: the next update places it
+        _win.Place(new PointI(x, y));
+        Log?.Invoke($"  caret({src}) refresh");
     }
 
     /// <summary>The focused control of <paramref name="fg"/>'s thread and its system caret (window, top in client coordinates;
@@ -1495,7 +1785,8 @@ internal sealed class KeyboardController : IDisposable
                     : null;
         if (why != null) { Log?.Invoke($"spelling: line end cancelled ({why})"); return; }
         var (mark, _, _, ms) = SpellingMarkOf(null, w);
-        if (mark is not (SpellingMark.SoundsLike or SpellingMark.Unknown)) return;
+        if (!MarkActs(mark) && NegationNow() is null) return;   // 0.11.0: « j'aime plus⏎ » gets its « ne » marker too
+        if (!MarkActs(mark)) mark = SpellingMark.Grammar;
         long id = 0;
         lock (_sync)
             if (_probe == ProbeNotAsked && v == _tracker.Version)
@@ -1516,7 +1807,7 @@ internal sealed class KeyboardController : IDisposable
     private void OnMarker(string how)
     {
         var mark = _win.Mark;
-        if (!_win.Shown || _markWord is not { } word || mark is not (SpellingMark.SoundsLike or SpellingMark.Unknown)) return;
+        if (!_win.Shown || _markWord is not { } word || !MarkActs(mark)) return;
         CancelListen("marker");
         string cur; bool start; List<string> ctx; char apostrophe;
         lock (_sync) { cur = _tracker.Current; start = _tracker.AtSentenceStart; ctx = _tracker.Context.ToList(); apostrophe = _tracker.ApostropheStyle; }
@@ -1527,6 +1818,7 @@ internal sealed class KeyboardController : IDisposable
             AddWordRequested?.Invoke(word);
             return;
         }
+        if (mark == SpellingMark.Grammar) { OnNegationMarker(word, how, ctx, start, apostrophe); return; }
         // 0.8.3: a word chosen from this list replaces the finished word, if nothing moves before the choice; the list then
         // takes the case of that word's place (after Enter the caret opens a line, but « la maizon⏎ » is not a sentence start)
         char sep; bool can; long v; bool wordStart;
@@ -1537,17 +1829,59 @@ internal sealed class KeyboardController : IDisposable
         }
         // 0.10.2 (glued words plan, owner Q2): the list ordered by the words before the finished word, when it opens; then
         // every apostrophe in the document's style (« j’ai »), then the case of the word's place
-        IReadOnlyList<string> ordered = _markCheck.Candidates;
-        long r0 = System.Diagnostics.Stopwatch.GetTimestamp();
-        try { ordered = _engine.RankCorrections(_markCheck.Candidates, KeyboardPolicy.WordsBefore(ctx, word), word, _markCheck.Tolerant); }
-        catch (Exception ex) { Log?.Invoke("spelling: ranking error " + ex.GetType().Name); }
-        double rankMs = (System.Diagnostics.Stopwatch.GetTimestamp() - r0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
-        var cands = ordered.Select(c => new Suggestion(Elision.Styled(c, apostrophe), 0, MatchKind.Phonetic));
-        _sugg = KeyboardPolicy.CasedDistinct(cands, "", can ? wordStart : start, _wordCount);
+        _sugg = SoundAlikeList(word, ctx, apostrophe, can ? wordStart : start, _wordCount, out double rankMs);
         _suggCount = _sugg.Count;
         _correction = can ? new SoundAlikeCorrection.Target(word, sep, v, Native.GetForegroundWindow(), _sugg) : null;
         Log?.Invoke(FormattableString.Invariant($"spelling: sound-alike words shown ({_sugg.Count}, {how}, ranked in {rankMs:0.0} ms){(can ? ", may replace" : ", insert only")}"));
         if (_sugg.Count > 0) ShowBar(mark);
+    }
+
+    /// <summary>The ≈ list of the finished word: ordered by the words before it (0.10.2), every apostrophe in the document's
+    /// style, the case of the word's place (UI thread).</summary>
+    private IReadOnlyList<Suggestion> SoundAlikeList(string word, List<string> ctx, char apostrophe, bool sentenceStart, int max, out double rankMs)
+    {
+        IReadOnlyList<string> ordered = _markCheck.Candidates;
+        long r0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        try { ordered = _engine.RankCorrections(_markCheck.Candidates, KeyboardPolicy.WordsBefore(ctx, word), word, _markCheck.Tolerant); }
+        catch (Exception ex) { Log?.Invoke("spelling: ranking error " + ex.GetType().Name); }
+        rankMs = (System.Diagnostics.Stopwatch.GetTimestamp() - r0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        var cands = ordered.Select(c => new Suggestion(Elision.Styled(c, apostrophe), 0, MatchKind.Phonetic));
+        return KeyboardPolicy.CasedDistinct(cands, "", sentenceStart, max);
+    }
+
+    /// <summary>
+    /// 0.11.0 (plan negation, owner Q3): the « ne » marker was clicked, or F9 — the bar shows the corrected group first (a
+    /// green correction tile, no picture: « ne veut pas », « Ce n'est pas »), then, when the negation word itself was ≈
+    /// (« pa »), its sound-alike words. Choosing the group replaces the typed words (<see cref="CorrectGroup"/>); a ≈ word
+    /// replaces that word only, as from the ≈ marker. Listening before inserting applies to the group tile as to any tile
+    /// (owner 2026-11-25: F-keys / click « 1er appui : écouter »), and the group heard is not said again when inserted.
+    /// </summary>
+    private void OnNegationMarker(string word, string how, List<string> ctx, bool start, char apostrophe)
+    {
+        if (_negation is not { } ng) return;
+        char sep; bool can; long v; bool wordStart, groupStart;
+        lock (_sync)
+        {
+            v = _tracker.Version;
+            can = _tracker.CanCorrect(word, out sep);
+            wordStart = _tracker.Finished?.SentenceStart ?? start;
+            groupStart = _tracker.SpanAtSentenceStart(ng.Fix.Original, ng.Tail);
+        }
+        if (v != ng.Version) { Log?.Invoke("negation: the text moved, nothing shown"); return; }
+        // the group's capital at a sentence start (« c'est pas » → « Ce n'est pas »)
+        var groupText = SoundAlikeCorrection.CasedGroup(ng.Fix.Replacement, groupStart);
+        var list = new List<Suggestion> { new(Elision.Styled(groupText, apostrophe), 0, MatchKind.Phonetic) };
+        double rankMs = 0;
+        if (_markCheck.Status == SpellingStatus.SoundsLike && _wordCount > 1)
+            foreach (var x in SoundAlikeList(word, ctx, apostrophe, can ? wordStart : start, _wordCount - 1, out rankMs))
+                if (!string.Equals(x.Word, list[0].Word, StringComparison.Ordinal)) list.Add(x);
+        _sugg = list;
+        _suggCount = _sugg.Count;
+        var fg = Native.GetForegroundWindow();
+        _group = new SoundAlikeCorrection.GroupTarget(ng.Fix.Original, ng.Tail, groupText, v, fg, _sugg, ng.Fix.Rule.ToString());
+        _correction = can && _sugg.Count > 1 ? new SoundAlikeCorrection.Target(word, sep, v, fg, _sugg) : null;
+        Log?.Invoke(FormattableString.Invariant($"negation: group shown ({ng.Fix.Rule}, {how}{(_sugg.Count > 1 ? $", + {_sugg.Count - 1} sound-alike words, ranked in {rankMs:0.0} ms" : "")})"));
+        ShowBar(SpellingMark.Grammar);
     }
 
     private TileClick? _lastTileClick;     // UI thread: the last tile click (message time, tile, screen point)
@@ -1652,8 +1986,131 @@ internal sealed class KeyboardController : IDisposable
         CancelListen(null);   // consumed by this insertion (or moot: another word goes in)
         if (i < 0 || i >= _sugg.Count || i >= _win.VisibleCount) return;
         var word = _sugg[i].Word;
-        if (_correction is { } fix && ReferenceEquals(fix.List, _sugg)) { _correction = null; Correct(fix, word, heard); return; }
+        if (i == 0 && _group is { } g && ReferenceEquals(g.List, _sugg)) { _group = null; _correction = null; CorrectGroup(g, heard); return; }
+        if (_correction is { } fix && ReferenceEquals(fix.List, _sugg)) { _correction = null; _group = null; Correct(fix, word, heard); return; }
+        // 0.11.0 (plan hyphen-names): a compound tile after « head- » — its ending at the caret, or, when it rewrites the head
+        // (« saint- » → « Saint-Nicolas »), the whole name over the head, read first
+        if (_compound is { } ct && ReferenceEquals(ct.List, _sugg) && KeyboardPolicy.CompoundInsert(word, ct.Head) is { } ci)
+        {
+            _compound = null;
+            if (ci.ReplaceHead) ReplaceCompound(ct, word, ci.Ending, heard);
+            else InsertWord(ci.Ending, heard);
+            return;
+        }
         InsertWord(word, heard);
+    }
+
+    /// <summary>
+    /// 0.11.0 (plan hyphen-names, owner Q1 = B): the tile <paramref name="whole"/> (« Saint-Nicolas ») writes the head otherwise
+    /// than it was typed (« saint-n »): it replaces the head, its hyphen and the letters after it when nothing moved since the
+    /// bar (version, window, <see cref="WordTracker.CanReplaceCompound"/>) and a read of the document agrees
+    /// (<see cref="SoundAlikeCorrection.DecideCompound"/>, D23: never delete what is not seen; <see cref="OnCompoundRead"/>).
+    /// Where the window's text cannot be read (<see cref="ReadableWindows"/>), or anything moved, the ending goes in at the
+    /// caret at once (« saint-Nicolas »). The bar is hidden while the read runs. UI thread; the log has the decisions, never
+    /// the words.
+    /// </summary>
+    private void ReplaceCompound(SoundAlikeCorrection.CompoundTarget ct, string whole, string ending, string? heard)
+    {
+        var fg = Native.GetForegroundWindow();
+        if (!_readable.MayReplace(fg, PidOf(fg), HostApps.UiaTextUnavailable(fg)))
+        {
+            Log?.Invoke("compound: the text cannot be read here, ending inserted at the caret");
+            InsertWord(ending, heard);
+            return;
+        }
+        string? proc = ProcessNameOf(fg);
+        bool keysOnly = SoundAlikeCorrection.KeysOnlyAllowed(proc);   // empty list in the product
+        var mode = AppRules.Effective((PunctuationSpacing)_punct, proc);
+        bool adaptive = AppRules.ReadsBackSpacing(proc, _lo?.IsLive(fg) == true) && (PunctuationSpacing)_punct != PunctuationSpacing.None;
+        bool same;
+        long id = 0;
+        lock (_sync)
+        {
+            same = _tracker.Version == ct.Version && fg == ct.Fg && _tracker.CanReplaceCompound(ct.Span);
+            if (same) { id = ++_fixIds; _pendingCompound = (ct, whole, ending, id, keysOnly, heard, mode, adaptive, adaptive && HostApps.IsLibreOffice(proc)); }
+        }
+        if (!same) { Log?.Invoke("compound: the text moved since the bar, ending inserted at the caret"); InsertWord(ending, heard); return; }
+        _sugg = Array.Empty<Suggestion>(); _suggCount = 0; _markAction = false; _win.HideBar();
+        _correctRead?.Request(ct.Version, fg, 0, ReasonCorrect, trigger: id);
+    }
+
+    /// <summary>0.11.0: the compound's read (the correction reader's thread). The document before the caret ends with the span
+    /// → the keys (Backspace over the span, the whole name, a space unless the text goes on) are sent under the lock, only if
+    /// still nothing was typed (version, window) and no key is inside the hook. The document differs, no text, a timeout → the
+    /// ending at the caret (UI thread, if nothing moved). A key or a jump first, a password field → nothing.</summary>
+    private void OnCompoundRead(ReadRequest q, ReadResult r)
+    {
+        (SoundAlikeCorrection.CompoundTarget? Fix, string Whole, string Ending, long Id, bool KeysOnly, string? Heard,
+         PunctuationSpacing Mode, bool Adaptive, bool AdaptiveLo) p;
+        lock (_sync) p = _pendingCompound;
+        if (p.Fix is not { } ct || p.Id != q.Trigger) return;
+        bool agrees = r.Status == ReadStatus.Ok && r.Window is { } w &&
+                      SoundAlikeCorrection.DocumentEndsWithSpan(w.Text[..w.Caret], ct.Span, out _);
+        var action = SoundAlikeCorrection.DecideCompound(r.Status, agrees, p.KeysOnly);
+        if (action == SoundAlikeCorrection.Action.Nothing)
+        {
+            lock (_sync) if (_pendingCompound.Id == p.Id) _pendingCompound = default;
+            if (r.Status == ReadStatus.Password) SuppressPassword(q.Fg, "compound read");
+            else Log?.Invoke("compound: typed meanwhile, nothing done");
+            return;
+        }
+        if (action == SoundAlikeCorrection.Action.Insert)
+        {
+            Log?.Invoke($"compound: read {r.Status} {r.Ms} ms, {(r.Status == ReadStatus.Ok ? "the document differs" : "not replaced")}, ending inserted at the caret");
+            _ui.BeginInvoke(() =>
+            {
+                bool still;
+                lock (_sync) { still = _tracker.Version == ct.Version && _pendingCompound.Id == p.Id; if (still) _pendingCompound = default; }
+                if (still) InsertWord(p.Ending, p.Heard);
+            });
+            return;
+        }
+        bool done = false, space = false;
+        var prio = Thread.CurrentThread.Priority;
+        Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
+        try
+        {
+            lock (_sync)
+            {
+                if (_pendingCompound.Id == p.Id && _tracker.Version == ct.Version && Native.GetForegroundWindow() == ct.Fg &&
+                    Interlocked.Read(ref _keysInHook) == 0)
+                {
+                    // the char after the caret: the read's when it has one, else the tracker's (keys only)
+                    bool known = r.Window is not null || _tracker.HasNextChar;
+                    char next = r.Window is { } rw ? (rw.Caret < rw.Text.Length ? rw.Text[rw.Caret] : '\0') : _tracker.NextChar;
+                    space = KeyboardPolicy.NeedsSpace(known, next, p.Whole);
+                    var keys = Inserter.Build(0, ct.Span.Length, p.Whole + (space ? " " : ""), Marker);
+                    var (sent, expected, err) = Inserter.Send(keys);
+                    string how = action == SoundAlikeCorrection.Action.Replace ? $"read {r.Ms} ms, the document agrees" : "no text to read, keys only";
+                    Log?.Invoke($"compound: {how}, head replaced (space={space}; SendInput {sent}/{expected}, error {err})");
+                    if (sent != expected) { _tracker.Reset(); _echo.Reset(); _session = null; }
+                    else { ApplyCompound(ct, p.Whole, space, p.Heard, p.Mode, p.Adaptive, p.AdaptiveLo); done = true; }
+                }
+                else Log?.Invoke("compound: typed meanwhile, nothing done");
+                _pendingCompound = default;
+            }
+        }
+        finally { Thread.CurrentThread.Priority = prio; }
+        if (done) _ui.BeginInvoke(() => AfterCorrection(p.Whole, ct.Fg, p.Heard));
+    }
+
+    /// <summary>0.11.0: the tracker, the echo and the D23 mirror follow the compound just written over the span (under _sync):
+    /// the echo goes back over the span as Backspace would and takes the whole name as inserted (said by the « inserted »
+    /// echo: « Saint-Nicolas »); our space is armed as after any insertion (D22).</summary>
+    private void ApplyCompound(SoundAlikeCorrection.CompoundTarget ct, string whole, bool space, string? heard, PunctuationSpacing mode,
+                               bool adaptive, bool adaptiveLo)
+    {
+        bool say = _speakInserted || heard != null;
+        for (int k = 0; k < ct.Span.Length; k++) _echo.Backspace();
+        var ev = _echo.Inserted(whole, space, say);
+        _tracker.ReplaceCompound(ct.Span, whole, space);
+        _session?.Insert(0, ct.Span.Length, whole + (space ? " " : ""));
+        if (say || ev is { Kind: EchoKind.Word }) _session?.MarkWordSpoken();
+        if (space) _autoSpace.Arm(_tracker.Version, ct.Fg, mode); else _autoSpace.Disarm();
+        _adaptiveFg = space && adaptive ? ct.Fg : IntPtr.Zero;
+        _adaptiveLo = space && adaptiveLo;
+        _adaptiveSetting = (PunctuationSpacing)_punct;
+        _fixEcho = say ? null : ev;
     }
 
     private long TrackerVersion() { lock (_sync) return _tracker.Version; }
@@ -1780,6 +2237,16 @@ internal sealed class KeyboardController : IDisposable
     /// thread, if still nothing moved; nothing: a key or a jump came first (stale), a password field (tracking suspended).</summary>
     private void OnCorrectRead(ReadRequest q, ReadResult r)
     {
+        bool group, compound;
+        lock (_sync)
+        {
+            group = _pendingGroup.Fix != null && _pendingGroup.Id == q.Trigger;
+            compound = !group && _pendingCompound.Fix != null && _pendingCompound.Id == q.Trigger;
+        }
+        // only a replacement read's Unavailable (the group's, 0.11.0 the compound's) marks the window unreadable
+        _readable.Note(q.Fg, PidOf(q.Fg), r.Status, groupRead: group || compound);
+        if (group) { OnGroupRead(q, r); return; }   // 0.11.0: the « ne » group's read
+        if (compound) { OnCompoundRead(q, r); return; }   // 0.11.0: a compound name over its head
         (SoundAlikeCorrection.Target? Fix, string Word, long Id, bool KeysOnly, string? Heard) p;
         lock (_sync) p = _pendingFix;
         if (p.Fix is not { } fix || p.Id != q.Trigger) return;
@@ -1866,6 +2333,103 @@ internal sealed class KeyboardController : IDisposable
         ScheduleUpdate();
     }
 
+    /// <summary>
+    /// 0.11.0 (plan negation): the group tile was chosen — the corrected group replaces the typed words when nothing moved
+    /// since the list (version, window, <see cref="WordTracker.CanCorrectSpan"/>) and a read of the document agrees
+    /// (<see cref="SoundAlikeCorrection.DecideGroup"/>, D23: never delete what is not seen; the keys-only path of the ≈ list
+    /// does not exist here). Anything else does nothing: a group is never inserted at the caret. The log has the decisions,
+    /// never the words.
+    /// </summary>
+    private void CorrectGroup(SoundAlikeCorrection.GroupTarget g, string? heard)
+    {
+        CancelListen(null);
+        var fg = Native.GetForegroundWindow();
+        bool same;
+        long id = 0;
+        lock (_sync)
+        {
+            same = _tracker.Version == g.Version && fg == g.Fg && _tracker.CanCorrectSpan(g.Original, g.Tail);
+            if (same) { id = ++_fixIds; _pendingGroup = (g, id, heard); }
+        }
+        _sugg = Array.Empty<Suggestion>(); _suggCount = 0; _markAction = false; _win.HideBar();
+        if (!same) { Log?.Invoke("negation: the text moved since the list, nothing done"); ScheduleUpdate(); return; }
+        _correctRead?.Request(g.Version, fg, 0, ReasonCorrect, trigger: id);
+    }
+
+    /// <summary>0.11.0: the group's read (the correction reader's thread). The document before the caret must end with the
+    /// group and its tail; then the keys are sent under the lock, only if still nothing was typed (version, window) and no
+    /// key is inside the hook. Written with the document's apostrophe.</summary>
+    private void OnGroupRead(ReadRequest q, ReadResult r)
+    {
+        (SoundAlikeCorrection.GroupTarget? Fix, long Id, string? Heard) p;
+        lock (_sync) p = _pendingGroup;
+        if (p.Fix is not { } g || p.Id != q.Trigger) return;
+        string docSpan = "";
+        bool agrees = r.Status == ReadStatus.Ok && r.Window is { } w &&
+                      SoundAlikeCorrection.DocumentEndsWith(w.Text[..w.Caret], g.Original, g.Tail, out docSpan);
+        if (SoundAlikeCorrection.DecideGroup(r.Status, agrees) == SoundAlikeCorrection.Action.Nothing)
+        {
+            lock (_sync) if (_pendingGroup.Id == p.Id) _pendingGroup = default;
+            if (r.Status == ReadStatus.Password) SuppressPassword(q.Fg, "negation read");
+            else Log?.Invoke($"negation: read {r.Status} {r.Ms} ms, {(r.Status == ReadStatus.Ok ? "the document differs" : "no text to read")}, nothing done");
+            if (r.Status != ReadStatus.Password) _ui.BeginInvoke(ScheduleUpdate);
+            return;
+        }
+        char style;
+        lock (_sync) style = _tracker.ApostropheStyle;
+        // the document's capital (an app may have capitalised « C'est pas ») and apostrophe
+        var rep = Elision.Styled(SoundAlikeCorrection.CasedGroup(g.Replacement, false, docSpan), SoundAlikeCorrection.ApostropheOf(docSpan, style));
+        var keys = SoundAlikeCorrection.BuildGroup(g.Original, g.Tail, rep, Marker);
+        bool done = false;
+        var prio = Thread.CurrentThread.Priority;
+        Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
+        try
+        {
+            lock (_sync)
+            {
+                if (_pendingGroup.Id == p.Id && _tracker.Version == g.Version && Native.GetForegroundWindow() == g.Fg &&
+                    Interlocked.Read(ref _keysInHook) == 0)
+                {
+                    var (sent, expected, err) = Inserter.Send(keys);
+                    Log?.Invoke($"negation: read {r.Ms} ms, the document agrees, replaced ({g.Rule}; SendInput {sent}/{expected}, error {err})");
+                    if (sent != expected) { _tracker.Reset(); _echo.Reset(); _session = null; }
+                    else { ApplyGroupCorrection(g, rep, p.Heard); done = true; }
+                }
+                else Log?.Invoke("negation: typed meanwhile, nothing done");
+                _pendingGroup = default;
+            }
+        }
+        finally { Thread.CurrentThread.Priority = prio; }
+        // the group heard on its tile counts as said whatever its apostrophe (the tile: the tracker's; the document's here)
+        string? heard = p.Heard is { } h && string.Equals(Elision.Styled(h, '\''), Elision.Styled(rep, '\''), StringComparison.OrdinalIgnoreCase) ? rep : p.Heard;
+        if (done) _ui.BeginInvoke(() => AfterCorrection(rep, g.Fg, heard));
+    }
+
+    /// <summary>The window's process id (0 when gone): <see cref="ReadableWindows"/> keys.</summary>
+    private static uint PidOf(IntPtr hwnd) { Native.GetWindowThreadProcessId(hwnd, out uint pid); return pid; }
+
+    private static readonly char[] LineBreaks = { '\n', '\r' };
+
+    /// <summary>0.11.0: the tracker, the echo and the D23 mirror follow the group replacement just sent (under _sync). The
+    /// echo goes back over the group and its tail as Backspace would, then takes the corrected group: its words as typed,
+    /// its last word as inserted (said by the « inserted » echo, owner Q7), then the tail — a sentence end there makes the
+    /// sentence echo say the corrected sentence.</summary>
+    private void ApplyGroupCorrection(SoundAlikeCorrection.GroupTarget g, string rep, string? heard)
+    {
+        bool say = _speakInserted || heard != null;
+        int back = g.Original.Length + g.Tail.Length;
+        var ev = _echo.ReplacedGroup(back, rep, g.Tail, say);
+        _tracker.CorrectSpan(g.Original, g.Tail, rep);
+        if (g.Tail.IndexOfAny(LineBreaks) >= 0) _session = null;   // Left / Right: the mirror cannot follow
+        else
+        {
+            _session?.Insert(0, back, rep + g.Tail);
+            if (say || ev is { Kind: EchoKind.Word }) _session?.MarkWordSpoken();
+        }
+        _autoSpace.Disarm();
+        _fixEcho = say ? null : ev;
+    }
+
     /// <param name="heard">listen before inserting: the word was just heard (the tile's text), so the insertion does not say it
     /// again — nor does the word echo or the D23 re-read — unless what it would say differs (« les amis »).</param>
     private void InsertWord(string word, string? heard = null)
@@ -1875,6 +2439,7 @@ internal sealed class KeyboardController : IDisposable
         var fg = Native.GetForegroundWindow();
         string? proc = ProcessNameOf(fg);
         var mode = AppRules.Effective((PunctuationSpacing)_punct, proc);
+        bool ia2Live = _lo?.IsLive(fg) == true;   // LibreOffice phase 1: Writer answers through IA2 (D22 read-back, owner Q1)
         string cur; int suf; bool known; char next; long v0;
         lock (_sync)
         {
@@ -1915,9 +2480,11 @@ internal sealed class KeyboardController : IDisposable
                 // D22: our space may be taken back by the next key (punctuation, a second space)
                 if (space) _autoSpace.Arm(_tracker.Version, fg, mode); else _autoSpace.Disarm();
                 // Word may space ; : ! ? itself (AutoCorrect, French text): read back and adapt, unless « Aucune »
-                // (LibreOffice also spaces them, but cannot be read back: its U+00A0 is accepted as is, 0.11.0)
-                bool adaptive = space && AppRules.ReadsBackSpacing(proc) && (PunctuationSpacing)_punct != PunctuationSpacing.None;
+                // (LibreOffice also spaces them: read back through IA2 in a live Writer window, phase 1 / owner Q1; else
+                // its U+00A0 is accepted as is and nothing is read back, 0.11.0)
+                bool adaptive = space && AppRules.ReadsBackSpacing(proc, ia2Live) && (PunctuationSpacing)_punct != PunctuationSpacing.None;
                 _adaptiveFg = adaptive ? fg : IntPtr.Zero;
+                _adaptiveLo = adaptive && HostApps.IsLibreOffice(proc);
                 _adaptiveSetting = (PunctuationSpacing)_punct;
             }
         }
@@ -1936,8 +2503,12 @@ internal sealed class KeyboardController : IDisposable
     public void Dispose()
     {
         _lineEndTimer?.Stop();   // plan 10B: no line-end tick after the probes are gone
+        _caretRefresh?.Stop();
+        // WR5: the re-check timer first (no post after the loop is gone); a WinEvent still running finds it disposed
+        if (_fgRecheckTimer is { } fgt) { try { fgt.Change(Timeout.Infinite, Timeout.Infinite); } catch (ObjectDisposedException) { } fgt.Dispose(); }
         if (_hookThreadId != 0) Native.PostThreadMessage(_hookThreadId, Native.WM_QUIT, IntPtr.Zero, IntPtr.Zero);
         _hookThread?.Join(1000);
+        _hookThreadId = 0;
         _reader?.Dispose();
         _selection?.Dispose();
         _punctCheck?.Dispose();
@@ -1946,5 +2517,8 @@ internal sealed class KeyboardController : IDisposable
         _sentenceTimer?.Dispose();
         _fieldProbe?.Dispose();
         _editProbe?.Dispose();
+        _loPrefetch?.Dispose();
+        _settleRead?.Dispose();
+        _lo?.Dispose();   // its RCWs are released on an MTA thread, never here (UI thread)
     }
 }

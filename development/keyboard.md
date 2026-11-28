@@ -48,21 +48,40 @@ Pepite.exe --render-bar <out.png> [--dpi 96|144|192] [--pictos <p>] [--no-pictur
 - **Elisions** are offered with their apostrophe (`l'`, `d'`, `qu'`, `jusqu'`…) and inserted **without a space**;
   the next-word bar follows at once (`vers` → `l'` → `horizon`). The inserted-word speech says « l'horizon »
   together.
+- **After a typed hyphen** (0.11.0, plan hyphen-names): the word before it is a head and its hyphenated names come first —
+  `saint-n` → **Saint-Nicolas**, `Jean-B` → Jean-Baptiste; then the usual words, with the lexicon's compounds merged in by
+  score, never ahead of the first one (`dis-m` → moi, `a-t-i` → il, `peut-ê` → être unchanged). A tile that writes the head as typed inserts its ending; one that changes it (`saint-` →
+  `Saint-Nicolas`) replaces `saint-n` after a read of the document agrees, else (Calc, Impress, a read that fails or
+  differs) inserts the ending at the caret (`saint-Nicolas`). A word that starts a hyphenated name, typed without its
+  capital (`saint`), gets that name in the bar's last place (`Saint-Marin`). Log: `compound: …` (decisions only, never
+  the words). Design: [keyboard-design.md §6h](../design/keyboard-design.md), [predict-core-design.md §5k](../design/predict-core-design.md).
 - **Punctuation after an inserted word** (D22): the space we added is taken back when you type `, . … ) ' -`
   (`maison,`); before `; : ! ?` it becomes a narrow no-break space (French typography, `Bonjour !`) — or nothing
   with « Espace avant ; : ! ? » = Aucune in Réglages; an extra space you type is absorbed (no double space). Only
   right after an insertion: text you typed yourself is never changed. Word and LibreOffice space `; : ! ?` themselves
-  (their French AutoCorrect): there the sign is sent alone after taking our space back — Word is then read back and
-  fixed (adaptive), LibreOffice's single U+00A0 is accepted as is (0.11.0).
+  (their French AutoCorrect): there the sign is sent alone after taking our space back, then read back and fixed when
+  the app added none — Word (adaptive) and LibreOffice Writer through IAccessible2 (0.11.0: LibreOffice's own U+00A0
+  always first and never removed; our space only when it added none, e.g. an English paragraph). Without IA2 (Calc,
+  `--no-ia2`) LibreOffice's U+00A0 is accepted as is.
 - **After you move the caret** (click, arrows, Home/End, PgUp/PgDn, Tab, Ctrl+V / Ctrl+Z / Ctrl+Backspace,
   switching window) the app **reads the text around the caret** and predicts from there: click after
   `il fait ` → next-word bar; click inside `mai|son` → completions of `mai`. Notepad (Win32 `Edit`) and
   Edge/Word (UI Automation) are supported; elsewhere it silently falls back to what you type.
-- **LibreOffice Writer** (0.11.0 quick fix, until the IA2 adapter of `development/studies/libreoffice-support.md`):
-  keys only — no read after a jump, the bar at the mouse (no caret), a ≈ correction inserted next to the word (never
-  replaced); Pépite does not even ask UI Automation there (`HostApps.UiaTextUnavailable`: the failed lookups cost
-  ≈ 110 ms per bar and slowed Writer); selection reading works through the Ctrl+C fallback, **on by default in
-  Writer windows** (never in Calc: a copy there leaves Calc's copy mode and Enter would paste); one U+00A0 (LibreOffice's) before `; : ! ?`.
+- **LibreOffice Writer** (0.11.0, LibreOffice ≥ 25.2; tested with 26.8.3 and 25.2.7): Pépite **reads the text around the
+  caret through IAccessible2** (`LibreOfficeText`, Windows' own `oleacc.dll` + `ia2comproxy.dll`: nothing to install or
+  configure) — the bar at the caret, the whole word replaced (D3), ≈ / glued / « ne » replacements (read first), the
+  D23 re-read (also after LibreOffice's own AutoCorrect and word completion: settle reads), the D22 read-back, a cached
+  password check. Pépite does not ask UI Automation there (`HostApps.UiaTextUnavailable`: the failed lookups cost
+  ≈ 110 ms per bar and slowed Writer). **The selection is read through IA2 too** (phase 2: drag, double / triple click,
+  Shift + arrows, Ctrl+A, several paragraphs; a word cut by a drag is completed, D26; up to 20 000 characters) — no
+  clipboard. The Ctrl+C copy (setting, **by default in Writer windows**) is only the safety net when that read fails or
+  is partial; never in Calc (a copy there leaves Calc's copy mode and Enter would paste). An IA2 stall (a stuck call, 3
+  timeouts) → keys only for 10 s, then 20 s, 40 s, then one trial call (a 4th episode within 10 minutes → for that
+  LibreOffice process); Calc, Impress, Draw and LibreOffice started with `SAL_ACCESSIBILITY_ENABLED=0` stay keys only.
+  Test switch `--no-ia2`: IA2 never called. Log lines (`--log`): `ia2: LibreOffice <version> pid P`, `ia2: off for pid P
+  (<why>)[, retry in N s]`, `ia2: on again for pid P after N s`, `read … src=ia2 …`, `selection read … src=ia2 …`,
+  `selection ia2: P paragraphs, H hops, extent X ms, text Y ms, complete|partial(…)`, `caret(ia2|ia2-late|ia2-recent)
+  N ms`, `probe ia2 state|cached …`, `settle: agrees|seeded|skipped(…)`, `punct check … (writer)` — never text.
 - **Inside a word, the whole word is replaced**: `la mai|zon est` + F1 (`maison`) → `la maison est`
   (Delete the part after the caret, Backspace the part before).
 - **Space rule**: a space is added after the inserted word only if the next character is not a space,
@@ -364,6 +383,53 @@ non-empty prediction for the current state, Word is quit only if the script star
 guard (session locked; then the foreground lock) without sending any input.
 
 Logs and screenshots: `<work>\test-runs\01-caret-text-reading\`.
+
+**0.11.0 re-run (host, 2026-11-27, `-Suite all`, self-contained publish of the working tree)** — **WH1–WH7, WL1,
+WR1–WR4, WR6–WR10, WS1–WS9 and plan 04 (WP2–WP8) PASS; WR5 FAIL** (see below). After the WR5 fix, a second
+`-Suite all` run: **all 38 cases PASS**, WR5 included with the real harness form (its event came while Word was still
+in front: `foreground event for a window not in front … re-check in 100 ms`, then the real activation → `landing=Elsewhere`,
+the sentence said), app folders restored byte for byte. The first attempt of the day found the
+harness broken in three ways, fixed before this run:
+
+- **Settings went to the wrong place.** The script still wrote `%APPDATA%\PredictKeyboard\settings.json`, the
+  pre-0.7.0 file that only `ProfileMigration` reads once: the app ran on the user's active profile (F-keys « 1er appui :
+  écouter », re-read off there) and wrote into it (the reading window's position), and the start made a
+  « mise-a-jour » backup zip. Those two changes from the first attempt were **not reverted** (they stay in the user's
+  profile and backup folder). The script now copies `%APPDATA%\Pepite-Prediction` and `%LOCALAPPDATA%\Pepite-Prediction`
+  first (checked by SHA-256), adds its own profile `p-wordht` (« Test Word »), makes it active, writes there what each
+  phase needs (`words.keysListenFirst` false and `words.clickMode` insert for the classic cases, `speech.rereadEdits`
+  true, `text.punctuationSpace` french / none), refuses to run unless the boot log says `settings (p-wordht)`, and
+  mirrors both folders back at the end (robocopy `/MIR`: files, folders, timestamps, attributes); the SHA-256 manifest
+  (path + content of every file, 13 files) was identical before and after every run of the new harness. The output
+  folder must lie outside both app folders, and an instance still running about 65 s after the last `--quit` is killed
+  before the restore (its exit flush would rewrite the restored files).
+- **Log patterns had drifted**: WH1 expected `src=keys` (0.11.0 logs `src=uia`); the suggestion line may end with
+  ` mark=Known (… ms)` (`PickWord` found no line); WH2 took `speak Inserted 'maison'` for the insertion line.
+- **New case WL1**: with `words.keysListenFirst` unset (the 0.11.0 default), the 1st F1 logs `listen F1 'maison'
+  armed`, says the word and types nothing (`la mai`); the 2nd F1 logs `listen confirm F1` and inserts (`la maison `).
+
+**WS4 (product, fixed)**: Ctrl+A on the 110-sentence document showed no reading bar. Word's UIA `GetSelection` there
+now takes 160–306 ms (measured on 2026-11-27), so the caret read came back after the 150 ms budget and `ReadQueue` turned its `Selection` into
+`Timeout` — and only a `Selection` asks the selection reader (its own 1500 ms budget). A `Selection` (like a
+`Password`) now keeps its status whatever its time: it carries no text the bar could apply late, and the selection
+read it triggers is checked again (latest request, tracker version, same window) before anything is shown. After the
+fix: `read ctrl src=uia status=Selection 306 ms` → `selection read ctrl … Ok 14 ms (6931 chars)` → `1000 words
+(truncated at 1000)`, the message shown, max batch 37 ms. Side effect in LibreOffice: a slow `ia2` `Selection`
+(> 150 ms) now reaches the selection path too, so the Ctrl+C fallback can run in Writer where it used to give up
+(still with all its guards: a selection gesture, never in Calc, the clipboard owner rule).
+
+**WR5 (fixed)**: the window switch after an inserted word says nothing (`said []`), identically with the installed
+0.10.2 — not a 0.11.0 regression. Cause, proven with temporary log lines (removed): the script's `Form.Show()` from a
+background process raises `EVENT_SYSTEM_FOREGROUND` for the form while `GetForegroundWindow()` still returns Word (the
+activation is refused at that moment); `OnForeground` sets `_lastFg` to the form, but `Jump` reads
+`GetForegroundWindow()` — Word — and asks the read there. 40 ms later the script's activation succeeds and its own
+foreground event for the form is dropped as « same window ». The read of Word ends with the form in front (`Stale`),
+and a landing in the session's own window without a read is `Unknown` → nothing said. Shown without activation
+(`ShowWindow(SW_SHOWNOACTIVATE)`) and then activated, the same scenario passes (`landing=Elsewhere`, the sentence
+said): an ordinary switch works; a window that gets the foreground event before it really gets the foreground did
+not. **Fixed in 0.11.0** (owner decision, 2026-11-27): `GetForegroundWindow()` is the truth for a foreground event
+(`ForegroundEvents`, design §« Foreground events vs the real foreground »); an event naming another window never
+becomes the tracked window and the foreground is re-checked 100 ms later. WR5 with the real harness form: PASS.
 
 ## Pictures + tray — tested (plan 02, 2026-11-08)
 
@@ -1130,6 +1196,25 @@ the W-G1 bars unchanged, « il et » → F3 « il est », « ils son » → sont
 order): « le maître nous a » → `avons, a, …`, « celui qui nous a » → `a, attend, …`, « la maîtresse vous a » → `avez,
 allez, a, …`.
 
+## Sound confusions and « Sons que l'élève confond » — tested (plan dys-sound-tolerance, 0.11.0, VM predict-test-win11, 2026-11-27)
+
+Test VM `predict-test-win11` from the `clean` checkpoint (restored after, VM off), self-contained build of HEAD + the
+Phase 2 change, `--audio null`, classic Notepad; driver `pds.ps1`; results and key screenshots in
+`<work>\test-runs\dys-sound\` (RESULTS.md).
+
+| # | Scenario | Result |
+|---|---|---|
+| D1 | « le chard »; « le chardin␣ », F9, F1 F1 | jardin 1st on a green tile; ≈, the list « may replace », the text becomes « le jardin »; start log `sound pairs: chj` |
+| D2 | « mon jien »; « la bouche␣ » | chien 1st, green; ✓ |
+| D3 | Réglages → Mots | « Sons que l'élève confond »: five boxes, ch/j alone checked, the logopède hint; « ? » opens `reglages.html#sons` (stub `aller/reglages-sons.html`) |
+| D4 | tick f/v; untick ch/j | « la foiture » → voiture 1st, green (`sound pairs: chj, fv`); « le chardin␣ » red ? (`sound pairs: fv`); back to the defaults: nothing left in the profile |
+| D8 | f/v, k/g, t/d, p/b ticked | la dable → table 1st, il crogne → grogne 1st, le pateau → bateau 2nd, la foiture → voiture 1st: all green (owner 2026-11-27: the ticked pair wins over the edit's orange) |
+| D5 | teacher mode | « Classe » f/v reaches its pupils (`sound pairs: chj, fv` when saved, a line only when the pairs change); Léa's Réglages ask the PIN and show f/v inherited; her own « off » wins (voiture orange again, `sound pairs: chj`); switching to Tom logs `sound pairs: chj, fv` |
+| D6 | machine file locks ch/j off | `locked [words.soundPairs.chj]`; the ch/j box disabled with « Réglé par l'administrateur »; « le chardin␣ » red |
+| D7 | Mots tab at 1366 × 768 (VM display) | the window fits the 720-pixel work area, the tab scrolls; the five boxes and the hint are visible without scrolling |
+
+Not verified: audio (the VM has no sound device), Narrator / voice access on the new boxes.
+
 ## Listen before inserting — to test (owner request 2026-11-25)
 
 Implemented and unit-tested (`ListenFirstTests`: the pending tile and the heard tile, the F-key matrix (held keys
@@ -1174,6 +1259,51 @@ the key-state premise of the hook (review of 238c58b).
 
 Every run checks the `hook: … max=` lines (< 1 ms) and `listen … (x ms)` (press → speak ≤ 30 ms on the UI thread).
 
+## LibreOffice Writer through IAccessible2 — tested (plan libreoffice-phase1, 0.11.0, VM predict-test-win11, 2026-11-27)
+
+LibreOffice 26.8.3.1 (checkpoint `lo-26.8`, defaults, French document) and a 25.2.7 smoke (temporary checkpoint);
+Notepad / Edge regressions on `clean`. Driver `<work>\test-runs\lo-phase1\scripts\lp.ps1`, full table in
+`<work>\test-runs\lo-phase1\RESULTS.md`.
+
+| # | Scenario | Pass if |
+|---|---|---|
+| L1 | bar while typing, after a line wrap, in a new paragraph | under the caret line (`caret(ia2)` / `ia2-recent`), never at the mouse |
+| L2 | click inside « la mai\|son est », F1 « maison » | « la maison est » (D3: Delete 3 + Backspace 3) |
+| L3 | click at a paragraph start, `l` | capitalised words (« La », « Le », « L' ») |
+| L4 | « la maizon␣ » F9 + « maison » | « La maison␣ » (`correction: read … the document agrees, replaced`) |
+| L5 | « ilya␣ », « jtaime␣ » ≈ | « Il y a␣ », « Je t’aime␣ » (the document's apostrophe) |
+| L6 | « mon cousin veu pa␣ » marker; again with `--no-ia2` | « Mon cousin ne veut pas␣ »; with `--no-ia2` no marker |
+| L7 | edit a word then click in the sentence; edit then go to another paragraph; an AutoCorrect entry inside an edit | `reread word`, `reread sentence`; `settle: seeded, session rebased` |
+| L8 | an AutoCorrect entry that changes the length (« abcisse » → « abscisse »), Backspace, F1 | `settle: seeded`; F1 deletes exactly the read prefix |
+| L9 | « Bonj » F1 F1 + `! ? : ;` in a French and an English paragraph (a `.fodt` with both), `,` | French: one U+00A0 (LibreOffice's, `punct check … Ok (writer)`); English: our U+202F (`Missing … inserted`); `Bonjour,` |
+| L10 | drag, double click, Shift+Ctrl+→, Ctrl+A; an empty drag | shown through the copy, clipboard restored, document unchanged; empty drag → no copy |
+| L11 | Writer's password dialog (Shift+Esc « protéger »): type a secret in both fields | `field probe: Password` both times; the secret 0× in the log; nothing spoken |
+| L12 | Enter at the end / mid-paragraph, Backspace merge, Up / Down | the right prefix after each; every `reread` explained |
+| L13 | table cell, bullets, comment, footnote | read `ia2 Ok` or keys (`Unavailable`: the comment); never a wrong deletion |
+| L14 | emoji + decomposed accent before « mai‸son » | correct replacement |
+| L15 | Calc: ≈ list | `src=skip`, inserted at the caret, no copy |
+| L16 | `SAL_ACCESSIBILITY_ENABLED=0` | keys only, reads `Unavailable` (first read 11 ms, 13 on 25.2, then < 1 ms), no error |
+| L17 | `--no-ia2` | the quick-fix behaviour (selection by copy, U+00A0), no IA2 call |
+| L18 | 400 keys at 40 keys/s: no Pépite / defaults / `--no-ia2` | Writer CPU per key ≤ 4.0 ms with the defaults |
+| L19 | 30 min of mixed typing | no hang, no Pépite error, working set +≤ 20 MB, soffice handles +≤ 2 % |
+| L20 | `taskkill /F /IM soffice.bin` while typing, restart | Pépite alive; reads resume on the new pid |
+| L21 | Writer's word completion accepted by Enter | `settle: seeded`; « maintenant la », no doubled letters |
+
+**Results (2026-11-27):** N1–N3, E1–E3 and L0–L21 pass on 26.8.3, except L19's handle gate (soffice handles +2.3 %,
+gate 2 %, one sample pair) and L18 (≤ 4.0 ms/key in 4 of the 6 defaults runs: 4.02, 3.98, 4.10, 3.83, 3.59, 3.83;
+final build 3.59 / 3.83; 2.9–3.8 without Pépite, 11.2–11.4 with `--no-ia2`). L7: the word echo says a word as typed,
+before AutoCorrect — documented limit; L16: no breaker line, reads fail in < 1 ms. The 25.2.7 smoke (L1, L2, L4, L9,
+L10, L16) passes. Gates: caret read p50 1 ms / p95 19 ms (> 150 ms only in a pid's first seconds), `caret(ia2)` p95
+3–5 ms, read-back p95 9 ms, settle p95 2 ms; 30 min: no hang, no error; L19 settle reads 573, all agreeing. Missed on
+the loaded 3-vCPU VM: the key hook under 1 ms in 88 % of its lines (Notepad, same session: 91 %), with 5 lines over
+3 ms in L19 (7.2, 3.9, 11.1, 11.6, 5.4 ms; 3 of them outside Pépite's first minute); the UI's caret wait over 20 ms in
+16 of ≈ 4 700 lookups after the first minute (max 32 ms) and a start-up burst to 138 ms. **Not tested**: 150 % scaling
+(L1). Word after phase 1: the host suite `WordHostTest.ps1 -Suite all` ran on 2026-11-27: WS4 and WR5 (the latter
+failing identically on 0.10.2) fixed, then all 38 cases PASS — see the Word 16 section. The VM run found and fixed
+four issues before release (commit 4b60ead): LibreOffice's own password dialog shown / logged (UIA said NotPassword),
+the breaker tripping on the bridge's slow first answers, the per-update caret lookup's CPU cost, and the UI wait ending
+on the timer tick.
+
 ## Known limitations / next steps
 
 - **D22 in Word**: after a read-back fix the first Ctrl+Z undoes our narrow space; overtype mode is not handled;
@@ -1182,6 +1312,11 @@ Every run checks the `hook: … max=` lines (< 1 ms) and `listen … (x ms)` (pr
 - **KI-1:** no visible feedback at start-up and no single-instance guard — a second start looks like 'nothing
   happens'; see [known-issues.md](known-issues.md).
 
+- **LibreOffice** (0.11.0, phase 1; see [keyboard-design.md §9](../design/keyboard-design.md)): typing at the end of a
+  Writer paragraph that is not the last counts as the end of the text (D23, auto-space); the selection is read by the
+  Ctrl+C copy until phase 2; the word echo says a word as typed, before LibreOffice's AutoCorrect changes it; in
+  keys-only mode (`--no-ia2`, the breaker off) no bar in LibreOffice's dialogs; 150 % scaling and a second monitor not
+  tested; Calc / Impress / Draw keys only.
 - **Reads only after caret jumps.** While typing, keys stay the source, so app-side autocorrect without a
   jump can still drift. Apps without a readable text (RichEdit/WordPad, Java, Electron, MSAA-only) keep
   the keystroke-only behaviour. An `Edit` with > 64 K characters cannot report its caret → keys.

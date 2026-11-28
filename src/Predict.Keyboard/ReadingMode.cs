@@ -71,7 +71,9 @@ internal sealed class ReadingMode : IReadingOutput
     /// <summary>A selection read of <paramref name="fg"/> (UI thread; the caller checked it is still current).</summary>
     /// <param name="tailAt">D26: where the sentence end added after the selection starts in <paramref name="text"/> (-1 = none).</param>
     /// <param name="cut">the reader stopped at its character limit: the text is cut (message shown).</param>
-    public void OnSelection(IntPtr fg, string text, long triggerTick, string source, long readMs, int tailAt = -1, bool cut = false)
+    /// <param name="partial">LibreOffice phase 2: only part of the selection could be read (its own message).</param>
+    public void OnSelection(IntPtr fg, string text, long triggerTick, string source, long readMs, int tailAt = -1, bool cut = false,
+                            bool partial = false)
     {
         var key = SelectionPolicy.Key(text);
         var dismissed = fg == _dismissedFg ? _dismissedKey : null;
@@ -80,7 +82,7 @@ internal sealed class ReadingMode : IReadingOutput
         switch (action)
         {
             case SelectionAction.Show:
-                Show(fg, text, triggerTick, source, readMs, tailAt, cut);
+                Show(fg, text, triggerTick, source, readMs, tailAt, cut, partial);
                 break;
             case SelectionAction.Keep:
                 SetFg(fg);
@@ -101,11 +103,11 @@ internal sealed class ReadingMode : IReadingOutput
         System.Threading.Interlocked.Exchange(ref _fgHook, (long)fg);
     }
 
-    private void Show(IntPtr fg, string text, long triggerTick, string source, long readMs, int tailAt, bool cut)
+    private void Show(IntPtr fg, string text, long triggerTick, string source, long readMs, int tailAt, bool cut, bool partial)
     {
         long t0 = Stopwatch.GetTimestamp();
         var s = _settings();
-        var doc = ReadingDocument.Build(text, ReadingDocument.MaxWords, tailAt, cut, IsName);
+        var doc = ReadingDocument.Build(text, ReadingDocument.MaxWords, tailAt, cut, IsName, partial);
         if (doc.Tiles.Count == 0) { Exit("selection without words"); return; }
         if (_active) _ctl.Exit();   // a new selection replaces the shown one (speech stopped)
         SetFg(fg);

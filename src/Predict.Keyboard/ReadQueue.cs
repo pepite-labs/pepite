@@ -20,16 +20,19 @@ internal readonly record struct ReadRequest(long Id, long Version, IntPtr Fg, lo
 /// <param name="Selected">plan 07, selection reads only: the text to read ("" = no selection) — after D26, the selection
 /// completed to whole words plus the sentence end that follows; <see cref="Before"/> / <see cref="After"/> hold the context
 /// read around the selection, <see cref="TailAt"/> where the added sentence end starts (-1 = none); <see cref="Cut"/> =
-/// the selection was longer than the reader's character limit (cut at a word boundary).</param>
+/// the selection was longer than the reader's character limit (cut at a word boundary); <see cref="Partial"/> = LibreOffice
+/// phase 2: the IA2 selection walk did not reach the selection's start or end (budget, a non-text object), so
+/// <see cref="Selected"/> holds only the part it reached.</param>
 internal readonly record struct ReadResult(ReadStatus Status, string Source, TextContext Ctx, long Ms, string? Before = null,
                                            TextWindow? Window = null, string? Selected = null, string? After = null, int TailAt = -1,
-                                           bool Cut = false);
+                                           bool Cut = false, bool Partial = false);
 
 /// <summary>
 /// Scheduling of caret reads, independent of how a read is done (so it is unit-tested with a fake reader):
 /// one dedicated MTA worker thread, one pending slot where the latest request wins (debounces
 /// auto-repeat), a version check before reading (a request overtaken by typing is <c>Stale</c> without
-/// reading), a time budget after it (<c>Timeout</c>). A worker busy for more than <c>stuckMs</c> — in a
+/// reading), a time budget after it (<c>Timeout</c>; a <c>Password</c> or <c>Selection</c> result keeps its status, it
+/// holds no text to apply late). A worker busy for more than <c>stuckMs</c> — in a
 /// read or in its warm-up — is abandoned when the next request arrives: a new generation takes over and
 /// the old one exits without ever delivering its result.
 /// </summary>
@@ -159,7 +162,9 @@ internal sealed class ReadQueue : IDisposable
                 }
                 long ms = sw.ElapsedMilliseconds;
                 r = r with { Ms = ms };
-                if (ms > _timeoutMs && r.Status != ReadStatus.Password) r = r with { Status = ReadStatus.Timeout };
+                // the budget is for text the bar would use late; Password and Selection carry none, and turning a slow
+                // Selection into Timeout hid it from the selection reader (Word's GetSelection on a long document: WS4)
+                if (ms > _timeoutMs && r.Status is not (ReadStatus.Password or ReadStatus.Selection)) r = r with { Status = ReadStatus.Timeout };
             }
 
             lock (_lock)

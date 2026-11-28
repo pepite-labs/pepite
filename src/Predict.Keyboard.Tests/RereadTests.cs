@@ -647,6 +647,28 @@ public class RereadTests
         Assert.Same(t, RereadFlow.Commit(t, t, st2, p2, true, 0).Session);
     }
 
+    /// <summary>LibreOffice phase 1: a settle read (the host's AutoCorrect changed the length: « tres » → « très bien »
+    /// here a longer word) rebases the session like a Delete's read — the word-level edit and the sentence survive, the
+    /// mirror follows the document.</summary>
+    [Fact]
+    public void Flow_Settle_Read_Rebases_The_Mirror_On_The_Document()
+    {
+        var s = Begin("Le ch|t dort.");
+        s.Type('a');                                           // « chat »: the edited word
+        var st = s.Snapshot();
+        // the document after the host's own change elsewhere in the sentence: « Le chat dort » → « Le chat dort » + 1 char
+        var p = RereadFlow.Plan(st, new ReadFacts(true, false, false, true, Fg, W("Le cha|t dorts."), 0));
+        Assert.True(p.Replace);
+        var session = RereadFlow.Commit(s, s, st, p, true, 0).Session;
+        Assert.NotNull(session);
+        Assert.NotSame(s, session);
+        Assert.Equal("Le chat dorts.", session!.Snapshot().Text);   // the mirror is the document now
+        Assert.Equal("chat", Land(session, W("Le chat do|rts.")).D.Text);   // the edit survived the rebase
+        // not a rebase in another window, nor of a dirty session: a fresh begin (the settle caller never asks then)
+        var other = RereadFlow.Plan(st, new ReadFacts(true, false, false, true, (IntPtr)0x9999, W("Le cha|t dorts."), 0));
+        Assert.Equal(0, other.Next!.Snapshot().Edits);
+    }
+
     [Fact]
     public void Delete_While_Left_Is_Typed_While_Left()
     {

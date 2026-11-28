@@ -27,8 +27,11 @@ internal static class HostApps
         !string.IsNullOrEmpty(process) && ((HashSet<string>)LibreOffice).Contains(process);
 
     /// <summary>A host whose text and caret UI Automation never gives: the caret read, the selection read and the caret
-    /// lookup of the bar are not even tried there (LibreOffice: a failed lookup cost ≈ 110 ms per bar update and 4–8× its
-    /// CPU per key, phase 0 probe 2026-11-26) — classified <see cref="ReadStatus.Unavailable"/> at once.</summary>
+    /// lookup of the bar are not even tried <b>through UIA</b> there (LibreOffice: a failed lookup cost ≈ 110 ms per bar
+    /// update and 4–8× its CPU per key, phase 0 probe 2026-11-26) — classified <see cref="ReadStatus.Unavailable"/> at
+    /// once. LibreOffice phase 1: a <b>Writer</b> window (<see cref="ModuleOf(IntPtr)"/>) is read through IAccessible2
+    /// instead (<see cref="LibreOfficeText"/>: the caret read, the D22 read-back, the bar's caret, the password probe);
+    /// Calc, Impress, Draw and LibreOffice's dialogs stay keys only.</summary>
     public static bool UiaTextUnavailable(string? process) => IsLibreOffice(process);
 
     // window → (pid, name): a recycled pid comes with another window; bounded (cleared when full)
@@ -43,9 +46,9 @@ internal static class HostApps
         if (pid == 0) return null;
         lock (Gate)
             if (Names.TryGetValue(hwnd, out var c) && c.Pid == pid) return c.Name;
-        string? name = null;
-        try { using var p = System.Diagnostics.Process.GetProcessById((int)pid); name = p.ProcessName; }
-        catch (Exception) { /* gone, or access denied: unknown */ }
+        // OpenProcess + QueryFullProcessImageName (a few us; LibreOffice phase 1 review: the hook thread asks this at a focus
+        // event, where a Process object cost several ms on a cache miss); same name as Process.ProcessName
+        string? name = PrivateHosts.ImageName(pid);
         lock (Gate)
         {
             if (Names.Count >= 64) Names.Clear();
@@ -80,6 +83,41 @@ internal static class HostApps
         if (Ends("Draw")) return LibreOfficeModule.Draw;
         return LibreOfficeModule.Other;
     }
+
+    /// <summary>LibreOffice's top-level window classes (every module, every version): a document frame is <c>SALFRAME</c>, a
+    /// dialog <c>SALSUBFRAME</c> (« Saisir le mot de passe », VM 26.8.3). The hook's focus path tests them first, one
+    /// GetClassName, before any process lookup.</summary>
+    public const string FrameClass = "SALFRAME", DialogClass = "SALSUBFRAME";
+
+    /// <summary>Is <paramref name="hwnd"/> a LibreOffice frame or dialog (<see cref="FrameClass"/>, <see cref="DialogClass"/>)?
+    /// One GetClassName; any thread.</summary>
+    public static bool IsFrame(IntPtr hwnd) => FrameKind(hwnd) != 0;
+
+    /// <summary>Is <paramref name="hwnd"/> a LibreOffice dialog (<see cref="DialogClass"/>)? One GetClassName; any thread.</summary>
+    public static bool IsDialogFrame(IntPtr hwnd) => FrameKind(hwnd) == 2;
+
+    /// <summary>One GetClassName: 1 = <see cref="FrameClass"/>, 2 = <see cref="DialogClass"/>, 0 = anything else (no string
+    /// is built for other classes: only their length is compared).</summary>
+    private static int FrameKind(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return 0;
+        var sb = new System.Text.StringBuilder(16);
+        int n = Native.GetClassName(hwnd, sb, sb.Capacity);
+        if (n != FrameClass.Length && n != DialogClass.Length) return 0;
+        var cls = sb.ToString(0, n);
+        return string.CompareOrdinal(cls, FrameClass) == 0 ? 1 : string.CompareOrdinal(cls, DialogClass) == 0 ? 2 : 0;
+    }
+
+    public static bool IsFrameClass(string? cls) =>
+        string.Equals(cls, FrameClass, StringComparison.Ordinal) || string.Equals(cls, DialogClass, StringComparison.Ordinal);
+
+    /// <summary>
+    /// LibreOffice phase 1: the windows whose focus objects are recorded for IAccessible2 — Writer (reads, caret, password
+    /// probe) and LibreOffice's dialogs (<see cref="LibreOfficeModule.Other"/>: the password probe only, so a password
+    /// field there is seen as one: VM L11, its UIA probe answered NotPassword and the typed password reached the
+    /// <c>--log</c>). Calc, Impress, Draw: unchanged (keys only, UIA probe).
+    /// </summary>
+    public static bool Ia2Focus(LibreOfficeModule m) => m is LibreOfficeModule.Writer or LibreOfficeModule.Other;
 
     /// <summary>The window's title (no message sent), or "". Any thread.</summary>
     public static string TitleOf(IntPtr hwnd)

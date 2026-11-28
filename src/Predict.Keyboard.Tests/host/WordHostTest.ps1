@@ -1,16 +1,26 @@
-﻿# Host test in Microsoft Word: caret text reading (plan 01, WH1-WH7) and punctuation / spacing (plan 04,
-# WP2 WP4 WP4b WP5 WP4en WP4fr2 WP8: -Suite plan04), re-read of edits (plan 06, WR1-WR10: -Suite plan06, ~3 min) and
-# reading of the selected text (plan 07, WS1-WS9: -Suite plan07, ~1.5 min; speech plays through the speakers).
+﻿# Host test in Microsoft Word: caret text reading (plan 01, WH1-WH7, WH8 hyphenated names, and WL1: the 0.11.0 default « 1st F-key press
+# listens, 2nd inserts »), punctuation / spacing (plan 04, WP2 WP4 WP4b WP5 WP4en WP4fr2 WP8: -Suite plan04), re-read of
+# edits (plan 06, WR1-WR10: -Suite plan06, ~3 min) and reading of the selected text (plan 07, WS1-WS9: -Suite plan07,
+# ~1.5 min; speech plays through the speakers).
 # Owner-approved exception: Word only. Do not touch the keyboard/mouse during the run (~2-3 min each suite).
-# Plan 06 switches once to this script's own console window and back to Word (WR5, the « window switch » case).
-# Plan 04 writes %APPDATA%\PredictKeyboard\settings.json (still the settings folder in 0.6.1) for its two phases (text.punctuationSpace french, then
-# none) and restores the user's original file (or removes it) at the end; a copy is kept in the output folder.
+# Plan 06 shows a small window of this script once and goes back to Word (WR5, the « window switch » case).
+# Settings (0.11.0): the app reads them from the ACTIVE profile (%APPDATA%\Pepite-Prediction\profiles\<id>\profile.json).
+# The run never uses the user's profiles: it first copies %APPDATA%\Pepite-Prediction and %LOCALAPPDATA%\Pepite-Prediction
+# (zip backups) to <OutDir>\profile-backup and checks the copy (SHA-256 of every file), adds its own profile p-wordht
+# (« Test Word ») and makes it active in profiles\index.json, and writes there what each phase needs (classic F-keys and
+# clicks: words.keysListenFirst false, words.clickMode insert; speech.rereadEdits true; text.punctuationSpace french, then
+# none for WP8; WL1: keysListenFirst left unset = the default). In finally, once the app has exited, both folders are
+# mirrored back from the copy (robocopy /MIR: the test profile, the index change, settings.json's app state and any backup
+# zip the start wrote or pruned are undone; /MIR also restores folders, timestamps and attributes) and the SHA-256
+# manifest (path + content of every file) is compared with the one taken before (summary:
+# « app folders restored byte for byte »). If the script is killed, restore by hand from <OutDir>\profile-backup.
 # The app is started with --no-promote (no tray registry change).
 # Safety: every input batch first checks that Word's window is in front (one SetForegroundWindow retry,
 # else the scenario aborts); injected input carries dwExtraInfo = 0; no Word option is changed; the test
 # document is closed unsaved; Word is quit only if this script started it; the app (Pepite.exe since 0.6.1,
 # PredictKeyboard.exe before; both accepted, started with --no-welcome) is stopped with
-# --quit (and --exit-after 300 as a backstop), never killed.
+# --quit (and --exit-after 300 as a backstop); killed only if it is still running ~65 s after the final --quit, so
+# that its exit flush cannot rewrite the app folders once they are restored.
 # A framework-dependent build needs the Microsoft.WindowsDesktop.App 10.x runtime installed on the host (otherwise it
 # only shows "You must install .NET"): use a SELF-CONTAINED publish, which carries it, and pass the DB explicitly.
 # Usage:  dotnet publish src/Predict.Keyboard -c Release -r win-x64 --self-contained true -o <work>\host-keyboard
@@ -31,7 +41,7 @@ param(
 $ErrorActionPreference = 'Stop'
 # -Only accepts "WP4en,WP4fr2" as one string too (powershell -File passes it unsplit)
 $Only = @($Only -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-$KnownScenarios = @('WH1', 'WH2', 'WH5', 'WH2-end', 'WH2b', 'WH3', 'WH4', 'WH6', 'WH7', 'WP2', 'WP4', 'WP4b', 'WP5', 'WP4en', 'WP4fr2', 'WP8',
+$KnownScenarios = @('WH1', 'WH2', 'WH5', 'WH2-end', 'WH2b', 'WH3', 'WH4', 'WH6', 'WH7', 'WH8', 'WL1', 'WP2', 'WP4', 'WP4b', 'WP5', 'WP4en', 'WP4fr2', 'WP8',
                     'WR1', 'WR2', 'WR3', 'WR4', 'WR5', 'WR6', 'WR7', 'WR8', 'WR9', 'WR10',
                     'WS1', 'WS2', 'WS3', 'WS4', 'WS5', 'WS6', 'WS7', 'WS8', 'WS9')
 $unknown = @($Only | Where-Object { $KnownScenarios -notcontains $_ })
@@ -44,6 +54,14 @@ if (-not $Exe) {
 if (-not $OutDir) {
   if (-not $env:PREDICT_WORK_DIR) { throw "pass -OutDir <dir> (or set PREDICT_WORK_DIR)" }
   $OutDir = Join-Path $env:PREDICT_WORK_DIR ("word-host\" + (Get-Date -Format 'yyyy-MM-dd_HHmmss'))
+}
+# the output (and its profile-backup) must not be inside an app folder: the restore mirrors those folders
+$OutDir = [IO.Path]::GetFullPath($OutDir).TrimEnd('\')
+foreach ($appDir in @((Join-Path $env:APPDATA 'Pepite-Prediction'), (Join-Path $env:LOCALAPPDATA 'Pepite-Prediction'))) {
+  $a = [IO.Path]::GetFullPath($appDir).TrimEnd('\')
+  if ($OutDir.Equals($a, [StringComparison]::OrdinalIgnoreCase) -or $OutDir.StartsWith($a + '\', [StringComparison]::OrdinalIgnoreCase)) {
+    throw "-OutDir $OutDir is inside the app folder $a - choose a folder outside it"
+  }
 }
 $Exe = (Resolve-Path $Exe).Path
 $KbName = [IO.Path]::GetFileNameWithoutExtension($Exe)
@@ -181,8 +199,9 @@ function Cps([string]$t) { ($t.ToCharArray() | ForEach-Object { if ([int]$_ -lt 
 # press the F-key of $word (case-insensitive: the bar may capitalise it) in the latest suggestion line since Mark
 # (never F-keys blindly: F1 = Word help). Returns the word as shown, i.e. as inserted.
 function PickWord([string]$word) {
-  $l = Since | Where-Object { $_ -match "typed=.* -> (.*)  \(\d+ ms\)$" } | Select-Object -Last 1
-  if ($l -notmatch "typed=.* -> (.*)  \(\d+ ms\)$") { throw "no suggestion line - '$word' not picked" }
+  # 0.11.0: the line may end with the spelling marker (" mark=Known (0.00 ms)")
+  $l = Since | Where-Object { $_ -match "typed=.* -> (.*?)  \(\d+ ms\)( mark=.*)?$" } | Select-Object -Last 1
+  if ($l -notmatch "typed=.* -> (.*?)  \(\d+ ms\)( mark=.*)?$") { throw "no suggestion line - '$word' not picked" }
   $ws = @($matches[1] -split ', ')
   $i = -1; for ($k = 0; $k -lt $ws.Count; $k++) { if ($ws[$k] -ieq $word) { $i = $k; break } }
   if ($i -lt 0) { throw "'$word' not in the bar ($($matches[1]))" }
@@ -209,10 +228,71 @@ function CheckOneSpaceBefore($name, [string]$stem, [char]$punct, $extra = '') {
 }
 # French text (proofing language of THIS test document only: wdFrench 1036), caret at its end
 function AtEndOf([string]$s) { Prefill $s; $script:d.Content.LanguageID = 1036; ClickIdx $s.Length | Out-Null; Start-Sleep -Milliseconds 400; Mark }
-$SettingsPath = Join-Path $env:APPDATA 'PredictKeyboard\settings.json'
-function WriteSettings([string]$mode) {
-  New-Item -ItemType Directory -Force (Split-Path $SettingsPath) | Out-Null
-  [IO.File]::WriteAllText($SettingsPath, '{"schema":1,"text":{"punctuationSpace":"' + $mode + '"}}')
+# ---- the run's own profile (see the header): the user's profiles are never active, both app folders are restored
+$AppRoaming = Join-Path $env:APPDATA 'Pepite-Prediction'
+$AppLocal = Join-Path $env:LOCALAPPDATA 'Pepite-Prediction'
+$TestProfileId = 'p-wordht'   # a valid id: « p- » + 6 base-32 characters
+$UTF8 = New-Object Text.UTF8Encoding $false
+# relative path + SHA-256 of every file under both folders (sorted): the before / after proof
+function AppManifest([string]$roaming = $AppRoaming, [string]$local = $AppLocal) {
+  $m = foreach ($pair in @(@('roaming', $roaming), @('local', $local))) {
+    if (Test-Path $pair[1]) {
+      $base = (Resolve-Path $pair[1]).Path
+      Get-ChildItem $base -Recurse -File -Force | ForEach-Object { "$($pair[0])$($_.FullName.Substring($base.Length)) $((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash)" }
+    } else { "$($pair[0]) (absent)" }
+  }
+  @($m | Sort-Object)
+}
+function ManifestHash([string[]]$m) {
+  $sha = [Security.Cryptography.SHA256]::Create()
+  ($sha.ComputeHash($UTF8.GetBytes(($m -join "`n"))) | ForEach-Object { $_.ToString('x2') }) -join ''
+}
+function Mirror([string]$from, [string]$to) {
+  & robocopy $from $to /MIR /COPY:DAT /DCOPY:T /R:1 /W:1 /XJ /NP /NFL /NDL /NJH /NJS | Out-Null
+  if ($LASTEXITCODE -ge 8) { throw "robocopy $from -> $to failed (exit $LASTEXITCODE)" }
+}
+function BackupAppFolders {
+  $script:appBefore = AppManifest
+  $script:roamingHad = Test-Path $AppRoaming; $script:localHad = Test-Path $AppLocal
+  $script:backupDir = Join-Path $OutDir 'profile-backup'
+  if ($script:roamingHad) { Mirror $AppRoaming (Join-Path $script:backupDir 'roaming') }
+  if ($script:localHad) { Mirror $AppLocal (Join-Path $script:backupDir 'local') }
+  # the copy must be exact before anything is changed (it is what the restore mirrors back)
+  $copy = AppManifest (Join-Path $script:backupDir 'roaming') (Join-Path $script:backupDir 'local')
+  if ((ManifestHash $copy) -ne (ManifestHash $script:appBefore)) { throw "SAFETY: the copy of the app folders differs from the original - nothing changed, run aborted" }
+  $script:backupOk = $true
+  Note "app folders before: sha256 $(ManifestHash $script:appBefore) ($($script:appBefore.Count) entries), copied to $($script:backupDir)"
+}
+function RestoreAppFolders {
+  $copy = AppManifest (Join-Path $script:backupDir 'roaming') (Join-Path $script:backupDir 'local')
+  if ((ManifestHash $copy) -ne (ManifestHash $script:appBefore)) { Note "RESTORE NOT DONE: the backup copy changed - restore by hand from $($script:backupDir)"; return }
+  if ($script:roamingHad) { Mirror (Join-Path $script:backupDir 'roaming') $AppRoaming } elseif (Test-Path $AppRoaming) { Remove-Item $AppRoaming -Recurse -Force }
+  if ($script:localHad) { Mirror (Join-Path $script:backupDir 'local') $AppLocal } elseif (Test-Path $AppLocal) { Remove-Item $AppLocal -Recurse -Force }
+  $after = AppManifest
+  if ((ManifestHash $after) -eq (ManifestHash $script:appBefore)) { Note "app folders restored byte for byte: sha256 $(ManifestHash $after) ($($after.Count) entries)" }
+  else {
+    Note "RESTORE MISMATCH: sha256 after $(ManifestHash $after) - backup kept in $($script:backupDir)"
+    Compare-Object $script:appBefore $after | ForEach-Object { Note "  $($_.SideIndicator) $($_.InputObject)" }
+  }
+}
+# the test profile's settings, the whole file rewritten (before a start only); active in the index
+function WriteSettings([string]$mode, [switch]$ListenFirst) {
+  $words = [ordered]@{ clickMode = 'insert' }
+  if (-not $ListenFirst) { $words['keysListenFirst'] = $false }   # WL1: unset = the 0.11.0 default (listen first)
+  $prof = [ordered]@{
+    schema = 1; id = $TestProfileId; name = 'Test Word'; avatar = [ordered]@{ picto = $null; color = 'violet' }
+    created = '2026-11-27T00:00:00Z'
+    settings = [ordered]@{ words = $words; text = [ordered]@{ punctuationSpace = $mode }; speech = [ordered]@{ rereadEdits = $true } }
+  }
+  $dir = Join-Path $AppRoaming "profiles\$TestProfileId"
+  New-Item -ItemType Directory -Force $dir | Out-Null
+  [IO.File]::WriteAllText((Join-Path $dir 'profile.json'), ($prof | ConvertTo-Json -Depth 10), $UTF8)
+  $ix = Join-Path $AppRoaming 'profiles\index.json'
+  $j = if (Test-Path $ix) { Get-Content $ix -Raw -Encoding UTF8 | ConvertFrom-Json } else { [pscustomobject]@{ schema = 1 } }
+  $order = @(if ($j.PSObject.Properties['order']) { @($j.order) | Where-Object { $_ -ne $TestProfileId } }) + $TestProfileId
+  if ($j.PSObject.Properties['order']) { $j.order = $order } else { $j | Add-Member -NotePropertyName order -NotePropertyValue $order }
+  if ($j.PSObject.Properties['active']) { $j.active = $TestProfileId } else { $j | Add-Member -NotePropertyName active -NotePropertyValue $TestProfileId }
+  [IO.File]::WriteAllText($ix, ($j | ConvertTo-Json -Depth 10), $UTF8)
 }
 function StartKb([switch]$Setup) {
   Mark; $script:startMark = $global:mark
@@ -222,7 +302,10 @@ function StartKb([switch]$Setup) {
   $boot = Since
   Add-Content $runLog $boot
   if (-not ($boot -match 'hooks installed') -or -not ($boot -match 'reader warm-up')) { throw "$KbName did not start" }
-  Note ("settings: " + (($boot | Where-Object { $_ -match 'settings: words' }) -replace '^.*settings: ', ''))
+  # 0.11.0 log: « settings (<profile id>): words ... »; the run must be on its own profile, never the user's
+  $sl = [string]($boot | Where-Object { $_ -match 'settings( \(\S+\))?: words' } | Select-Object -Last 1)
+  Note ("settings: " + ($sl -replace '^\S+ ', ''))
+  if ($sl -notmatch "settings \($TestProfileId\):") { throw "SAFETY: the test profile $TestProfileId is not the active one - run aborted" }
   # at setup Word is brought to the front once; on a restart mid-run focus is only checked, never taken back
   if ($Setup) { [WH]::Activate($script:wordHwnd) | Out-Null } else { Guard }
   Start-Sleep -Milliseconds 800
@@ -251,7 +334,9 @@ if (Get-Process Pepite, PredictKeyboard -EA SilentlyContinue) { throw "Pepite / 
 
 $wordPidsBefore = @(Get-Process WINWORD -EA SilentlyContinue | ForEach-Object Id)
 $w = $null; $d = $null; $p = $null; $startMark = 0; $createdWord = $false
+$script:backupOk = $false
 try {
+  BackupAppFolders   # before any change; throws (nothing changed) if the copy is not exact
   $w = New-Object -ComObject Word.Application
   $createdWord = @(Get-Process WINWORD -EA SilentlyContinue | Where-Object { $wordPidsBefore -notcontains $_.Id }).Count -gt 0
   Note "Word: $(if ($createdWord) { 'new instance started by the test' } else { 'attached to an existing instance (will not be quit)' })"
@@ -261,27 +346,23 @@ try {
   $wordHwnd = [IntPtr]$w.ActiveWindow.Hwnd
   [WH]::Activate($wordHwnd) | Out-Null; Start-Sleep -Milliseconds 500
 
-  if ($Suite -ne 'plan01') {
-    # back up the user's settings file before any write (restored in finally)
-    $script:settingsHad = Test-Path $SettingsPath
-    if ($script:settingsHad) { Copy-Item $SettingsPath (Join-Path $OutDir 'settings.json.orig') -Force }
-    $script:settingsTouched = $true
-    WriteSettings 'french'
-  }
+  WriteSettings 'french'   # the test profile, active (both app folders are restored in finally)
   StartKb -Setup
 
   if ($Suite -in 'plan01', 'all') {
   Scenario 'WH1' {
     Prefill ''; ClickIdx 0 | Out-Null; Key 0x1B   # Esc: keys only from here
     Mark; TypeText 'il fait '; Start-Sleep -Milliseconds 700
-    $l = Since; $pred = $l | Where-Object { $_ -match "typed='' ctx=\[il fait\] src=keys" } | Select-Object -Last 1
+    # src=keys in the 2026-11-08 run, src=uia in 0.11.0: any source is accepted (src=\w+), the case checks the next-word list
+    $l = Since; $pred = $l | Where-Object { $_ -match "typed='' ctx=\[il fait\] src=\w+" } | Select-Object -Last 1
     $W = if ($pred -match '-> ([^,]+),') { $matches[1].Trim() } else { '' }
     F1; $t = Text
     Pass 'WH1' ([bool]$pred -and $W -and $t -match "(?i)il fait $([regex]::Escape($W)) $") "next-word '$W', text [$t]"
   }
   Scenario 'WH2' {
     Prefill 'la maison est belle'; ClickIdx 6 | Out-Null; Start-Sleep -Milliseconds 300
-    $r = ReadLine 'click'; F1; $t = Text; $ins = Since | Where-Object { $_ -match 'insert' } | Select-Object -Last 1
+    # the insertion line itself (« insert 'w' (... space=False) »), not « speak Inserted 'w' »
+    $r = ReadLine 'click'; F1; $t = Text; $ins = Since | Where-Object { $_ -cmatch "^\S+ insert '" } | Select-Object -Last 1
     Pass 'WH2' ($r -match "status=Ok .*prefix='mai' suffix='son' next=␠ ctx=\[la\]" -and $t -match '(?i)^la \w+ est belle$' -and $ins -match 'space=False') "$r | [$t] | $ins"
     $script:wh2 = $t
   }
@@ -340,11 +421,42 @@ try {
     $t = Text; $pl = Since | Where-Object { $_ -match "typed='mai'" } | Select-Object -Last 1
     Pass 'WH7' ($t -match '(?i)la mai$' -and [bool]$pl) "[$t] | $pl"
   }
+  # hyphenated names (0.11.0): « saint-n » offers « Saint-Nicolas »; choosing it replaces the typed head (capital restored,
+  # no « saint- » left twice) after a read of the document
+  Scenario 'WH8' {
+    Prefill ''; ClickIdx 0 | Out-Null; Start-Sleep -Milliseconds 300
+    Mark; TypeText ('je vais ' + [char]0xE0 + ' saint-n'); Start-Sleep -Milliseconds 900
+    $w = PickWord 'Saint-Nicolas'; Start-Sleep -Milliseconds 800
+    $t = Text; $c = Since | Where-Object { $_ -match 'compound: ' } | Select-Object -Last 1
+    Pass 'WH8' ($t -cmatch ('^[jJ]e vais ' + [char]0xE0 + ' Saint-Nicolas $') -and $c -match 'head replaced') "picked '$w' -> [$t] | $c"
+  }
+  # 0.11.0 default (owner 2026-11-25, words.keysListenFirst not set): the 1st F1 says the word and rings its tile, nothing
+  # is typed; the 2nd F1 on the same tile inserts it. A restart with that profile, then back to the classic F-keys.
+  $wl1 = $Only.Count -eq 0 -or $Only -contains 'WL1'
+  if ($wl1) { StopKb; WriteSettings 'french' -ListenFirst; StartKb }
+  Scenario 'WL1' {
+    Prefill ''; ClickIdx 0 | Out-Null; Start-Sleep -Milliseconds 300
+    Mark; TypeText 'la mai'; Start-Sleep -Milliseconds 700
+    $pl = Since | Where-Object { $_ -match "typed='mai'" } | Select-Object -Last 1
+    $W = if ($pl -match '-> ([^,]+),') { $matches[1].Trim() } else { '' }
+    Mark; F1; Start-Sleep -Milliseconds 400
+    $t1 = Text; $l1 = @(Since)
+    $heard = [string]($l1 | Where-Object { $_ -match 'listen F1( .*)? armed' } | Select-Object -Last 1)
+    $ins1 = @($l1 | Where-Object { $_ -cmatch "^\S+ insert '" }).Count
+    Mark; F1; Start-Sleep -Milliseconds 400
+    $t2 = Text; $l2 = @(Since)
+    $conf = [string]($l2 | Where-Object { $_ -match 'listen confirm F1' } | Select-Object -Last 1)
+    $ins2 = [string]($l2 | Where-Object { $_ -cmatch "^\S+ insert '" } | Select-Object -Last 1)
+    $ok = $W -and $t1 -ceq 'la mai' -and $heard -and $ins1 -eq 0 -and $conf -and $ins2 -match "insert '$([regex]::Escape($W))'" -and
+          $t2 -match "(?i)^la $([regex]::Escape($W)) $"
+    Pass 'WL1' $ok "word '$W' | 1st F1: text [$t1] $heard, inserts=$ins1 | 2nd F1: $conf / $ins2 text [$t2]"
+  }
+  if ($wl1 -and $Suite -eq 'all') { StopKb; WriteSettings 'french'; StartKb }
   }
 
   if ($Suite -in 'plan06', 'all') {
     # Plan 06 (D23): re-read of the modified word / sentence when the caret leaves it. What is said is read from the
-    # --log trace ("speak Reread '...'"); default speech settings (word / sentence echo off, re-read on).
+    # --log trace ("speak Reread '...'"); the test profile: re-read on, word / sentence echo at their default (on since 0.8.3).
     # Paragraphs are separated by `r (Word's paragraph mark, one character in Range indices).
     function Rereads { @(Since | Where-Object { $_ -match "speak Reread '(.*)'$" } | ForEach-Object { $_ -replace "^.*speak Reread '(.*)'$", '$1' }) }
     function RereadLines { @(Since | Where-Object { $_ -match 'reread |speak (Reread|Inserted)' }) }
@@ -750,12 +862,15 @@ finally {
     if (-not $p.HasExited) { $q = Start-Process $Exe -ArgumentList '--quit' -PassThru; [void]$q.WaitForExit(10000) }
     if (-not $p.WaitForExit(5000)) { Note "$KbName did not exit on --quit (exit-after 300 s will stop it)" }
   }
-  if ($script:settingsTouched) {
-    try {
-      $orig = Join-Path $OutDir 'settings.json.orig'
-      if ($script:settingsHad) { Copy-Item $orig $SettingsPath -Force; Note "settings.json restored" }
-      else { Remove-Item $SettingsPath -Force -EA SilentlyContinue; Note "settings.json removed (there was none before)" }
-    } catch { Note "RESTORE settings.json FAILED: $_ (original copy: $orig)" }
+  if ($script:backupOk) {
+    # the app writes its files until it exits (queued stores, flushed at exit): restore only after that, waiting up to
+    # 60 s more; a process still there (this run's own instance only) is killed first, so that no late flush rewrites
+    # the restored settings.json or brings back profiles\p-wordht
+    if ($p -and -not $p.HasExited -and -not $p.WaitForExit(60000)) {
+      Note "$KbName (pid $($p.Id)) still running 65 s after --quit: killed before the restore"
+      try { Stop-Process -Id $p.Id -Force; [void]$p.WaitForExit(10000) } catch { Note "kill pid $($p.Id): $($_.Exception.Message)" }
+    }
+    try { RestoreAppFolders } catch { Note "RESTORE FAILED: $($_.Exception.Message) - restore by hand from $($script:backupDir)" }
   }
   if ($d) { try { $d.Saved = $true; $d.Close([ref]0) } catch { Note "close doc: $_" } }
   if ($w -and $createdWord) { try { $w.Quit([ref]0) } catch { Note "quit Word: $_" } }

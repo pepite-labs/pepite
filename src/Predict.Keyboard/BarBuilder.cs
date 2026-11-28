@@ -111,6 +111,9 @@ internal static class BarBuilder
 
     /// <summary>Plan 10B (D12): the marker's red (« ? » unknown word); green and blue are the tiles' own.</summary>
     public static readonly Brush Red = Frozen(0xC6, 0x28, 0x28);
+    /// <summary>0.11.0 (plan negation, owner Q4): the « ne » marker's amber — discreet, and dark enough for its white text
+    /// (#8A5A00 on white text: contrast 5.9:1, WCAG 2.2 SC 1.4.3 AA for normal text).</summary>
+    public static readonly Brush Amber = Frozen(0x8A, 0x5A, 0x00);
     private static readonly FontFamily Symbols = new("Segoe UI Symbol, Segoe UI");
 
     /// <summary>The marker's colour, symbol, accessible name and action hint (null: nothing to do on a click).</summary>
@@ -118,6 +121,7 @@ internal static class BarBuilder
     {
         SpellingMark.Known => (Green, "✓", Strings.SpellKnownName, null),
         SpellingMark.SoundsLike => (Blue, "≈", Strings.SpellSoundsName, Strings.SpellSoundsAction),
+        SpellingMark.Grammar => (Amber, "ne", Strings.SpellNegationName, Strings.SpellNegationAction),   // 0.11.0, owner Q4
         _ => (Red, "?", Strings.SpellUnknownName, Strings.SpellUnknownAction),
     };
 
@@ -142,7 +146,7 @@ internal static class BarBuilder
             Width = d, Height = d, CornerRadius = new CornerRadius(d / 2), Background = colour, HorizontalAlignment = HorizontalAlignment.Center,
             Child = new TextBlock
             {
-                Text = symbol, FontFamily = Symbols, FontSize = Math.Round(d * 0.6), FontWeight = FontWeights.Bold, Foreground = White,
+                Text = symbol, FontFamily = Symbols, FontSize = Math.Round(d * (symbol.Length > 1 ? 0.45 : 0.6)), FontWeight = FontWeights.Bold, Foreground = White,
                 HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
             },
         };

@@ -380,6 +380,79 @@ public class ReadingTests
         Assert.Null(new AppSettings().Reading.ClipboardFallback);   // 0.11.0: not set = the host's default
     }
 
+    /// <summary>LibreOffice phase 2: a selection is read directly from any source (Writer through IA2); the Ctrl+C copy
+    /// is only the safety net for an IA2 read, under the 0.11.0 rules (gesture, setting, never in Calc).</summary>
+    [Fact]
+    public void Route_Reads_Every_Selection_Directly_The_Copy_Is_Only_The_Ia2_Safety_Net()
+    {
+        var W = LibreOfficeModule.Writer;
+        // ia2 Selection + gesture + Writer default → read, the copy allowed as a fallback
+        Assert.Equal((true, true, 0), SelectionPolicy.Route(ReadStatus.Selection, "ia2", true, false, null, W, false));
+        Assert.Equal((true, true, 250), SelectionPolicy.Route(ReadStatus.Selection, "ia2", true, true, null, W, false));   // Shift: debounce
+        Assert.Equal((true, false, 0), SelectionPolicy.Route(ReadStatus.Selection, "ia2", true, false, false, W, false));  // « Jamais »: IA2 only
+        Assert.Equal((true, false, 0), SelectionPolicy.Route(ReadStatus.Selection, "ia2", false, false, null, W, false));  // no gesture
+        Assert.Equal((true, false, 0), SelectionPolicy.Route(ReadStatus.Selection, "ia2", true, false, null, W, true));    // password suppressed
+        Assert.Equal((true, false, 0), SelectionPolicy.Route(ReadStatus.Selection, "ia2", true, false, true, LibreOfficeModule.Calc, false));
+        foreach (var src in new[] { "uia", "win32" })                                                                       // read directly, no copy
+            Assert.Equal((true, false, 0), SelectionPolicy.Route(ReadStatus.Selection, src, true, false, true, LibreOfficeModule.None, false));
+        // no text pattern: the copy under the same rules as 0.11.0
+        Assert.Equal((true, true, 30), SelectionPolicy.Route(ReadStatus.Unavailable, "skip", true, false, null, W, false));
+        Assert.Equal((true, true, 250), SelectionPolicy.Route(ReadStatus.Unavailable, "skip", true, true, null, W, false));
+        Assert.Equal((false, false, 0), SelectionPolicy.Route(ReadStatus.Unavailable, "skip", true, false, null, LibreOfficeModule.Calc, false));
+        Assert.Equal((false, false, 0), SelectionPolicy.Route(ReadStatus.Unavailable, "skip", true, false, true, LibreOfficeModule.Calc, false));
+        Assert.Equal((false, false, 0), SelectionPolicy.Route(ReadStatus.Unavailable, "skip", false, false, null, W, false));
+        Assert.Equal((false, false, 0), SelectionPolicy.Route(ReadStatus.Unavailable, "uia", true, false, null, LibreOfficeModule.None, false));
+        // nothing selected, a password field, a failed read: nothing to ask
+        Assert.Equal((false, false, 0), SelectionPolicy.Route(ReadStatus.Ok, "ia2", true, false, null, W, false));
+        Assert.Equal((false, false, 0), SelectionPolicy.Route(ReadStatus.Password, "ia2", true, false, true, W, false));
+        Assert.Equal((false, false, 0), SelectionPolicy.Route(ReadStatus.Timeout, "ia2", true, false, true, W, false));
+    }
+
+    [Fact]
+    public void Module_Is_Looked_Up_Only_When_A_Copy_Could_Follow()
+    {
+        Assert.True(SelectionPolicy.NeedsModule(ReadStatus.Selection, "ia2", true, null));
+        Assert.True(SelectionPolicy.NeedsModule(ReadStatus.Unavailable, "skip", true, true));
+        Assert.False(SelectionPolicy.NeedsModule(ReadStatus.Selection, "uia", true, true));
+        Assert.False(SelectionPolicy.NeedsModule(ReadStatus.Selection, "ia2", false, null));
+        Assert.False(SelectionPolicy.NeedsModule(ReadStatus.Unavailable, "skip", true, false));
+        Assert.False(SelectionPolicy.NeedsModule(ReadStatus.Ok, "ia2", true, null));
+    }
+
+    /// <summary>Review S3–S5: an IA2 text already cut cleanly is never re-cut by the reader's limit, only capped if the D26
+    /// completion made it longer; an uncut text at the limit is cut at a word.</summary>
+    [Fact]
+    public void Limit_Never_Recuts_A_Clean_Cut()
+    {
+        Assert.Equal(("le chat dort", true), SelectionPolicy.Limit("le chat dort", alreadyCut: true, 12));
+        Assert.Equal(("le chat dort", true), SelectionPolicy.Limit("le chat dort", alreadyCut: true, 100));
+        Assert.Equal(("le chat do", true), SelectionPolicy.Limit("le chat dort", alreadyCut: true, 10));   // D26 overflow: capped
+        Assert.Equal(("le chat", true), SelectionPolicy.Limit("le chat dort", alreadyCut: false, 12));     // at the limit: a word cut
+        Assert.Equal(("le chat dort", false), SelectionPolicy.Limit("le chat dort", alreadyCut: false, 13));
+    }
+
+    [Fact]
+    public void A_Partial_Read_Has_Its_Own_Message()
+    {
+        var d = ReadingDocument.Build("Le chat dort.", partial: true);
+        Assert.True(d.Partial);
+        Assert.False(d.Truncated);
+        Assert.False(ReadingDocument.Build("Le chat dort.").Partial);
+        Assert.NotEqual(Strings.ReadTooLong, Strings.ReadPartial);
+    }
+
+    /// <summary>The selection reader's fallback decision: a failed read, or (phase 2) an IA2 read that reached only part of
+    /// the selection; never a complete read, a password field or a stale read.</summary>
+    [Fact]
+    public void Fallback_Is_Wanted_For_A_Failed_Or_Partial_Read()
+    {
+        Assert.True(SelectionPolicy.WantsFallback(ReadStatus.Unavailable));
+        Assert.True(SelectionPolicy.WantsFallback(ReadStatus.Ok, partial: true));
+        Assert.False(SelectionPolicy.WantsFallback(ReadStatus.Ok));
+        Assert.False(SelectionPolicy.WantsFallback(ReadStatus.Password, partial: true));
+        Assert.False(SelectionPolicy.WantsFallback(ReadStatus.Stale, partial: true));
+    }
+
     /// <summary>Owner 2026-11-27: the module of a LibreOffice window from its (untranslated) title suffix.</summary>
     [Theory]
     [InlineData("soffice.bin", "Sans nom 1 — LibreOffice Writer", (int)LibreOfficeModule.Writer)]

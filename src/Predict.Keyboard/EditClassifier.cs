@@ -122,10 +122,11 @@ internal enum SessionMove { Leave, Keep, End }
 /// <param name="Ok">the read reached the text (status Ok, a window) and was applied (nothing typed since the jump,
 /// same window, in time).</param>
 /// <param name="Latest">it is the latest read requested: an older one never decides a landing.</param>
-/// <param name="IsDelete">the read follows a Delete applied to the session (a rebase, not a leave).</param>
+/// <param name="IsRebase">the read follows a Delete applied to the session, or is a settle read (LibreOffice phase 1: the
+/// document changed by the host's own AutoCorrect / word completion): a rebase, never a leave nor a landing.</param>
 /// <param name="Version">the tracker version the read was requested at: a begin / rebase is installed only if the
 /// tracker still has it under the commit lock (no key slipped in between the read and the commit).</param>
-internal readonly record struct ReadFacts(bool Ok, bool Password, bool Latest, bool IsDelete, IntPtr Fg, TextWindow? Window,
+internal readonly record struct ReadFacts(bool Ok, bool Password, bool Latest, bool IsRebase, IntPtr Fg, TextWindow? Window,
                                           long Version = 0);
 
 /// <param name="Replace">false: leave the session untouched (nothing to decide from this read).</param>
@@ -164,9 +165,9 @@ internal static class RereadFlow
         if (f.Password) return new(RereadDecision.Skip("password"), Landing.Unknown, true, null, Drop: true);   // never next to a password field
         if (st is null || !st.Left)
         {
-            // no leave pending: start from this read (after Delete: rebase, keeping the word / sentence state)
+            // no leave pending: start from this read (after Delete or a settle read: rebase, keeping the word / sentence state)
             if (!f.Ok || f.Window is null) return new(RereadDecision.Skip("no read"), Landing.Unknown, false, null);
-            var next = st != null && f.IsDelete && f.Fg == st.Fg && !st.Dirty
+            var next = st != null && f.IsRebase && f.Fg == st.Fg && !st.Dirty
                 ? EditSession.Continue(st, f.Window, sameWord: true) : EditSession.Begin(f.Window, f.Fg);
             return new(RereadDecision.Skip("begin"), Landing.Unknown, true, next, Version: f.Version);
         }

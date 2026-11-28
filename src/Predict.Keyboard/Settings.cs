@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
+using Predict.Core;
 
 namespace Predict.Keyboard;
 
@@ -40,6 +41,17 @@ internal sealed record ReadingSettings(bool Enabled = true, bool? ClipboardFallb
     public bool HasWindow => WinX.HasValue && WinY.HasValue && WinW.HasValue && WinH.HasValue;
 }
 
+/// <summary>« Sons que l'élève confond » (plan dys-sound-tolerance Phase 2, D33): the voicing pairs whose swap the engine
+/// tolerates (« chardin » → jardin). ch/j is on by default (owner Q-B), the four others are off; per profile, inherited
+/// from « Classe » and lockable per leaf (<c>words.soundPairs.chj</c> …) like any other setting.</summary>
+internal sealed record SoundPairSettings(bool ChJ = true, bool FV = false, bool KG = false, bool TD = false, bool PB = false)
+{
+    /// <summary>The pairs as the engine's <see cref="PredictionEngine.Tolerance"/>.</summary>
+    public SoundPairs ToEngine() =>
+        (ChJ ? SoundPairs.ChJ : 0) | (FV ? SoundPairs.FV : 0) | (KG ? SoundPairs.KG : 0) |
+        (TD ? SoundPairs.TD : 0) | (PB ? SoundPairs.PB : 0);
+}
+
 /// <summary>PBKDF2 hash of the adult PIN (designed in iteration 3, used from iteration 6).</summary>
 internal sealed record PinHash(string Alg, int Iterations, string Salt, string Hash);
 
@@ -58,7 +70,8 @@ internal sealed record AppSettings(
     BarPosition Position = BarPosition.Caret, int? FreeX = null, int? FreeY = null,
     SpeechSettings? Speech = null, LockSettings? Lock = null, PunctuationSpacing Punctuation = PunctuationSpacing.French,
     ReadingSettings? Reading = null, bool Welcome = true, bool SpellingIndicator = true, bool NamePictures = true,
-    ClickMode Click = ClickMode.ListenDouble, bool KeysListenFirst = true, bool ListenShiftKeys = false, bool ListenButton = false)
+    ClickMode Click = ClickMode.ListenDouble, bool KeysListenFirst = true, bool ListenShiftKeys = false, bool ListenButton = false,
+    SoundPairSettings? Sounds = null)
 {
     public const int Schema = 1;
     public const int MinWords = 1, MaxWords = 8;
@@ -66,6 +79,7 @@ internal sealed record AppSettings(
     public SpeechSettings Speech { get; init; } = Speech ?? new SpeechSettings();
     public LockSettings Lock { get; init; } = Lock ?? new LockSettings();
     public ReadingSettings Reading { get; init; } = Reading ?? new ReadingSettings();
+    public SoundPairSettings Sounds { get; init; } = Sounds ?? new SoundPairSettings();
 
     /// <summary>Pictures above the reading tiles: the reading setting when set, else the bar's.</summary>
     public bool ReadingPictures => Reading.Pictures ?? Pictures;
@@ -130,6 +144,11 @@ internal sealed record AppSettings(
                 // independent, also for users who never set them; A (Shift+F1…F8 speaks; off), D (speaker band; off)
                 ["clickMode"] = ClickModeNames[Click], ["keysListenFirst"] = KeysListenFirst,
                 ["listenShiftKeys"] = ListenShiftKeys, ["listenButton"] = ListenButton,
+                // D33 (plan dys-sound-tolerance Phase 2): « Sons que l'élève confond », one leaf per pair (inherited, lockable)
+                ["soundPairs"] = new JsonObject
+                {
+                    ["chj"] = Sounds.ChJ, ["fv"] = Sounds.FV, ["kg"] = Sounds.KG, ["td"] = Sounds.TD, ["pb"] = Sounds.PB,
+                },
             },
             ["bar"] = bar,
             ["text"] = new JsonObject { ["punctuationSpace"] = PunctuationNames[Punctuation] },
@@ -172,6 +191,8 @@ internal sealed record AppSettings(
         var st = o?["start"] as JsonObject;
         var rw = rd?["window"] as JsonObject;
         var free = b?["free"] as JsonObject;
+        var sp = w?["soundPairs"] as JsonObject;
+        var spd = d.Sounds;
         PinHash? pin = null;
         if (l?["pin"] is JsonObject p && Str(p["alg"]) is { } alg && Int(p["iterations"]) is int it &&
             Str(p["salt"]) is { } salt && Str(p["hash"]) is { } hash)
@@ -200,7 +221,9 @@ internal sealed record AppSettings(
             Click: ParseEnum(w?["clickMode"], ClickModeNames, d.Click),
             KeysListenFirst: Bool(w?["keysListenFirst"]) ?? d.KeysListenFirst,
             ListenShiftKeys: Bool(w?["listenShiftKeys"]) ?? d.ListenShiftKeys,
-            ListenButton: Bool(w?["listenButton"]) ?? d.ListenButton).Validated();
+            ListenButton: Bool(w?["listenButton"]) ?? d.ListenButton,
+            Sounds: new SoundPairSettings(Bool(sp?["chj"]) ?? spd.ChJ, Bool(sp?["fv"]) ?? spd.FV, Bool(sp?["kg"]) ?? spd.KG,
+                                          Bool(sp?["td"]) ?? spd.TD, Bool(sp?["pb"]) ?? spd.PB)).Validated();
     }
 
     private static T ParseEnum<T>(JsonNode? n, IReadOnlyDictionary<T, string> names, T def) where T : struct

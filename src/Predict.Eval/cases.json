@@ -724,5 +724,448 @@
     "context": "il",
     "typed": "sort",
     "intended": "sort"
+  },
+  {
+    "category": "split-est",
+    "typed": "cé",
+    "intended": "c'est"
+  },
+  {
+    "category": "split-est",
+    "context": "et",
+    "typed": "cé",
+    "intended": "c'est"
+  },
+  {
+    "category": "split-est",
+    "context": "mais",
+    "typed": "cé",
+    "intended": "c'est"
+  },
+  {
+    "category": "split-est",
+    "context": "oui",
+    "typed": "cé",
+    "intended": "c'est"
+  },
+  {
+    "category": "split-est",
+    "context": "il",
+    "typed": "sé",
+    "intended": "s'est"
+  },
+  {
+    "category": "split-est",
+    "context": "elle",
+    "typed": "sé",
+    "intended": "s'est"
+  },
+  {
+    "category": "split-est",
+    "context": "il",
+    "typed": "sè",
+    "intended": "s'est"
+  },
+  {
+    "category": "split-est",
+    "context": "il",
+    "typed": "nè",
+    "intended": "n'est"
+  },
+  {
+    "category": "split-est",
+    "context": "ce",
+    "typed": "nè",
+    "intended": "n'est"
+  },
+  {
+    "category": "split-est",
+    "context": "ça",
+    "typed": "nè",
+    "intended": "n'est"
+  },
+  {
+    "category": "split-est",
+    "typed": "kè",
+    "intended": "qu'est"
+  },
+  {
+    "category": "split-est",
+    "typed": "ce",
+    "intended": "c'est"
+  },
+  {
+    "category": "split-est",
+    "context": "et",
+    "typed": "ce",
+    "intended": "c'est"
+  },
+  {
+    "category": "split-3",
+    "typed": "jtaime",
+    "intended": "je t'aime"
+  },
+  {
+    "category": "split-3",
+    "typed": "jetaime",
+    "intended": "je t'aime"
+  },
+  {
+    "category": "split-3",
+    "context": "et",
+    "typed": "jtaime",
+    "intended": "je t'aime"
+  },
+  {
+    "category": "split-3",
+    "typed": "jemapelle",
+    "intended": "je m'appelle"
+  },
+  {
+    "category": "split-3",
+    "context": "bonjour",
+    "typed": "jemapelle",
+    "intended": "je m'appelle"
+  },
+  {
+    "category": "split-3",
+    "typed": "ilsapelle",
+    "intended": "il s'appelle"
+  },
+  {
+    "category": "split-3",
+    "typed": "ellesapelle",
+    "intended": "elle s'appelle"
+  },
+  {
+    "category": "split-3",
+    "typed": "jelaime",
+    "intended": "je l'aime"
+  },
+  {
+    "category": "split-3",
+    "typed": "jenai",
+    "intended": "je n'ai"
+  },
+  {
+    "category": "split-3",
+    "typed": "jelai",
+    "intended": "je l'ai"
+  },
+  {
+    "category": "split-3",
+    "typed": "tumas",
+    "intended": "tu m'as"
+  },
+  {
+    "category": "split-3",
+    "typed": "ilma",
+    "intended": "il m'a"
+  },
+  {
+    "category": "split-3",
+    "typed": "jtavais",
+    "intended": "je t'avais"
+  },
+  {
+    "category": "split-3",
+    "typed": "elma",
+    "intended": "elle m'a"
+  },
+  {
+    "category": "split-3",
+    "typed": "onsen",
+    "intended": "on s'en"
+  },
+  {
+    "category": "split-3",
+    "typed": "jemen",
+    "intended": "je m'en"
+  },
+  {
+    "category": "split-3",
+    "typed": "ilsé",
+    "intended": "il s'est"
+  },
+  {
+    "category": "expr",
+    "typed": "ilya",
+    "intended": "il y a"
+  },
+  {
+    "category": "expr",
+    "context": "et",
+    "typed": "ilya",
+    "intended": "il y a"
+  },
+  {
+    "category": "expr",
+    "typed": "ilnya",
+    "intended": "il n'y a"
+  },
+  {
+    "category": "expr",
+    "typed": "ilyavait",
+    "intended": "il y avait"
+  },
+  {
+    "category": "expr",
+    "context": "c'est",
+    "typed": "parceque",
+    "intended": "parce que"
+  },
+  {
+    "category": "expr",
+    "typed": "parcontre",
+    "intended": "par contre"
+  },
+  {
+    "category": "expr",
+    "typed": "quelquechose",
+    "intended": "quelque chose"
+  },
+  {
+    "category": "expr",
+    "typed": "kelkechose",
+    "intended": "quelque chose"
+  },
+  {
+    "category": "expr",
+    "typed": "toutlemonde",
+    "intended": "tout le monde"
+  },
+  {
+    "category": "expr",
+    "typed": "toutdesuite",
+    "intended": "tout de suite"
+  },
+  {
+    "category": "expr",
+    "typed": "toutacoup",
+    "intended": "tout à coup"
+  },
+  {
+    "category": "expr",
+    "typed": "toutafait",
+    "intended": "tout à fait"
+  },
+  {
+    "category": "expr",
+    "typed": "toutdabord",
+    "intended": "tout d'abord"
+  },
+  {
+    "category": "expr",
+    "typed": "apeupres",
+    "intended": "à peu près"
+  },
+  {
+    "category": "expr",
+    "typed": "estceque",
+    "intended": "est-ce que"
+  },
+  {
+    "category": "expr",
+    "typed": "keske",
+    "intended": "qu'est-ce que"
+  },
+  {
+    "category": "expr",
+    "typed": "silteplait",
+    "intended": "s'il te plaît"
+  },
+  {
+    "category": "expr",
+    "typed": "silvousplait",
+    "intended": "s'il vous plaît"
+  },
+  {
+    "category": "expr",
+    "typed": "biensur",
+    "intended": "bien sûr"
+  },
+  {
+    "category": "expr",
+    "typed": "aurevoir",
+    "intended": "au revoir"
+  },
+  {
+    "category": "expr",
+    "typed": "enfait",
+    "intended": "en fait"
+  },
+  {
+    "category": "expr-b2",
+    "typed": "ilest",
+    "intended": "il est"
+  },
+  {
+    "category": "expr-b2",
+    "typed": "ellea",
+    "intended": "elle a"
+  },
+  {
+    "category": "expr-b2",
+    "typed": "elleest",
+    "intended": "elle est"
+  },
+  {
+    "category": "expr-b2",
+    "typed": "onest",
+    "intended": "on est"
+  },
+  {
+    "category": "expr-b2",
+    "context": "et",
+    "typed": "onest",
+    "intended": "on est"
+  },
+  {
+    "category": "expr-b2",
+    "typed": "jesuis",
+    "intended": "je suis"
+  },
+  {
+    "category": "expr-b2",
+    "context": "mais",
+    "typed": "jesuis",
+    "intended": "je suis"
+  },
+  {
+    "category": "expr-b2",
+    "typed": "ilsont",
+    "intended": "ils ont"
+  },
+  {
+    "category": "split-neg",
+    "context": "je vois",
+    "typed": "ces",
+    "intended": "ces"
+  },
+  {
+    "category": "split-neg",
+    "context": "il prend",
+    "typed": "ses",
+    "intended": "ses"
+  },
+  {
+    "category": "split-neg",
+    "context": "il range",
+    "typed": "les",
+    "intended": "les"
+  },
+  {
+    "category": "split-neg",
+    "context": "il range",
+    "typed": "des",
+    "intended": "des"
+  },
+  {
+    "category": "split-neg",
+    "context": "je range",
+    "typed": "mes",
+    "intended": "mes"
+  },
+  {
+    "category": "split-neg",
+    "context": "tu ranges",
+    "typed": "tes",
+    "intended": "tes"
+  },
+  {
+    "category": "split-neg",
+    "context": "j'ai",
+    "typed": "jeté",
+    "intended": "jeté"
+  },
+  {
+    "category": "split-neg",
+    "context": "il faut",
+    "typed": "jeter",
+    "intended": "jeter"
+  },
+  {
+    "category": "split-neg",
+    "context": "plein d'",
+    "typed": "entrain",
+    "intended": "entrain"
+  },
+  {
+    "category": "split-neg",
+    "context": "c'est",
+    "typed": "parce",
+    "intended": "parce"
+  },
+  {
+    "category": "split-neg",
+    "context": "une",
+    "typed": "île",
+    "intended": "île"
+  },
+  {
+    "category": "split-neg",
+    "context": "un",
+    "typed": "élan",
+    "intended": "élan"
+  },
+  {
+    "category": "split-neg",
+    "context": "il a",
+    "typed": "onze",
+    "intended": "onze"
+  },
+  {
+    "category": "split-neg",
+    "context": "c'est",
+    "typed": "illégal",
+    "intended": "illégal"
+  },
+  {
+    "category": "hyphen",
+    "context": "il est peut-",
+    "typed": "ê",
+    "intended": "peut-être"
+  },
+  {
+    "category": "hyphen",
+    "context": "je vais là-",
+    "typed": "b",
+    "intended": "là-bas"
+  },
+  {
+    "category": "hyphen",
+    "context": "ma grand-",
+    "typed": "m",
+    "intended": "grand-mère"
+  },
+  {
+    "category": "hyphen",
+    "context": "il a vingt-",
+    "typed": "c",
+    "intended": "vingt-cinq"
+  },
+  {
+    "category": "hyphen",
+    "context": "je veux celui-",
+    "typed": "l",
+    "intended": "celui-là"
+  },
+  {
+    "category": "hyphen-keep",
+    "context": "dis-",
+    "typed": "m",
+    "intended": "moi"
+  },
+  {
+    "category": "hyphen-keep",
+    "context": "a-t-",
+    "typed": "i",
+    "intended": "il"
+  },
+  {
+    "category": "hyphen-keep",
+    "context": "va-",
+    "typed": "t",
+    "intended": "t"
   }
 ]

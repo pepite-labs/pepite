@@ -13,6 +13,10 @@ internal static class CommandLine
     /// file is never taken as the database.</summary>
     public const string Import = "--import", CheckConfig = "--check-config";
 
+    /// <summary>LibreOffice phase 1 (test switch): IAccessible2 is never called — Writer gets the 0.11.0 keys-only behaviour
+    /// (the VM control, and the negation plan's « unreadable host »). A flag, no value.</summary>
+    public const string NoIa2 = "--no-ia2";
+
     public static readonly string[] ValueOptions =
     {
         "--exit-after", "--pictos", "--render-bar", "--dpi", "--size", "--font", "--spacing", "--mark", "--listening",

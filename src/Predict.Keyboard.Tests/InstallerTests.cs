@@ -240,4 +240,99 @@ public class InstallInfoTests
         // nothing the .NET 10 build ships (InstallDelete runs before the copy, but a listed live file would be a typo)
         Assert.DoesNotContain(files, f => f is "Pepite.exe" or "Pepite.dll" or "coreclr.dll" or "hostfxr.dll" or "e_sqlite3.dll");
     }
+
+    private static string RepoFile(params string[] parts)
+    {
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
+        {
+            var p = Path.Combine(new[] { d.FullName }.Concat(parts).ToArray());
+            if (File.Exists(p)) return p;
+        }
+        throw new FileNotFoundException(Path.Combine(parts));
+    }
+
+    /// <summary>The body of one Pascal function / procedure of pepite.iss (up to the next top-level <c>end;</c>).</summary>
+    private static string CodeOf(string iss, string header)
+    {
+        int i = iss.IndexOf(header, StringComparison.Ordinal);
+        Assert.True(i >= 0, header);
+        int end = iss.IndexOf("\nend;", i, StringComparison.Ordinal);
+        return iss.Substring(i, end - i);
+    }
+
+    /// <summary>Plan installer-upgrade step 3 (R2): an older setup over a newer install stops in InitializeSetup (exit 1),
+    /// with a French message that says how to go back.</summary>
+    [Fact]
+    public void Downgrade_Is_Refused_In_InitializeSetup()
+    {
+        var iss = File.ReadAllText(RepoFile("installer", "pepite.iss")).Replace("\r\n", "\n");
+        Assert.Contains("Result := CheckInstalledVersion();", CodeOf(iss, "function InitializeSetup(): Boolean;"));
+        var check = CodeOf(iss, "function CheckInstalledVersion(): Boolean;");
+        Assert.Contains("StrToVersion(PrevVersion, P)", check);
+        Assert.Contains("ComparePackedVersion(P, N)", check);
+        Assert.Contains("'DisplayVersion'", check);
+        Assert.Contains("plus récente", check);
+        Assert.Contains("désinstallez d''abord", check);
+        Assert.Contains("downgrade refused: installed", check);
+        var dep = File.ReadAllText(RepoFile("installer", "DEPLOIEMENT.txt"));
+        Assert.Contains("version plus récente", dep);
+    }
+
+    /// <summary>Step 4 (R4): at an upgrade the information page is never shown again and the choice pages only with
+    /// « Modifier les choix »; « Lancer Pépite » stays not elevated and never after a silent run.</summary>
+    [Fact]
+    public void Upgrade_Skips_The_Choice_Pages_Unless_Asked()
+    {
+        var iss = File.ReadAllText(RepoFile("installer", "pepite.iss")).Replace("\r\n", "\n");
+        var skip = CodeOf(iss, "function ShouldSkipPage(PageID: Integer): Boolean;");
+        foreach (var page in new[] { "wpInfoBefore", "wpSelectComponents", "wpSelectTasks", "wpReady", "ConfigPage.ID", "ChangeChoices.Checked", "IsUpgrade" })
+            Assert.Contains(page, skip);
+        Assert.Contains("CreateCustomPage(wpWelcome, 'Mise à jour de Pépite'", iss);
+        Assert.Contains("'Mettre à jour'", iss);
+        // the upgrade page names the previous tasks from the uninstall entry (the tasks list is empty before its page)
+        Assert.Contains("'Inno Setup: Selected Tasks'", CodeOf(iss, "function CheckInstalledVersion(): Boolean;"));
+        Assert.DoesNotContain("WizardIsTaskSelected('demarrage')", CodeOf(iss, "function UpgradeSummary(): String;"));
+        var run = iss.Split("\n").Single(l => l.StartsWith("Filename: \"{app}\\Pepite.exe\"", StringComparison.Ordinal));
+        Assert.Contains("skipifsilent", run);
+        Assert.Contains("runasoriginaluser", run);
+    }
+
+    /// <summary>Step 5 (R6): Pépite is restarted after a silent upgrade only through ExecAsOriginalUser, and /NOLANCER
+    /// (documented in DEPLOIEMENT.txt) prevents it.</summary>
+    [Fact]
+    public void Silent_Upgrade_Restart_Uses_ExecAsOriginalUser_And_NOLANCER()
+    {
+        var iss = File.ReadAllText(RepoFile("installer", "pepite.iss")).Replace("\r\n", "\n");
+        var code = iss[iss.IndexOf("\n[Code]\n", StringComparison.Ordinal)..];
+        var restart = CodeOf(iss, "procedure RestartAfterSilentInstall();");
+        Assert.Contains("CmdSwitch('NOLANCER')", restart);
+        Assert.Contains("WizardSilent", restart);
+        Assert.Contains("PepiteWasRunning", restart);
+        var autostart = code.Split("\n").Where(l => l.Contains("--autostart")).ToList();
+        Assert.Single(autostart);
+        Assert.Contains("ExecAsOriginalUser(", autostart[0]);
+        Assert.Contains("RestartAfterSilentInstall();", CodeOf(iss, "procedure CurStepChanged(CurStep: TSetupStep);"));
+        Assert.Contains("/NOLANCER", File.ReadAllText(RepoFile("installer", "DEPLOIEMENT.txt")));
+    }
+
+    /// <summary>The Finished page never claims desktop icons (that task is unticked by default).</summary>
+    [Fact]
+    public void Finished_Text_Does_Not_Promise_Desktop_Icons()
+    {
+        var lines = File.ReadAllLines(RepoFile("installer", "pepite.iss"));
+        var finished = lines.Single(l => l.StartsWith("FinishedLabel=", StringComparison.Ordinal));
+        Assert.DoesNotContain("Bureau", finished);
+        Assert.Contains("menu Démarrer", finished);
+    }
+
+    /// <summary>High DPI: the three check lists get a wider, scaled gap left of their boxes (else a top-level box is
+    /// drawn half outside the list, Inno Setup 7.1.1).</summary>
+    [Fact]
+    public void Check_Lists_Get_A_Scaled_Offset()
+    {
+        var iss = File.ReadAllText(RepoFile("installer", "pepite.iss")).Replace("\r\n", "\n");
+        var init = CodeOf(iss, "procedure InitializeWizard();");
+        foreach (var list in new[] { "ComponentsList", "TasksList", "RunList" })
+            Assert.Contains($"WizardForm.{list}.Offset := WizardForm.{list}.Offset + ScaleX(8);", init);
+    }
 }

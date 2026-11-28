@@ -157,7 +157,14 @@ UI Automation `TextPattern` first where the application supports it, with the Wi
         │                    caret sentence never yields the one before it (second read 80 ms later); echoes typed
         │                    meanwhile wait behind the read and follow the sentence (SentenceEchoGate, pure; given up
         │                    after 1.1 s); the D23 skip needs the sentence spoken or being spoken
-        ├── CaretTextReader  own MTA thread: reads the text around the caret after a jump (Win32 Edit / UIA)
+        ├── CaretTextReader  own MTA thread: reads the text around the caret after a jump (Win32 Edit / UIA; LibreOffice
+        │                    Writer: LibreOfficeText)
+        ├── LibreOfficeText  0.11.0 (LibreOffice phase 1): Writer's text through IAccessible2 — focus slot (hook), paragraph
+        │                    cache + leases, prefetch, circuit breaker per soffice pid, Read / ReadBefore / CaretPoint
+        │                    (lo-caret worker, 20 ms bound) / ProbePassword (cached per focus object); SettlePolicy (pure)
+        ├── Ia2Interop       read-only built-in COM interop (IAccessible, IServiceProvider, IAccessible2 role,
+        │                    IAccessibleText read methods; every other slot a gap) + ComLoBackend (oleacc + Windows'
+        │                    ia2comproxy.dll, nothing installed or shipped)
         ├── SelectionReader  own MTA thread: the selected text (EM_GETSEL+WM_GETTEXT / UIA GetSelection), Ctrl+C fallback
         ├── SelectionPolicy, ClipboardCopy, ReadingDocument, ReadingController  pure (plan 07, unit-tested)
         ├── ContextExtractor pure: text window + caret → prefix, suffix, next char, context (= what typing gives)
@@ -206,7 +213,30 @@ UI Automation `TextPattern` first where the application supports it, with the Wi
  └────────────────────────────┘                        │ OnRead → lock{ ShouldApply ? tracker.Seed }        │
                                                        │          → ScheduleUpdate (UI thread)              │
                                                        └────────────────────────────────────────────────────┘
+
+ LibreOffice Writer (phase 1, IAccessible2; every COM call on an MTA worker)
+ hook thread (no COM, O(1) only)                        MTA workers (all IA2 calls)
+  OnFocusEvent ──NoteFocus(root,hwnd,obj,child)──► focus slot (seq++) ──Request──► lo-prefetch (ReadQueue: resolve, no text)
+  separator / Enter in a live Writer window ─────────Request (120 ms)─────────► settle-reader (ReadQueue)
+  jumps (as today) ──────────────────────────────────Request──────────────────► caret-text-reader ─┐
+                                                       punct read-back / sentence / correct ───────┤─► LibreOfficeText
+ field-probe / edit-probe / echo-guard (MTA) ── PasswordProbe.Check ───────────────────────────────┤   (cache, leases,
+ UI thread (STA, never COM) ── Caret.Get ── post + wait ≤ 20 ms ──► lo-caret (1 MTA thread, 1 slot)┘    breaker)
 ```
+
+**LibreOffice Writer (IAccessible2).** Proxies are obtained and used on MTA threads only; the WPF UI thread and the
+hook thread never touch an RCW (the shutdown release is handed to a thread-pool thread). A cross-process COM call cannot
+be cancelled, so the budgets sit around it: the queue's 150 ms (`Timeout`), its 2 s `stuck` (worker replaced), the UI's
+20 ms wait for the caret worker (no second call queued while it is busy), the echo guard's 300 ms; and the breaker per
+soffice pid (§7b) turns IA2 off — exactly the keys-only behaviour — after a stuck call or three timeouts in a row (a slow
+call in a pid's first 5 s, while the bridge wakes up, is not counted, and calls that overlapped one slow episode count
+once: the VM's first run switched IA2 off at start with three 300–420 ms answers). Phase 2 (0.11.0): that switch is a
+**cooldown**, not the rest of the session — 10 s, then 20 s, then 40 s; after it one trial call decides (a 4th episode
+within 10 minutes of IA2 last coming back on is for good). The selection walk runs on the `selection-reader` worker
+(MTA), within its own 700 ms budget checked between calls; the breaker counts it as a timeout only past 1.4 s. The hook
+adds one `GetClassName` per focus event of any window (`SALFRAME` first, then the title), a struct write and a request
+for a Writer frame, and per separator one volatile compare (`IsLive`) and, in a live Writer window, one `settle-reader`
+Request (a tiny lock + an event set) — all JIT-compiled in `WarmUpHookPath`.
 
 **Merge rules (read vs keys).** A jump resets the tracker and remembers its `Version`. The read result is
 applied (`tracker.Seed`) only if **(1)** the tracker version is unchanged (nothing typed, no other jump
@@ -293,6 +323,20 @@ and a new one started; the old one never delivers its result.
 | our own injected input (marker `LXKB`), incl. the Deletes of an insertion | ignored — never a jump | — | yes |
 
 The delays exist because the low-level hook sees an event **before** the application handles it.
+
+**Foreground events vs the real foreground (WR5, 0.11.0).** The window an `EVENT_SYSTEM_FOREGROUND` names is not always
+the foreground: a window shown by a background process gets its event while Windows refuses its activation, and its
+real activation a moment later raises a second event for the same window. `GetForegroundWindow()` is the truth, as
+for the key-down backstop and the read (`ForegroundEvents`, pure): an event that names the foreground is handled at
+once, and so is one naming a window whose root (`GA_ROOT`) is the foreground (a UWP frame's inner window). One that
+names another window never becomes the tracked window: the real foreground is used now if it changed (a third window
+after a quick double switch), and the real foreground is looked at again 100 ms later — then, while it is still the
+tracked window (or none), twice more at 300 ms intervals, so that a late activation without a second event is still
+seen (a one-shot timer, made at start, posts a thread message to the hook loop; any newer event cancels it; at stop the
+timer is disposed before the loop ends).
+The bar's own activation (BUG-1) is handled as before and neither asks nor cancels a re-check. Before this, the tracked
+window became the named one while the read went to the old one, and the real activation was then dropped as « the
+same window »: the re-read of the sentence just left was lost.
 
 ### WordTracker state
 
@@ -385,7 +429,8 @@ from a read), Backspaces the part before. **Trailing space** (`KeyboardPolicy.Ne
 An elision is inserted **without a space** (`NeedsSpace` → false); `WordTracker.Accept("l'")` pushes `l` into the
 context and counts the apostrophe as the separator, exactly as when it is typed, so the next-word bar follows at once
 (`vers` → F3 `l'` → `ouest, est, avant…`, `h` → `hôpital, horizon…`). Right after a typed `-` the bare `t` is
-not mapped (`a-t-il`: `WordTracker.LastSeparator`). The speech echo does not say `l'` alone: the
+not mapped (`a-t-il`: `WordTracker.LastSeparator`). A typed `-` still ends the word (it is a separator, as it always
+was); 0.11.0: the word before it is the **head** whose compounds the bar offers first (`WordTracker.HyphenHead`, § 6h). The speech echo does not say `l'` alone: the
 next inserted (or typed) word is said with it (« l'horizon »; `SpeechEcho.LastInserted` keeps the chunk up to its last
 `' ’ -`). **Ranking**: after a bare elision in the context, candidates that take one (Lexique `phon` starting with a
 vowel or `w`/`8` — *oiseau*, *huile* — minus a short list of aspirated-h words, because `phon` does not mark the
@@ -441,10 +486,17 @@ version, so it disarms by itself; a window change too.
   processes of `HostApps.LibreOffice`: `soffice.bin` and its launchers). Its French AutoCorrect (on by default, French
   text) deletes the spaces before `; : ! ?` and inserts **one U+00A0**; a U+202F of ours was kept next to it (phase 0
   probe: `maison` U+202F U+00A0 `!`). `AppRules.AppSpacesPunctuation` is true there, so the punctuation typed after our
-  space is sent alone (Backspace + the sign, whatever the setting) and LibreOffice puts its own U+00A0. Writer gives no
-  text to read (§ 7b), so there is **no read-back** (`AppRules.ReadsBackSpacing` = Word only): AutoCorrect off or a
-  non-French paragraph → no space, as in Word with its option off; LibreOffice's options are never changed. The D22
-  « take back our space » before `, . … ) ' -` and the absorbed second space are unchanged.
+  space is sent alone (Backspace + the sign, whatever the setting) and LibreOffice puts its own U+00A0. **Writer read
+  back through IAccessible2** (phase 1, owner Q1 of the plan = yes, 2026-11-27; `AppRules.ReadsBackSpacing(process,
+  ia2Live)`): in a Writer window that answers through IA2 the sign still goes alone first — Word's shortcut « this window
+  adds none: ours with the sign at once » is never used there — then ≈ 60 ms later `ReadBefore(4)` reads what LibreOffice
+  produced: one space → done (`punct check '!' … Ok: the app added its own space (writer)`); none (AutoCorrect off, a
+  paragraph in another language) → our space per the setting (U+202F, or U+00A0 with « Française (espace insécable
+  normale) »), Left / space / Right as in Word; two → logged only, **LibreOffice's U+00A0 is never removed**
+  (`AppRules.ReadBack`). « Aucune » → no read-back. A settle read follows the answer (§5c). Without IA2 (Calc, Impress,
+  `--no-ia2`, the breaker off) there is **no read-back**: AutoCorrect off or a non-French paragraph → no space, as in Word
+  with its option off. LibreOffice's options are never changed. The D22 « take back our space » before `, . … ) ' -` and
+  the absorbed second space are unchanged.
 - More limits of the Word rule:
   - **Undo order**: a read-back fix is a separate edit (Left, U+202F, Right — or Left, Backspace, Right); the first
     Ctrl+Z in Word undoes our U+202F (or brings back the removed space), and the Left/Right split Word's undo group
@@ -539,6 +591,20 @@ read at the new caret (reader thread) ──► snapshot under the lock ─► C
   Ctrl+Del), **Shift+Del** and **Insert** (overwrite mode) end the session silently; **Esc** keeps it. Delete after a
   leave (before its read) only marks the session typed-while-left. A mirror longer than 4 × 900 characters is no
   longer followed (`Dirty`).
+- **Settle reads** (LibreOffice phase 1: changes LibreOffice makes itself — its AutoCorrect, which runs on separators,
+  and its word completion accepted by Enter): in a Writer window that answers through IA2, a typed separator (white
+  space, punctuation except `' ’ -`) or Enter asks the `settle-reader` queue for one read 120 ms later
+  (`SettlePolicy`); a key typed meanwhile makes it `Stale` without any COM call (version check). Not asked while our
+  auto-space is armed (a seed would disarm the D22 fix), a D22 read-back is pending (`PendingReadBack`; the read-back
+  asks its own settle read once answered) or a ≈ / « ne » replacement is armed or waiting for its read; re-checked at
+  the answer. **Agrees** with the keys — the same word before the caret, nothing after, the same context words, ignoring
+  the case and ' / ’ (LibreOffice capitalises every sentence's first word and types ’: a seed for that alone would
+  forget the finished word and its ≈ / « ne » marker) → kept (`settle: agrees`). Otherwise the tracker is seeded (the
+  echo only if blank) and the session **rebased** like after Delete (`ReadFacts.IsRebase`) — only when it exists, is not
+  left, is in the same window and is not dirty; never a landing, never a selection decision (`settle: seeded`). Limit:
+  the word echo says a word as typed, before AutoCorrect changed it (« abcisse »); the mirror then follows the document.
+  **A Writer paragraph is the read's whole text** (offsets are paragraph-relative): typing at the end of a paragraph
+  that is not the last counts as typing at the end of the text (§9).
 - **No double speech**: when the word echo or the « inserted » echo says the modified word, the session marks it
   spoken and a move inside the sentence does not repeat it; leaving the sentence says the sentence only, never the
   word first.
@@ -711,15 +777,37 @@ source application is never touched.
   Ctrl+C handler) cannot be hidden: it may appear in the history (Windows+V) — said in the setting's tooltip. Log:
   `selection: Ctrl+C fallback: copied in N ms, K format(s) restored[ (try n)]` or `… a late copy after N ms, … restored`
   (never the text).
-- **LibreOffice** (0.11.0 quick fix, owner 2026-11-26; until IA2 selection reading, phase 1 of
-  `development/studies/libreoffice-support.md`): Writer gives UI Automation no selection, so the reading mode read nothing
-  there (user feedback « la lecture d'un texte sélectionné ne fonctionne pas »). The phase 0 probe (LibreOffice 26.8.3) showed
-  the fallback works for a drag, a double click, Shift+Ctrl+→ and Ctrl+A (0.7–0.9 s after the gesture, clipboard restored
-  identically, document unchanged), hence on by default in **Writer** windows. The caret and selection
-  reads skip UIA in every LibreOffice window (`HostApps.UiaTextUnavailable`: `Unavailable` at once, source `skip`), so the
-  fallback starts without the failed UIA round trip. Limits: with the clipboard source there is no context, so D26 cannot
-  complete a word cut by a drag (« hat dort dan » is read as selected); Writer's own copy may appear in the clipboard
-  history (as everywhere).
+- **LibreOffice Writer: the selection through IAccessible2** (phase 2, 0.11.0; plan `libreoffice-phase2`). LibreOffice
+  has no « whole selection » call, but every paragraph reports its own part of the selection, focused or not
+  (`get_selection`; VM probe 26.8.3: a backward selection comes back reversed, `[54,3]`; an empty paragraph inside
+  reports `[0,0]`, one outside nothing). `LibreOfficeText.ReadSelection` starts at the focused paragraph (the cursor's end)
+  and follows `flowsFrom` / `flowsTo` (`IAccessible2::get_relation`, `IAccessibleRelation`) while the selection touches
+  the shared edge — first without any text call (the extent), then `get_text` per range in document order, paragraphs
+  joined by a line break; up to 48 characters before / after it in its own paragraph for D26 (a word cut by a drag is
+  completed: « Le ch[at dort dan]s » → « chat dort dans »). Off-screen paragraphs answer too (20 pages: 164 paragraphs,
+  extent ≈ 230 ms, text ≈ 20 ms in the probe). **Edge rule**: a selection that ends exactly at the focused paragraph's
+  start / end leaves only an empty mark there (`nSelections` 1, an empty range at offset 0 / n — never seen in plain
+  typing): the neighbour on that side holds it; an empty focused paragraph asks the previous one, then the next. A table
+  block gives the focused cell caret −1: still `Selection`. After Ctrl+A on a long document Writer moves the cursor to
+  the off-screen last paragraph without a focus event (VM LS8): the walk may start from a paragraph that is `SELECTED` but
+  not focused (never caret text from it). Limits: 400 hops, 700 ms (checked between calls of the walk,
+  the text pass and the context), the 20 000-character cap (cut at the last word boundary, never inside a surrogate pair,
+  `Cut` → the « Texte trop long, seuls les 1000 premiers mots sont lus » message; the reader never re-cuts it). The
+  selection's **start** not reached (budget, a selected non-text object, a COM error on the way back) → `Unavailable`:
+  the copy when allowed, else nothing — never the end of a selection shown alone. Its **end** not reached → `Partial`:
+  the copy below replaces it when allowed, else the part read is shown with « Seule une partie de la sélection a pu
+  être lue. » A
+  `PROTECTED` object anywhere → `Password` before any text call; offsets that do not match the text → `Unavailable` (the
+  copy). Only a Writer document frame (`SALFRAME`) is read, never a `SALSUBFRAME` dialog. A Ctrl+click multi-selection
+  reads the run that holds the cursor. Log (never text): `selection ia2: P paragraphs, H hops, extent X ms, text Y ms,
+  complete|complete (cut)|partial(<why>)`. **Routing** (`SelectionPolicy.Route`, pure): a `Selection` from any source
+  is read directly; the Ctrl+C copy is only IA2's safety net (owner 2026-11-27: the setting « Dans LibreOffice Writer
+  seulement » stays the default and governs only that net) — when IA2 is off (breaker, `--no-ia2`, the bridge disabled,
+  LibreOffice too old), the offsets do not match, or the walk is partial. Calc, Impress, Draw: never read (no copy in
+  Calc, whatever the setting). The caret and selection reads skip UIA in every LibreOffice window
+  (`HostApps.UiaTextUnavailable`: `Unavailable` at once, source `skip`). With the copy (the safety net) there is no
+  context, so D26 cannot complete a cut word there, and Writer's own copy may appear in the clipboard history (as
+  everywhere).
   **Which window** (`HostApps.ModuleOf`, owner 2026-11-27): every module runs in `soffice.bin` and every frame has the class
   `SALFRAME`, so the frame's untranslated title suffix decides — « … — LibreOffice Writer » / « … LibreOffice Calc » /
   Impress / Draw (26.8 fr and en, « Sans nom 1 — LibreOffice Writer » for a new document; any separator); the title is
@@ -1018,6 +1106,9 @@ Up to 0.6.1 the user layer was `%APPDATA%\PredictKeyboard\settings.json`; 0.7.0 
   `words.spellingIndicator` (plan 10B, on by default),
   `words.clickMode` (`listenDouble` by default), `words.keysListenFirst` (true), `words.listenShiftKeys`,
   `words.listenButton` (off; owner 2026-11-25, §5e),
+  `words.soundPairs.{chj, fv, kg, td, pb}` (« Sons que l'élève confond », D33: chj true, the four others false; one leaf
+  per pair, so « Classe » `fv: true` is inherited, a pupil's own `fv: false` wins and the machine file locks one pair alone;
+  §6h),
   `speech.{speakInserted, speakWords, speakSentences, voice, rate −10..10, volume 0..100}` (the three echoes on by
   default — `speakWords` / `speakSentences` since 0.8.3, owner 2026-11-15), `lock.{enabled, pin}`
   (0.6 only, unused; the migration moves a `lock.pin` to `teacher.json`);
@@ -1037,6 +1128,11 @@ Up to 0.6.1 the user layer was `%APPDATA%\PredictKeyboard\settings.json`; 0.7.0 
   process, ACL) it is left untouched and nothing is saved this session. Each write is flushed to disk
   (`FileStream.Flush(true)`) before the rename. `state.json` (iteration 2) is migrated into
   `state.trayPromoted` once and deleted only after the new file is written (a failed write keeps it and retries).
+  **A newer schema is never rewritten** (plan installer-upgrade, 0.11.0): a file whose numeric `schema` is higher than
+  the one this version writes (a newer Pépite wrote it, then an older one was installed or run portable) is read and
+  used, but the store is read-only for the session (`<label>: <file> has schema N, newer than this version (M): read,
+  never written this session`): a save would relabel it with the older schema. Missing or non-numeric `schema` → as
+  before; nothing is moved aside. A visible notice is in the TODO.
 - **Locked values are never written**; a value the user had for a path that is now locked stays in their file
   but has no effect.
 - **Trust rule of the machine file**: by default `C:\ProgramData` lets a standard user **create** files, so a
@@ -1192,7 +1288,8 @@ Up to 0.6.1 the user layer was `%APPDATA%\PredictKeyboard\settings.json`; 0.7.0 
                               idleReturnMin, returnOnLock, offeredHere {<COMPUTERNAME>: [ids]}}, session {logonTimeUtc, ended}
    profiles\teacher.json      pin {alg, iterations, salt, hash}, recovery {…}, setAtUtc, failures {count, untilUtc}
    profiles\<id>\profile.json { schema, id, name, avatar {picto, color}, created, settings {…difference layer…} }
- %LOCALAPPDATA%\Pepite-Prediction\sauvegardes\profils-<stamp>-<reason>.zip   (daily, before a delete / an import; 5 kept per reason)
+ %LOCALAPPDATA%\Pepite-Prediction\sauvegardes\profils-<stamp>-<reason>.zip   (daily, before a delete / an import, at the first
+                              start of each new version « -mise-a-jour » with application/settings.json; 5 kept per reason)
  <anywhere>\*.pepite         export file (9B): { format "pepite-profils", version 1, app, created, remarque,
                               classe {name, avatar, settings}, profils [{id, name, avatar, settings}],
                               enseignant? {pin, recovery} (hashes, only when « Inclure le code enseignant ») }
@@ -1206,6 +1303,13 @@ Up to 0.6.1 the user layer was `%APPDATA%\PredictKeyboard\settings.json`; 0.7.0 
   profil », the file still kept. The voice-id migration of plan 08a is applied to the layer. A fresh install gets an
   empty « Mon profil ». A file that cannot be **read** (locked, ACL) is not "bad content": the migration stops before
   writing anything and runs again at the next start.
+- **Version backup** (`VersionBackup`, plan installer-upgrade R5, 0.11.0): right after `settings.json` is loaded and
+  before the profiles are, a start whose version differs from `state.lastVersion` zips `profiles\` plus the root
+  `settings.json` (entry `application/settings.json`) into `profils-<stamp>-mise-a-jour.zip` (5 kept; the clean-up
+  matches the reason exactly, so the daily `-jour` ones never count them). The version is recorded only once the zip
+  is written (a failure is retried at the next start); a first start (no profiles before it) records it without a
+  zip; a dev build (`?`) or a read-only `settings.json` does nothing. Log: `version: <old|none> -> <new>, backup
+  <zip> in <ms> ms`.
 - **Start-up never fails on the files** (`ProfileMigration.OpenStores`): any IO / access error of the migration or of
   the stores (a file where the folder should be, an ACL, an offline redirected `%APPDATA%`) is logged
   (`profiles: start-up failed (…)`) and the session runs on an in-memory « Mon profil » built from the old settings
@@ -1391,7 +1495,10 @@ the « ? » of the spelling indicator (0.8.1, §6h).
   sentence-start capital, like a lowercase start, gives a name a tenth of the lift. A capitalised
   « Mes fautes » target is a name too. A name never shows the ARASAAC picture of its lowercase homograph (`Suggestion.Name` → `PictureStore.KeyFor`
   null: an empty slot); 10C gives names their own pictures. Hyphenated names (Q16) are suggested whole and by each
-  capitalised part (« Jean-Baptiste » → « Baptiste »; not « les » of « Valbrune-les-Pins »).
+  capitalised part (« Jean-Baptiste » → « Baptiste »; not « les » of « Valbrune-les-Pins »). 0.11.0 (plan hyphen-names):
+  they are also offered **after the hyphen is typed** (« Jean-B » → « Jean-Baptiste », « saint-n » → « Saint-Nicolas »,
+  § 6h « Compounds after a typed hyphen »), and a word typed without a name's capital that starts one (« saint ») gets it
+  in the bar's last place.
 - **Engine**: see [predict-core-design.md](predict-core-design.md) § Personal words (a unigram-level share of the list,
   names favoured when the pupil starts with a capital, « Mes fautes » exact or ≥ 3-letter prefix with `WSpelling`).
 - **Lessons**: Espace enseignant → Mots → « Nouvelle leçon… » (`LessonDialog`): a name and a pasted text (or « Ouvrir un
@@ -1534,8 +1641,17 @@ has the state, never the word.
   (`PredictionEngine.Tolerance`, predict-core-design § 5h), a word whose only sound-alikes are one voicing swap away is ≈
   too (« chardin␣ » ≈ jardin, not ?). `SpellingCheck.Tolerant` counts those candidates, always last; `OnMarker` passes it
   to `RankCorrections`, which orders the exact sound-alikes by the context first, then the confusions among themselves —
-  a confusion never goes ahead of an exact one. `Tolerant` = 0 is the 0.10.2 list. Phase 1: the engine default is ch/j for
-  every profile (no keyboard setting yet; the per-profile « Sons que l'élève confond » comes in Phase 2).
+  a confusion never goes ahead of an exact one. `Tolerant` = 0 is the 0.10.2 list.
+- **« Sons que l'élève confond » (Phase 2, D33)**: the pairs are a setting of the profile, `words.soundPairs.*` (§6c; ch/j
+  on, f/v, k/g, t/d, p/b off). `KeyboardController.Configure` sets `PredictionEngine.Tolerance` from
+  `SoundPairSettings.ToEngine()` and logs `sound pairs: chj, fv` (« none ») at start and whenever the pairs change;
+  `Configure` runs on every `SettingsService.Changed`, so a profile switch, a « Classe » edit reaching the active pupil
+  (`ProfileService.SaveLayer` → `ReloadActive` → `Retarget`) and an import apply it (`SoundPairSettingsTests`). Réglages →
+  « Mots », below « Images pour les noms propres »: the header with its « ? » (→ `reglages.html#sons`, stub
+  `aller/reglages-sons.html`, section tag `aide:sons` for F1), five boxes on one wrapping row (AutomationIds
+  `SoundPairChJ`, `SoundPairFV`, `SoundPairKG`, `SoundPairTD`, `SoundPairPB`, each with its « Réglé par l'administrateur »
+  note) and the hint « À cocher d'après le bilan du ou de la logopède… » (also the boxes' UIA HelpText); saved by
+  Enregistrer, so the Réglages PIN rules apply (D29) and « Classe » is edited from the Espace enseignant.
 - **Setting**: `words.spellingIndicator` (on by default, Q7), Réglages → « Mots » → « Indicateur d'orthographe » (saved by
   Enregistrer like the other settings, with a hint line), per profile and « Classe » (layered), lockable by the machine
   file (`"locked":{"words":{"spellingIndicator":false}}` → the checkbox disabled with « Réglé par l'administrateur »).
@@ -1582,6 +1698,97 @@ has the state, never the word.
   `spelling_unlisted`'s complement (Grammalecte `French.lex`, see predict-core-design.md), a personal word or a pack form;
   the typing ✓ (`KnowsForMark`) follows the same rule and also leaves out a very rare pack name at a sentence start
   (« Pome »: no ✓ while typed, then ≈ — the 10C nit).
+- **0.10.2 / 0.11.0 — glued tiles** (plans glued-words, glued-words-followup): a joined tile (« l'école ») shows the
+  picture of its main word (`PictureStore.PictureForm`; a name keeps its full form, « N'Diaye »). 0.11.0: a tile may hold
+  several words (« je t'aime », « il y a », D22 amended): inserted as one string with one space after, kept verbatim by
+  the tracker (`WordTracker.Accept`; a ≈ replacement, `CorrectFinished`, reads the kept text again, so the context is its
+  words); its picture is the main word of its last part when that part is joined (« je t'aime » → aime), else its full
+  form, which no shipped picture has (« il y a »: none; a teacher's picture of that exact form still shows). At a sentence
+  start it takes a capital (« Ilya » → « Il y a »), its apostrophes the document's (« qu’est-ce que »); the indicator never
+  judges a string with a space (`SpellingIndicator.Judged`: no mark after it).
+
+- **0.11.0 — the « ne » marker and the group replacement** (plan negation, owner answers 2026-11-17, D12 / D31 amended):
+  when the finished word ends a simple negation typed without « ne » (« mon cousin veu pa␣ », « c'est pas␣ », « j'aime
+  plus.␣ »), `Update` asks `NegationNow`: `WordTracker.TryClause` gives the clause from the kept text (up to 12 words since
+  the last `. ! ? … ; : ,`, a line break or an unknown point, each flagged exact — typed or inserted since the jump, never
+  the part a read rebuilt nor a word whose start is unknown — and the one or two separators typed after the word: « ␣ »,
+  « .␣ », « ␣! », « .⏎ »; a lone « . » waits for the next separator, as the ≈ rule does), then
+  `PredictionEngine.MissingNe` (predict-core-design § 5j). A fix makes the marker **« ne » on amber** (`SpellingMark.Grammar`,
+  `#8A5A00`, white text, contrast 5.9:1; owner Q4): it wins over ✓ and over ≈ on « pa ». It is on whenever the spelling
+  indicator is (owner Q5, no setting; `--no-negation` is a test switch), shown with the bar's next-word tiles, alone when
+  there is none, and after Enter through the line-end check like ≈ / ?. **Hidden where choosing could do nothing**
+  (owner 2026-11-27): `ReadableWindows` learns per window and process from the reads — any Ok read (focus, caret,
+  correction) → readable; only the group's own correction read coming back Unavailable → unreadable (a focus read is
+  Unavailable for content or timing reasons in readable apps: the caret after « 2024 », Word busy); a window not read yet
+  follows its host (`HostApps.UiaTextUnavailable`:
+  LibreOffice starts unreadable), so the marker comes back by itself once the window reads Ok, and it does not come
+  straight back after a « nothing done ». UIA name « Négation : il manque peut-être
+  « ne » », help « clic : voir la phrase avec « ne » (F9) ». The next letter or any jump clears it (owner Q8: no re-offer
+  at the sentence end yet).
+  - **Click / F9** (`OnNegationMarker`): the bar shows the **group tile** first — the corrected group as `Replacement`
+    gives it, with a capital when the group opens a sentence (`WordTracker.SpanAtSentenceStart`: « c'est pas » → « Ce
+    n'est pas »; `SoundAlikeCorrection.CasedGroup`; the replacement also takes the document's capital when the read finds
+    one), its apostrophes the document's, a green correction tile (tooltip « Phrase corrigée : avec « ne » ») without picture (`PictureStore.PictureForm`: a several-word form no picture has) — then, when the
+    negation word itself was ≈ (« pa »), its ≈ words (`SoundAlikeList`, the ≈ marker's list); a ≈ word replaces that word
+    only, exactly as from the ≈ marker.
+  - **Listen before inserting** (owner 2026-11-25) applies to the group tile as to any tile and as to the ≈ tiles: in the
+    listen-first modes (« Clic sur un mot », « Touches F1–F8 : 1er appui : écouter », a UIA Invoke) the first press says
+    the group and rings its tile, the confirming press replaces; a group heard on its tile is not said again (its
+    apostrophe compared loosely: the tile has the tracker's, the replacement the document's).
+  - **Choosing the group** (`CorrectGroup`): nothing moved since the list (tracker version, window,
+    `WordTracker.CanCorrectSpan`: the kept text ends with exactly the group and its tail, typed) → the document is read
+    (the correction reader); `SoundAlikeCorrection.DecideGroup` replaces **only when the read is Ok and the document ends
+    with the group and its tail** (`DocumentEndsWith(before, span, tail)`: letters in any case, ' and ’ alike, a line
+    break as `\r\n` / `\n` / `\r`, every other separator exactly — Word's no-break space before « ! » means no). Anything
+    else does **nothing**: a group is never inserted at the caret, and there is no keys-only path — neither the test
+    allow-list nor the hosts whose text cannot be read (LibreOffice without IA2, `NeverKeysOnly`, a canvas in a browser), which get
+    nothing (stricter than the ≈ list, which inserts there). Keys: `BuildGroup` = `Build(group + tail − 1, replacement
+    + tail without its last char, last char)`: Backspace over the group and the tail, the corrected group, the tail again; a
+    line break is never deleted nor retyped (Left … Right). Sent under the lock only if nothing was typed meanwhile and no
+    key is in the hook.
+  - **After it** (`ApplyGroupCorrection`): the tracker (`CorrectSpan`: the kept text and the context follow, the finished
+    word becomes the corrected negation word, so the marker does not come back), the echo (`SpeechEcho.ReplacedGroup`:
+    Backspace over the group and its tail, the corrected words as typed, the last one as inserted, then the tail — a
+    sentence end there makes the sentence echo, from the document after a Backspace over a sentence end) and the D23 mirror
+    (`Insert(0, group + tail, replacement + tail)`; reset after a line break). The group is said like an inserted word
+    (owner Q7: « Lire le mot inséré »), else the echo's event. Logs `mark=Grammar negation=<rule>`, `negation: group shown
+    (<rule>, F9)`, `negation: read Ok 12 ms, the document agrees, replaced (<rule>; SendInput …)`, `negation: read
+    Unavailable …, no text to read, nothing done`, `negation: the text moved since the list, nothing done` — never the words.
+- **0.11.0 — Compounds after a typed hyphen** (plan hyphen-names, owner 2026-11-27: « saint-n » must give
+  « Saint-Nicolas »; Q1 = B, the whole name). Not a regression: a typed `-` has always ended the word, so the bar predicted
+  the letters after it alone (« n » → « ne »). Now:
+  - **Head** (`WordTracker.HyphenHead`, `Predict.Core.HyphenHead`): the word right before one typed `-`, from the kept text
+    only — letters joined by single inner hyphens (« Saint-Pierre », « a-t »), ≤ 40 chars, exact (typed, inserted, or the
+    word a read gave; never the part a read rebuilt), nothing glued before it. `HyphenHeadNeutral`: its capital says
+    nothing (a sentence start, after `: « " —`, nothing known before). A click after « saint- » rebuilds the text from the
+    read without its hyphen: no head there (documented limit).
+  - **Bar** (`PredictionEngine.PredictAfterHyphen`, predict-core-design § 5k): the head's **names** first (« Saint-Nicolas »
+    in their own form, `Name` → the names-pack picture), then today's list without the words a name already writes; the
+    lexicon's compounds (head as typed, ending cased like the letters: « porte-monnaie ») are merged into today's list by
+    score and never ahead of its first word, and dropped when their ending is one of today's words (« être » after
+    « peut- » writes « peut-être »). At most 5 compound tiles. The inversions keep their pronoun (« dis-m » → moi, « a-t-i »
+    → il; « va-t » keeps today's order, « va-tout » after « t »).
+    `KeyboardPolicy.Shown(…, hyphenHead)` never cases a compound tile again. No « ne » marker while a head is set.
+  - **Choosing a tile** (`Insert` → `KeyboardPolicy.CompoundInsert`): a tile that writes the head as typed inserts only its
+    ending at the caret, in every host (« Saint-N » → « Nicolas »). A tile that rewrites the head (« saint- » →
+    « Saint-Nicolas ») is a **read-first replacement**, like the ≈ list and the « ne » group: nothing moved since the bar
+    (version, window, `WordTracker.CanReplaceCompound`: the kept text ends with head + `-` + the letters, exact, no letter
+    after the caret) → the correction reader reads the document (`OnCompoundRead`); `SoundAlikeCorrection.DecideCompound`:
+    Ok and the document ends with that span (`DocumentEndsWithSpan`, any case) → Backspace over it, the whole name, a space
+    unless the text goes on; Ok but different, Timeout, a selection, Unavailable → the ending at the caret (« saint-Nicolas »:
+    the head is never deleted unseen; Unavailable on the keys-only test allow-list → from the keys); a key or a jump first →
+    nothing; a password field → nothing (tracking suspended). Where the window's text cannot be read (`ReadableWindows`:
+    Calc, Impress, Draw; a compound read's Unavailable teaches it, as the group's) the ending goes in at once, no read.
+    **Owner Q2 (decided 2026-11-27)**: the same « Saint-Nicolas » tile there (its ending goes in: « saint-Nicolas »);
+    the choice is one constant, `KeyboardPolicy.UnreadableCompoundTile` (`WholeTile`; `EndingTile` = « Nicolas » only).
+  - **After it** (`ApplyCompound`, under the lock): the echo goes back over the span and takes the name as inserted (said
+    « Saint-Nicolas » by « Lire le mot inséré », not again when just heard: case is not heard); the tracker
+    (`ReplaceCompound`: the kept text « Saint-Nicolas␣ », derived as typing it would — a Backspace gives « Nicolas » with its
+    head again, the « ne » clause reads « Saint » « Nicolas » as typed words); the D23 mirror (`Insert(0, span, name + space)`);
+    our space armed (D22). The ending path's echo keeps the typed head (« saint-Nicolas »). Logs `compound: read Ok 9 ms,
+    the document agrees, head replaced (…)`, `compound: the text cannot be read here, ending inserted at the caret`,
+    `compound: read Unavailable …, not replaced, ending inserted at the caret`, `compound: typed meanwhile, nothing done` —
+    never the words.
 
 ## 6i. Proper names and their pictures (D30, D19 amended, plan 10C, 0.8.2)
 
@@ -1724,12 +1931,22 @@ gives his e-mail, written « nom @ domaine » and turned into a link by `contact
 | Order | Method | Works for |
 |---|---|---|
 | 1 | `GetGUIThreadInfo(tid).rcCaret` + `ClientToScreen` | Win32 edit controls (Notepad, many dialogs) |
+| 1b | **`ia2`**: IAccessible2 `get_characterExtents` of the caret (or of the last character, right edge; an empty paragraph: its `accLocation`), screen coordinates — LibreOffice Writer when IA2 answers there (`LibreOfficeText.IsLive`) | LibreOffice Writer (0.11.0, phase 1) |
 | 2 | UI Automation `TextPattern.GetSelection()` → bounding rectangle | modern apps exposing TextPattern (Word, browsers, WinUI) |
 | 3 | mouse position + 20 px | last resort |
 
 Step 2 is not tried in a host that never answers it (`HostApps.UiaTextUnavailable`, 0.11.0: LibreOffice, no system caret
 and no UIA text): the failed lookup cost ≈ 110 ms per bar update (median, phase 0 probe) and raised Writer's CPU per key
-from ≈ 3 to 11–23 ms. The bar goes to the mouse there until IA2's caret rectangle (phase 1).
+from ≈ 3 to 11–23 ms. **Step 1b** (LibreOffice phase 1): the UI thread never makes a COM call. `Caret.Get` asks the
+`lo-caret` worker (one MTA thread, one slot) and waits at most 20 ms — a kernel wait for all but the last timer tick, then
+yielding to the deadline (a kernel wait alone ends on a 15.6 ms timer tick: 29 ms measured in the VM; under the VM's
+load the UI thread can still be preempted: 16 of ≈ 4 700 lookups over 20 ms in the 30 min run). Late, or the worker still busy with an earlier lookup (no second call is
+queued behind a slow LibreOffice) → the point of the same paragraph younger than 1 s (`ia2-late`), else the mouse. A
+point of the same paragraph younger than 100 ms is reused without any COM call (`ia2-recent`: the plan's CPU fallback —
+one lookup per bar update cost Writer ≈ 1 ms of CPU per key; with it, final build, 3.59 / 3.83 ms/key at 40 keys/s against
+4.2–4.3 before; at a child's pace every update still looks up); a bar placed at a reused point is placed again 120 ms after the
+last such update (`caret(ia2) refresh`), so it never stays at a stale point after a line wrap or Enter. A point outside the foreground window's rectangle is discarded
+(DPI / wrong object guard). Each lookup is logged `caret(ia2|ia2-late|ia2-recent) N ms` (`--log`).
 
 ## 7b. Reading the text at the caret
 
@@ -1764,11 +1981,28 @@ just faster.
   it the text end looked like `\n` (no space added) and other fields' text entered the window.
 - **Emoji** before the caret count as separators (as when typed), never shift the indices: verified with
   10 emoji + ZWJ sequences + a decomposed accent before `mai‸son` (E-emoji).
-- **LibreOffice** (0.11.0): no text pattern and no caret through UIA (the IA2 bridge exposes MSAA / IA2 only): the caret
-  read and the selection read return `Unavailable` (source `skip`) without asking UIA (`HostApps.UiaTextUnavailable`,
-  processes `soffice.bin` and its launchers). Consequences: keys only (no D23 re-read, ≈ correction inserted, never
-  replaced — `NeverKeysOnly`), selection reading through the Ctrl+C fallback (on by default in Writer, never in Calc, §5d), D22 punctuation
-  left to LibreOffice's AutoCorrect (§5b). Password fields are still checked by `PasswordProbe` before any copy.
+- **LibreOffice** (0.11.0): no text pattern and no caret through UIA (the IA2 bridge exposes MSAA / IA2 only), so UIA is
+  never asked there (`HostApps.UiaTextUnavailable`, processes `soffice.bin` and its launchers). **Writer is read through
+  IAccessible2** (phase 1, `LibreOfficeText` over `Ia2Interop`, read-only; Windows' own `oleacc.dll` + `ia2comproxy.dll`,
+  nothing installed): source `ia2`, see the column below. Calc, Impress, Draw and LibreOffice's dialogs stay keys only
+  (`Unavailable`, source `skip`): no D23 re-read, ≈ inserted, never replaced (`NeverKeysOnly`). Writer's selection is
+  read through IA2 too (phase 2, §5d); the Ctrl+C copy only when that read fails.
+
+| LibreOffice Writer (IA2, `LibreOfficeText.Read`) | |
+|---|---|
+| object | the paragraph (or heading) that has the focus: Writer raises one `EVENT_OBJECT_FOCUS` per paragraph; the hook records it (`NoteFocus`: a struct write + a prefetch request; for a `SALFRAME` frame whose title ends « LibreOffice Writer », and LibreOffice's dialogs — `SALSUBFRAME`, no prefetch, for the password probe) → `AccessibleObjectFromEvent` on the `lo-prefetch` worker; no slot yet → `AccessibleObjectFromWindow` + the `accFocus` walk (it fails on paragraph 2 once an infobar is shown: second resort only). `IAccessible2` through `QueryService`, `IAccessibleText` by `QueryInterface` (HRESULTs kept: a dead server is not « no interface ») |
+| password | `accState` `STATE_SYSTEM_PROTECTED` → `Password` before any text call; not `FOCUSED` → one re-resolve with the walk, then `Unavailable` |
+| role | IA2 role paragraph (0x41E) or heading (0x414) only; anything else (sidebar, toolbars, Find bar, fields) → `Unavailable` |
+| caret / selection | `get_caretOffset`; `get_nSelections` + `get_selection(0)` non-empty → `Selection` (no text call); an empty mark at offset 0 / n → the edge rule (one hop, §5d); caret −1 with a selection (a table block) → `Selection` |
+| text | **one** `get_text(c − 600, c + 300)` clamped to the paragraph (`get_nCharacters`); offsets are paragraph-relative (base −1, as UIA) |
+| text length | must equal the offsets (UTF-16 units), else `Unavailable` (`ia2: offset mismatch`) — never a trusted shift |
+| bound | ReadQueue budget 150 ms, worker replaced if stuck > 2 s; circuit breaker per soffice pid (`ia2: off for pid P (<why>)`): a stuck call, 3 timeouts in a row (not counted in the pid's first 5 s — `ia2: slow call at start` — and overlapping slow calls count once) or 5 structural failures in a row (no IAccessible2, or a paragraph / heading without IAccessibleText; a known non-text role is a normal failure; a successful resolve ends the run); the proxy not registered (`REGDB_E_IIDNOTREG`) → off everywhere; `RPC_E_SERVER_DIED*` → the pid is forgotten (a new soffice starts afresh); busy / defunct / `E_FAIL` → the cached object is dropped, `Unavailable`. Off = exactly the keys-only behaviour. **Half-open** (phase 2, F1): a stuck call or 3 timeouts switch the pid off for a cooldown — `ia2: off for pid P (<why>), retry in N s`, 10 / 20 / 40 s — then the first call once no call of the pid is in flight is the one trial (`ia2: on again for pid P after N s`, counters reset; stuck or slow → the next episode); the 4th episode within 10 minutes of IA2 last coming back on → off for the pid; structural failures stay for the pid's life. The VM WR5 run had lost IA2 for the session on the first « Enregistrer sous » (a call blocked while the dialog was created: 0.15–1.3 s, answering again once it is in front) |
+| cost (VM, 26.8.3) | read p50 ≈ 1 ms, first read of a new paragraph a few ms (warm: the prefetch); caret lookup p50 0.8 ms |
+
+  **A paragraph is the read's whole text**: its start is a sentence start (capitals after a click at a paragraph start);
+  its end is « end of text » (the auto-space is added after F1 at a paragraph end, as in Notepad). Accepted D23 limit:
+  typing at the end of a non-last paragraph counts as typing at the end of the text (§9). Test switch `--no-ia2`: IA2 is
+  never called (the 0.11.0 keys-only behaviour). Version line once per pid: `ia2: LibreOffice <FileVersion> pid P`.
 - **Word** (input-free probe on the host, COM-placed caret): the document pane `_WwG` gives correct windows (cold 44 ms, warm 3–7 ms). A paragraph mark `\r` inside the text is a sentence end and, as NextChar, means no space; the **final** paragraph mark lies outside `DocumentRange`, so after clamping the document end reads as end of text (space added, as in Notepad).
 
 ## 8. Security & privacy
@@ -1810,9 +2044,31 @@ just faster.
   (no admin), or « pour tous les utilisateurs » / `/ALLUSERS` in `C:\Program Files\Pepite-Prediction` (the school
   choice: AppLocker's default rules block `%LOCALAPPDATA%\Programs`). The app writes nothing next to the exe, so Program
   Files works. Run value and `.pepite` association in HKCU or HKLM to match (`HKA`); one install per PC — the installer
-  refuses the other mode while one exists (exit 1). The installer never starts Pépite elevated (« Lancer Pépite » runs
-  as the original user; a silent install starts nothing) and asks a running copy to quit first (the `.Quit` event, then
-  Restart Manager). **Data search** (`DataSearch.MayWalkUp`): the walk-up to `<parent>\Data.Build\out\` (prediction
+  refuses the other mode while one exists (exit 1). The installer starts Pépite only as the original user (« Lancer
+  Pépite » and the R6 restart below use `runasoriginaluser` / `ExecAsOriginalUser`; a setup started already elevated
+  starts it elevated — use `/NOLANCER` from an elevated console) and asks a running copy to quit first (the `.Quit`
+  event, then Restart Manager). **Upgrade** (plan installer-upgrade, 0.11.0): `InitializeSetup` reads `DisplayVersion`
+  of the uninstall entry of this mode. A newer installed version → refused before any change (`StrToVersion` +
+  `ComparePackedVersion`; a French box unless silent; exit 1; log `downgrade refused: installed X, this setup Y`;
+  going back = uninstall first, the data is kept; setups before 0.11.0 do not check). An older or equal one → an
+  « Mise à jour de Pépite » page after the welcome page (« Pépite X est déjà installé : il sera mis à jour en Y »,
+  « réinstallé (réparation) » for the same version; folder, components and tasks of the previous install, the RAM
+  warning) with « Mettre à jour » as Next: the information, components, tasks, configuration and ready pages are
+  skipped (two clicks: « Mettre à jour », « Terminer »); the « Modifier les choix » box brings them back in their
+  usual order (the ready memo starts « Mise à jour : Pépite X → Y »); the Finished page says « Mise à jour
+  terminée ». An unreadable `DisplayVersion` is not compared (upgrade page without the old number). **R6**: a silent
+  install that closed this session's Pépite (its mutex was there) restarts it with `--autostart` through
+  `ExecAsOriginalUser` after the machine file step (`restart: started|failed <rc>|exception`, never changes the exit
+  code); `/NOLANCER` prevents it; as SYSTEM the pupil's `Local\` mutex is in another session, so nothing is restarted
+  (the Run key starts the new version at the next logon). **Known limit** (VM row U2, 2026-11-27, also true of every
+  earlier release): as SYSTEM the setup cannot close a Pépite open in a user's session either — the `.Quit` event is
+  per session and Restart Manager answers « Session Mismatch », even with `/FORCECLOSEAPPLICATIONS` — so the copy fails
+  on a file in use, the setup rolls back and exits 5 (the old version stays); DEPLOIEMENT.txt says to deploy with
+  nobody logged on; a cross-session quit is in the TODO. The Finished text never mentions desktop icons
+  (`FinishedLabel` overridden: « Pépite se trouve dans le menu Démarrer »). **High DPI**: the three check lists get
+  `Offset + ScaleX(8)` (Inno Setup 7.1.1 sizes the check box from the 96 DPI system bitmap, 13 px, but draws the themed
+  box at its real size, so top-level boxes were drawn half outside the list at 150 % / 200 %; fixed upstream by
+  commit 5b4c39b6, 7.2.0-preview-1 — drop the workaround after testing 7.2.0 final). **Data search** (`DataSearch.MayWalkUp`): the walk-up to `<parent>\Data.Build\out\` (prediction
   DB, pictures, grammar, fonts) happens only when the exe's folder has a `bin\Debug\` or `bin\Release\` segment whose
   parent holds a `*.csproj` — an install or a publish folder finds its data next to the exe or not at all (a planted
   `C:\Data.Build\out\pictos.sqlite` is never read by an installed copy). **All users = Program Files only** (owner decision 2026-11-15, plan 12 review): in
@@ -1840,7 +2096,25 @@ just faster.
   on a `NotPassword` answer — `Unavailable` (the field cannot be classified) → `echo dropped (field not proven)`; a
   terminal or remote-session / VM window (`PrivateHosts`: the terminal classes / processes of the Ctrl+C fallback, plus
   mstsc, msrdc, vmconnect, VirtualBox, VMware, remote-control and VNC clients) → `echo dropped (terminal or remote
-  window)`; the inserted and corrected words go through the same guard (`Speaker.SayChecked`). In such a window the
+  window)`; the inserted and corrected words go through the same guard (`Speaker.SayChecked`). **LibreOffice Writer**
+  (0.11.0, phase 1): `PasswordProbe` asks IAccessible2 whenever the window has a recorded focus object
+  (`LibreOfficeText.ProbePassword`, not only once IA2 has answered there): one `accState` per focus object, cached —
+  no COM call per spoken word in steady typing (the UIA probe was Writer's remaining CPU cost per word).
+  `STATE_SYSTEM_PROTECTED` → Password; a focused paragraph / heading → NotPassword; **anything else → Unavailable**, so
+  nothing is spoken in LibreOffice's fields and dialogs, even a password field without `PROTECTED`; after 3 probes that
+  find no focused object IA2 gives no answer for that focus object (the UIA probe then); no focus object yet, IA2 off or
+  `--no-ia2` → the UIA probe. **LibreOffice's dialogs** (`SALSUBFRAME`, VM L11 « Saisir le mot de passe »: UIA called
+  its password field NotPassword and the typed password reached the `--log`) record their focus objects too (no
+  prefetch) and are probed through IA2: the field is `PROTECTED` → Password; the dialog's first field gets no focus event
+  of its own and the walk finds nothing there, so **no focused object in a LibreOffice dialog = Password** (nothing
+  tracked, logged, shown or spoken until a focus event names the field; never cached, never given up). The selection
+  walk (phase 2) checks `PROTECTED` on every paragraph it reaches before any text call (`Password` for the whole read),
+  and is never run while a `SALSUBFRAME` is in front. And a LibreOffice
+  dialog that IA2 does not answer at all (`--no-ia2`, the breaker off) is never asked to UIA: **Password** too (review of
+  the VM fixes; cost: no bar in LibreOffice's dialogs in keys-only mode). The hook records a dialog's focus object even
+  when its first focus event comes before its foreground event. A dialog never becomes « live ». Logs: `probe ia2 state N ms: <answer>`, `probe ia2 cached: <answer>` (once per answer).
+  The IA2 surface is **read-only by construction**: only reading methods are declared, every other vtable slot is a gap,
+  `IAccessibleEditableText` is never declared (unit-tested); no IA2 log line carries text. In a terminal or remote window the
   controller also tracks nothing, reads nothing and shows no bar (`_privateHost`, set at each foreground change; log
   `terminal or remote window in front: nothing tracked nor said`; re-evaluated at each foreground change and each focus
   move inside a window; the process is named with `OpenProcess` + `QueryFullProcessImageName`, and a process that cannot
@@ -1893,7 +2167,13 @@ just faster.
 | Limitation | Next step |
 |---|---|
 | text read only after jumps; autocorrect while typing (no jump) still drifts | read after an app-side change too (TextChanged events) — out of scope v1 |
-| RichEdit (WordPad), Java, Electron, MSAA-only apps: no read (keys only) | per-app adapters (LibreOffice/Chrome/Firefox next, D14) |
+| RichEdit (WordPad), Java, Electron, MSAA-only apps: no read (keys only) | per-app adapters (Chrome/Firefox, D14; LibreOffice Writer done in 0.11.0 through IA2) |
+| LibreOffice phase 2: a Writer selection is read through IA2 within 400 hops / 700 ms (Ctrl+A on ≈ 100+ pages, or a slow PC, gives a partial read → the copy when allowed, else nothing when the start was not reached, or the part read with « Seule une partie de la sélection a pu être lue. »); a Ctrl+click multi-selection reads the run holding the cursor; footnotes, frames, headers read as their own paragraph | `IAccessibleTextSelectionContainer` if LibreOffice adds one; the walk cost measured in the VM (LS7 / LS8) |
+| LibreOffice Calc / Impress / Draw: keys only; Calc's UIA password probe takes ≈ 2.2 s (the echo is dropped there) | an IA2 adapter per module, if asked |
+| LibreOffice phase 1: a Writer paragraph is the read's whole text — typing at the end of a paragraph that is not the last counts as the end of the text (auto-space, D23) | read the next paragraph's start (IA2 relations) |
+| LibreOffice moving to a qt6 / UIA accessibility bridge (study R1) would make IA2 find nothing (keys only) and may make UIA work | a measurement, not a rewrite |
+| LibreOffice phase 1: the word echo says a word as typed, before LibreOffice's AutoCorrect changed it; the D23 mirror then follows the document (settle read) | — (accepted) |
+| LibreOffice phase 1: the caret rectangle at mixed DPI on a second monitor is not tested (a point outside the window falls back to the mouse) | test on two monitors |
 | `Edit` with > 64 K chars: EM_GETSEL can't report the caret → keys | `EM_GETSEL` with pointer args / `EM_EXGETSEL` |
 | focus moved into a password field by the page *while* typing (no jump, after the probe answered) is not seen | probe again on UIA focus-changed events |
 | UWP / packaged apps hosted by `ApplicationFrameHost`: the foreground window's pid is the host's, not the app's, so a UIA element with a real pid is rejected (`Unavailable` → keys) | resolve the hosted `CoreWindow`'s pid before comparing |

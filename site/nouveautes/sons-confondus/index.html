@@ -14,7 +14,7 @@
 <body>
 <!-- Page « Nouveautés » du site GitHub Pages (installer/build_help_site.py --pages), en ligne avec la version 0.11.0.
      LATEST entre accolades = le dossier de la dernière version de l'aide. Les images sont de vraies captures de Pépite,
-     sans données d'élève. Quand le réglage « Sons que l'élève confond » sortira, mettre à jour la partie « Bientôt ».
+     sans données d'élève.
      Licence : CC BY-SA 4.0, sauf les pictogrammes ARASAAC visibles dans les captures (Sergio Palao, ARASAAC,
      Gouvernement d'Aragon, CC BY-NC-SA 4.0). -->
 <!-- Date : la ligne « Page publiée le … » sous le chapeau garde la date de la première publication. Si la page
@@ -32,8 +32,8 @@
   <ul>
       <li><a href="#change">Ce qui change</a></li>
       <li><a href="#pourquoi">Pourquoi</a></li>
-      <li><a href="#regler">Rien à régler</a></li>
-      <li><a href="#bientot">Bientôt</a></li>
+      <li><a href="#regler">Le réglage</a></li>
+      <li><a href="#bientot">Les autres paires</a></li>
       <li><a href="#limites">Les limites</a></li>
       <li><a href="../index.html">Toutes les nouveautés</a></li>
       <li><a href="{LATEST}/aide/index.html">L'aide</a></li>
@@ -42,7 +42,7 @@
 <main id="contenu">
 <h1>Pépite comprend mieux les sons confondus (ch / j)</h1>
 <p class="chapeau">Nouveau dans Pépite 0.11.0&#8239;: un élève qui écrit «&#8239;ch&#8239;» à la place de «&#8239;j&#8239;», ou l'inverse, se voit quand même proposer le mot qu'il voulait écrire. <q>chardin</q> → <b>jardin</b>, <q>jien</q> → <b>chien</b>, <q>mancher</q> → <b>manger</b>.</p>
-<p class="petit">Page publiée le <time datetime="2026-11-27">27 novembre 2026</time>.</p>
+<p class="petit">Page publiée le <time datetime="2026-11-27">27 novembre 2026</time>, mise à jour le <time datetime="2026-11-28">28 novembre 2026</time>.</p>
 
 <h2 id="change">Ce qui change</h2>
 <h3 id="en-tapant">Pendant que l'élève tape</h3>
@@ -62,11 +62,14 @@
   <li>Ministère de l'Éducation nationale, <cite>Évaluations nationales de début de CE2, français&#8239;: fiche «&#8239;Écrire des mots dictés&#8239;»</cite>, 2026 (site eduscol.education.gouv.fr)&#8239;: parmi les exemples d'erreurs d'un élève qui ne maîtrise pas encore les correspondances entre les sons et les lettres, <q>visache</q> pour <q>visage</q>.</li>
 </ul>
 
-<h2 id="regler">Rien à régler</h2>
+<h2 id="regler">Le réglage</h2>
 <p>C'est en marche dès l'installation de Pépite 0.11.0, pour tous les profils. Quand l'élève tape un mot correctement, Pépite le propose à la même place qu'avant.</p>
+<p>Dans <b>Réglages</b> → onglet <b>Mots</b>, la partie <b>«&#8239;Sons que l'élève confond&#8239;»</b> montre la case <b>ch / j (ch, j, g, ge)</b>, cochée au départ. Pour un élève à qui cela n'apporte rien, l'enseignant peut la décocher.</p>
 
-<h2 id="bientot">Bientôt&#8239;: les autres paires de sons</h2>
-<p>Chaque élève a ses propres confusions&#8239;: l'un mélange f et v, un autre t et d. Un réglage <b>«&#8239;Sons que l'élève confond&#8239;»</b> est prévu dans le profil de chaque élève&#8239;: l'enseignant ou l'orthophoniste pourra y cocher les paires f / v, k / g, t / d et p / b. Il sera protégé par le code enseignant. Nous l'annoncerons ici quand il sera prêt.</p>
+<h2 id="bientot">Les autres paires de sons</h2>
+<p>Chaque élève a ses propres confusions&#8239;: l'un mélange f et v, un autre t et d. Le même réglage propose aussi <b>f / v</b>, <b>k / g (c, qu, k / g, gu)</b>, <b>t / d</b> et <b>p / b</b>, décochées au départ&#8239;: l'enseignant les coche pour un élève, d'après le bilan de l'orthophoniste ou du logopède. <q>foiture</q> → <b>voiture</b>, <q>crogne</q> → <b>grogne</b>, <q>dable</q> → <b>table</b>, <q>pateau</q> → <b>bateau</b>.</p>
+<p>Le réglage se fait par profil. Fait pour «&#8239;Classe&#8239;», il vaut pour chaque élève qui n'a pas fait son propre choix. Avec la gestion enseignant, les réglages peuvent demander le code enseignant. Une école peut aussi imposer une paire, cochée ou non, par son fichier de configuration.</p>
+<p>Une case cochée sans besoin ajoute des mots inutiles dans la barre&#8239;: mieux vaut ne cocher que ce que le bilan montre.</p>
 
 <h2 id="limites">Les limites</h2>
 <ul>

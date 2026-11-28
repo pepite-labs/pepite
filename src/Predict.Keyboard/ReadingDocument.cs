@@ -47,6 +47,8 @@ internal sealed class ReadingDocument
     public int WordCount { get; }
     /// <summary>The selection had more than <see cref="MaxWords"/> words.</summary>
     public bool Truncated { get; }
+    /// <summary>LibreOffice phase 2: only part of the selection could be read (its own message).</summary>
+    public bool Partial { get; private init; }
     /// <summary>De-duplication key of the selection it was built from (trimmed).</summary>
     public string Key { get; }
 
@@ -58,8 +60,9 @@ internal sealed class ReadingDocument
     /// <param name="tailAt">D26: index where the sentence-end punctuation added after the selection starts (-1 = none): those
     /// punctuation tiles are attached to the last word's tile (« bien ! »), not shown apart.</param>
     /// <param name="cut">the text was already cut by the reader's character limit: <see cref="Truncated"/> (message shown).</param>
+    /// <param name="partial">LibreOffice phase 2: only part of the selection was read (<see cref="Partial"/>).</param>
     public static ReadingDocument Build(string? selection, int maxWords = MaxWords, int tailAt = -1, bool cut = false,
-                                        Func<string, bool>? isName = null)
+                                        Func<string, bool>? isName = null, bool partial = false)
     {
         string full = selection ?? "";
         var toks = Tokenizer.Tokenize(full);
@@ -159,7 +162,7 @@ internal sealed class ReadingDocument
             while (ti < tiles.Count && tiles[ti].Sentence == k) { hasWords |= tiles[ti].IsWord; ti++; }
             sentences.Add(new ReadingSentence(ranges[k].Start, ranges[k].End, first, ti, hasWords));
         }
-        return new ReadingDocument(text, tiles, sentences, words, truncated, SelectionPolicy.Key(full));
+        return new ReadingDocument(text, tiles, sentences, words, truncated, SelectionPolicy.Key(full)) { Partial = partial };
     }
 
     /// <summary>Plan 10C: the picture key of a name tile is this prefix + the name as written (« \u0001Belgique »): looked up in

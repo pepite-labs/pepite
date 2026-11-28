@@ -98,6 +98,111 @@ internal sealed class WordTracker
         Finished = f with { Word = correction };
     }
 
+    /// <summary>0.11.0 (plan negation): the clause the finished word ends, from the kept text — up to
+    /// <see cref="Predict.Core.Negation.MaxTokens"/> words since the last clause mark, each flagged exact (typed or inserted
+    /// since the last jump, never the part a read rebuilt nor a word whose start is unknown), and the
+    /// <paramref name="tail"/> typed after the finished word (one or two separators: <see cref="Predict.Core.Negation.ClauseOf"/>).
+    /// False while a word is being typed, with no finished word, or a word cut by the caret.</summary>
+    public bool TryClause(out List<Predict.Core.NegToken> tokens, out bool startKnown, out string tail, out bool plusAllowed)
+    {
+        tokens = new List<Predict.Core.NegToken>(); startKnown = false; tail = ""; plusAllowed = false;
+        if (Finished is not { } f || _buf.Length > 0 || f.Split || _text.Length < 2) return false;
+        // _text[0] is the marker: '\n' = the kept text starts a sentence (a read found it)
+        if (!Predict.Core.Negation.ClauseOf(_text.ToString(1, _text.Length - 1), System.Math.Max(0, _seeded - 1), _text[0] == '\n',
+                                            out tokens, out startKnown, out tail, out plusAllowed)) return false;
+        return tokens.Count > 0 && tokens[^1].Word == f.Word;
+    }
+
+    /// <summary>0.11.0 (plan negation): can the group <paramref name="original"/> (several words, the separators between them)
+    /// followed by <paramref name="tail"/> be replaced from the keys? The kept text ends with exactly them, typed (not rebuilt
+    /// by a read), with no letter glued before (<see cref="CanCorrect"/> for one word).</summary>
+    public bool CanCorrectSpan(string original, string tail)
+    {
+        if (Finished is null || _buf.Length > 0 || string.IsNullOrEmpty(original) || string.IsNullOrEmpty(tail)) return false;
+        int start = _text.Length - tail.Length - original.Length;   // index of the group's first letter
+        if (start < 1 || start < _seeded) return false;
+        if (string.CompareOrdinal(_text.ToString(start, original.Length), original) != 0) return false;
+        if (string.CompareOrdinal(_text.ToString(_text.Length - tail.Length, tail.Length), tail) != 0) return false;
+        return !ContextExtractor.IsWordChar(_text[start - 1]);
+    }
+
+    /// <summary>0.11.0 (plan negation): does the group <paramref name="original"/> (before <paramref name="tail"/>) open a
+    /// sentence — only spaces between it and a typed or read sentence end, or the known start of the text?</summary>
+    public bool SpanAtSentenceStart(string original, string tail)
+    {
+        int i = _text.Length - tail.Length - original.Length - 1;   // the char right before the group
+        while (i >= 1 && _text[i] is ' ' or ' ' or ' ' or '\t') i--;
+        if (i < 1) return _text[0] == '\n' && _seeded <= 1;
+        return _text[i] is '.' or '!' or '?' or '…' or '\n' or '\r';
+    }
+
+    /// <summary>0.11.0 (plan negation): the group was replaced by <paramref name="replacement"/> in the document (the same
+    /// tail after it): the kept text and the state follow; the finished word becomes the replacement's last word. Call only
+    /// after <see cref="CanCorrectSpan"/> said true.</summary>
+    public void CorrectSpan(string original, string tail, string replacement)
+    {
+        if (Finished is not { } f) return;
+        Version++;
+        _text.Length -= original.Length + tail.Length;
+        AppendText(replacement);
+        AppendText(tail);
+        if (!Derive(keepRight: false)) return;
+        int i = replacement.Length;
+        while (i > 0 && ContextExtractor.IsWordChar(replacement[i - 1])) i--;
+        Finished = f with { Word = replacement[i..] };
+    }
+
+    /// <summary>0.11.0 (plan hyphen-names): the word right before a single hyphen typed before the current word (« saint » of
+    /// « saint-n », « Saint-Pierre » of « Saint-Pierre-e », « a-t » of « a-t-i »), as the kept text has it — letters joined by
+    /// single inner hyphens, at most <see cref="Predict.Core.PredictionEngine.HyphenHeadMax"/> chars, exact (typed, inserted or
+    /// the word a read gave, never the part a read rebuilt: <see cref="Predict.Core.HyphenHead.Find"/>), nothing glued
+    /// before it; null otherwise (a click after « saint- » rebuilds the text from the read: no head, a documented limit).</summary>
+    public string? HyphenHead => HyphenHeadAt(out _);
+
+    /// <summary>0.11.0: a capital on <see cref="HyphenHead"/> says nothing about a name (it opens a sentence, follows « : », or
+    /// nothing is known before it: <see cref="Predict.Core.HyphenHead.NeutralBefore"/>). False when there is no head.</summary>
+    public bool HyphenHeadNeutral => HyphenHeadAt(out int s) is not null && Predict.Core.HyphenHead.NeutralBefore(_text.ToString(), s, 1);
+
+    private string? HyphenHeadAt(out int start)
+    {
+        start = -1;
+        int hyphen = _text.Length - _buf.Length - 1;   // the char right before the current word ([0] = the marker)
+        if (hyphen < 2 || _text[hyphen] != '-') return null;
+        var t = _text.ToString();
+        if (!Predict.Core.HyphenHead.Find(t, hyphen, System.Math.Max(1, _seeded), out start)) return null;
+        return t[start..hyphen];
+    }
+
+    /// <summary>0.11.0: can the head, its hyphen and the letters typed after it (<paramref name="span"/>: « saint-n ») be
+    /// replaced from the keys? The kept text ends with exactly them, exact (not rebuilt by a read), nothing glued before, no
+    /// letter after the caret (<see cref="Suffix"/>).</summary>
+    public bool CanReplaceCompound(string span)
+    {
+        if (string.IsNullOrEmpty(span) || Suffix.Length > 0) return false;
+        int start = _text.Length - span.Length;
+        if (start < 1 || start < _seeded) return false;
+        if (string.CompareOrdinal(_text.ToString(start, span.Length), span) != 0) return false;
+        return !ContextExtractor.IsWordChar(_text[start - 1]) && _text[start - 1] != '-';
+    }
+
+    /// <summary>0.11.0: <paramref name="span"/> was replaced by the whole compound <paramref name="whole"/> (« Saint-Nicolas »,
+    /// plus one space if <paramref name="spaced"/>): the kept text and the state follow (derived as typing it would); the
+    /// finished word is its last part, after its hyphen, as <see cref="Accept"/> finishes an inserted word. Call only after
+    /// <see cref="CanReplaceCompound"/> said true.</summary>
+    public void ReplaceCompound(string span, string whole, bool spaced)
+    {
+        Version++;
+        _text.Length -= span.Length;
+        AppendText(whole);
+        if (spaced) AppendText(' ');
+        if (!Derive(keepRight: false)) return;
+        if (!spaced && _buf.Length > 0) { Push(_buf.ToString()); _buf.Clear(); _sep = 0; LastSeparator = '\0'; }   // as Accept
+        int i = whole.Length;
+        while (i > 0 && ContextExtractor.IsWordChar(whole[i - 1])) i--;
+        Finished = new Predict.Core.FinishedWord(whole[i..], i > 0 ? whole[i - 1] : '\0', spaced ? ' ' : '\0',
+                                                 _ctx.Count >= 2 ? _ctx[^2] : null, false);
+    }
+
     /// <summary>The separator typed right before the current word / caret ('\0' = none or unknown): a '-' means an
     /// inversion such as <c>a-t-il</c>, where <c>t</c> is not the elision <c>t'</c> (D22).</summary>
     public char LastSeparator { get; private set; }

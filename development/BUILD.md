@@ -23,7 +23,7 @@
 
 The word base and the other data are **provided already built** (owner decision 2026-11-16): a normal build — a
 developer, the GitHub Actions « app » workflow — does not rebuild them. One command downloads the data release
-(`src\Data.Build\data-release.lock.json`: GitHub Release `data-2026.11.2` of `pepite-labs/pepite`), checks every asset's
+(`src\Data.Build\data-release.lock.json`: GitHub Release `data-2026.11.3` of `pepite-labs/pepite`), checks every asset's
 SHA-256 and size, unpacks it into `src\Data.Build\out\` and checks the word base with `verify_data_pack.py`:
 
 ```
@@ -34,7 +34,7 @@ python -I src\Data.Build\fetch_data_release.py --cache <work>\data-cache
 |---|---|---|
 | `pepite-data-2026.11.1.zip` | `prediction.sqlite`, `prediction-SOURCES.txt`, `spelling.sqlite` + `spelling\`, `grammar.sqlite` + `grammar\` | CC BY-SA 4.0 + MPL-2.0 |
 | `pictos-arasaac-2026-11-08.zip` | `pictos.sqlite`, `ARASAAC-LICENCE.txt` | CC BY-NC-SA 4.0 (separate component) |
-| `noms-2026.2.zip` | `noms-pack\noms\` | CC BY 4.0 |
+| `noms-2026.3.zip` | `noms-pack\noms\` | CC BY 4.0 |
 | `fonts-2026.11.zip` | `fonts\` | OFL 1.1 |
 | `espeak-ng-win-x64-724808c5.zip` | `espeak\` | GPL-3.0-or-later |
 | `espeak-ng-<commit>.tar.gz` | kept as a file (the source offer; `build_installer.ps1 -EspeakSourceArchive`) | GPL-3.0-or-later |
@@ -359,11 +359,14 @@ xcopy /E /I %PREDICT_BUILD_DIR%\names-pack\out\noms src\Data.Build\out\noms-pack
 ```
 
 Inputs and snapshots are pinned in `names.lock.json` (INSEE, Statbel, CLDR 49, flag-icons 7.6.0, 12 Commons flags, four
-Wikidata query snapshots, the CC BY 4.0 legal code, the resvg 0.50.0 build tool); `snapshot <id>` re-runs a Wikidata query
+Wikidata query snapshots, the CC BY 4.0 legal code, the resvg 0.50.0 build tool, and since edition 2026.3 Pépite's own
+drawings in « dessins »: the committed `pepite-noms/images/saint-nicolas.svg`, CC0 1.0, 128 × 128 PNG, not on its variant
+« Sint-Niklaas »); `snapshot <id>` re-runs a Wikidata query
 on purpose and re-pins it, `fetch --pin-new` pins a new input after review. Python 3.10+ and Pillow; about 10 MB of raw
 downloads. The build writes `noms\` (2.9 MB: `noms.json`, `images\`, `LICENCE.txt`, `SOURCES.md`, `ATTRIBUTION-fr.txt`),
 `noms-<edition>.zip`, `diff-<edition>.md` and `build-report.json`; it fails above 10 MB, on a picture outside the licence
-allow-list (MIT, public domain, CC0) or on a historical figure without a death date. The keyboard build copies
+allow-list (MIT, public domain, CC0), on a drawing whose SVG changed or whose entry is missing, restricted or already
+pictured, or on a historical figure without a death date. The keyboard build copies
 `out\noms-pack\noms\` next to the exe as `noms\` when it holds `noms.json` and `LICENCE.txt`; without it no name is proposed
 (`names: off`). The folder is meant to become its own repository (« pepite-noms »): see its README.
 
@@ -444,6 +447,25 @@ gh release create data-2026.11.2 --repo pepite-labs/pepite --target main --title
 gh release view data-2026.11.2 --repo pepite-labs/pepite --json tagName,isDraft,isImmutable,assets   # 10 assets, tag set
 ```
 
+**`data-2026.11.3` (0.11.0, made 2026-11-27):** the same asset names as `data-2026.11.2` except `noms-2026.3.zip`
+(replaces `noms-2026.2.zip`): names pack 2026.3, Pépite's Saint-Nicolas drawing (CC0 1.0; owner 2026-11-27, D30 amended),
+`3c0dbd4a…0f3b`, 467 710 bytes, 263 files; its `noms.json` is `0ad3cc50…a621` (the `build_names.py` zip `be5fc55d…494a`
+holds the same files with the 2026-01-01 entry date; two builds give the same SHA-256). The seven other assets are
+**byte-identical** to `data-2026.11.2` (packaged again from an unpack of `data-2026.11.2` with only `noms-pack\noms\`
+replaced; every SHA-256 and size equal to the previous lock). Checked: `sha256sum -c` (8 × OK), `fetch_data_release.py
+--from` (8 × ok, 315 files, data pack 0 problems), the `Data.Build` and `pepite-noms` Python suites, `export.py
+--scan-data` on the unpacked tree (no note on the names pack; the notes on `prediction.sqlite` / `grammar.sqlite` are
+those of the unchanged pepite-data asset). The release command — **before pushing the commits that pin
+`data-2026.11.3`** (same reason as above; title, notes and asset list as `data-2026.11.2`):
+
+```
+S=<work>/data-release/data-2026.11.3
+(cd "$S" && sha256sum -c --strict SHA256SUMS.txt)
+gh release create data-2026.11.3 --repo pepite-labs/pepite --target main --title "Données 2026.11.3" --latest \
+    --notes-file "$S/BUILD-INFO.txt" "$S"/*.zip "$S"/espeak-ng-*.tar.gz "$S/SHA256SUMS.txt" "$S/BUILD-INFO.txt"
+gh release view data-2026.11.3 --repo pepite-labs/pepite --json tagName,isDraft,isImmutable,assets   # 10 assets, tag set
+```
+
 ## 2. Installer (plan 12, from 0.10.0)
 
 One command builds the installer from a clean checkout with the pinned data of § 1 in `src\Data.Build\out\`
@@ -453,10 +475,10 @@ committed.
 
 ```
 powershell -ExecutionPolicy Bypass -File installer\fetch_innosetup.ps1 -WorkDir <work> -Pin     # once: Inno Setup 7.1.1
-powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.10.2 -WorkDir <work> [-Private] [-VerifyReproducible]
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.11.0 -WorkDir <work> [-Private] [-VerifyReproducible]
 python -I -m unittest discover -s installer\tests -p test_release_lint.py
 # the CI form (plan 13, .github/workflows/app.yml): no word list, no earlier release, the data release's source archive
-powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.10.2 -WorkDir <work> -NoForbiddenList ^
+powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 0.11.0 -WorkDir <work> -NoForbiddenList ^
     -OldRelease '' -EspeakSourceArchive <cache>\espeak-ng-<commit>.tar.gz
 ```
 
@@ -545,8 +567,12 @@ powershell -ExecutionPolicy Bypass -File installer\build_installer.ps1 -Version 
   `voix\siwis`, `voix\pierre` (private builds), tasks `demarrage`, `pepite`, `bureau`, the school's machine file
   (`/CONFIG=`, checked with `Pepite.exe --check-config`), the uninstall data question. Behaviour and switches:
   [../design/keyboard-design.md](../design/keyboard-design.md) § 8 and `installer\DEPLOIEMENT.txt`.
-- **Tests in the VM**: `installer\tests\Test-PepiteInstall.ps1` (scenarios T1–T11, dot-sourced inside the Windows 11
-  test VM; never run an installer on a development PC: it installs global hooks and writes the Run key).
+- **Tests in the VM**: `installer\tests\Test-PepiteInstall.ps1` (scenarios T1–T15 and the upgrade rows U1, U1b, U1c,
+  U6a–c, U8Check, U2* of plan installer-upgrade, dot-sourced inside the Windows 11 test VM; never run an installer on a
+  development PC: it installs global hooks and writes the Run key). **At every release** (plan installer-upgrade R3):
+  T15 (silent upgrade from the previous release, installed tree = `files.sha256`) and one **interactive** upgrade from
+  the previous public release (U1: the « Mise à jour de Pépite » page names both versions, two clicks, profiles kept,
+  one `-mise-a-jour.zip`) — part of the A8 short VM session.
 
 ## 2a. GitHub Actions (plan 13)
 
@@ -579,12 +605,26 @@ always finds it written.
 
 `.github/workflows/pages.yml` publishes <https://pepite-labs.github.io/pepite/>: one folder per **minor** version
 (`0.10/aide/…`; a patch release replaces its minor's folder), `/` redirects to the latest. Triggers: « Run workflow » on
-`main` (input `minor`, default `0.10`, must be the csproj's minor: the site can go live right after the first public
+`main` (input `minor`, default `0.11`, must be the csproj's minor: the site can go live right after the first public
 push) and every `v<x.y.z>` tag; environment `github-pages` (owner approval). The other minor folders are rebuilt from the
 latest published release tag of each minor (a Pages deployment replaces the whole site).
 
+Where the **current** minor's help comes from (dispatch input `help`, since 2026-11-27):
+
+| Run | Current minor's folder (`<x.y>/aide/…`) | `site/` pages |
+|---|---|---|
+| dispatch, `help: release` (the default) | `git archive` of the **latest published release tag** of that minor (drafts are not counted), like every other minor: the online help stays the released one while `main` moves on | from `main` |
+| dispatch, `help: release`, no published release of that minor yet | from the checkout (`main`) | from `main` |
+| dispatch, `help: main` | from the checkout (`main`): only to preview a help that is not released yet | from `main` |
+| `v<x.y.z>` tag | from the tag's checkout | from the tag |
+
+So an announcement page of `site/` may be published from `main` before its release, but it may link only to help
+sections that exist in the help the run publishes (with `help: release`, the last release's help): otherwise the link
+is plain text until the release (owner rule, 2026-11-27: a link to a page that exists, or no link). `check_page` checks
+the file exists, not the anchor of another page: check the `#…` of each `{LATEST}/aide/…` link by hand.
+
 ```
-python -I installer\build_help_site.py --out <site> --fonts <out>\fonts --latest 0.10 --version 0.10=<source tree> --pages site
+python -I installer\build_help_site.py --out <site> --fonts <out>\fonts --latest 0.11 --version 0.11=<source tree> --pages site
 python -I -m unittest discover -s installer\tests -p test_build_help_site.py
 ```
 
@@ -600,7 +640,12 @@ fonctionne sans Internet. » on every page (style rule appended to `style.css`),
 latest minor folder, so the page reuses the help's `style.css`, fonts, logo and `prefs.js`. `check_page` keeps the
 help's shell and CSP and also requires links that resolve in the site (absolute links only to
 `github.com/pepite-labs/pepite`) and no e-mail address written out. Update the page by hand for each test release
-(version, download link, SHA-256, date, mail subject in `contact.js`).
+(version, download link, SHA-256, date, mail subject in `contact.js`). The installer's SHA-256 exists only once the CI
+has built the tag: the version commit leaves a marked comment « À REMPLIR APRÈS LA CI » and a sentence pointing to the
+release's `SHA256SUMS.txt`; after the draft is checked (plan 13 A8) and published, a small commit on `main` puts the
+hash in, then a new « Run workflow » of `pages.yml` (`help: release`) publishes it. The Pages run of the tag itself
+shows the interim sentence and a download link that works only once the release is published: approve its
+`github-pages` deployment after publishing (or reject it before dispatching the run that puts the hash in).
 
 ## 2b. Try the predictor
 

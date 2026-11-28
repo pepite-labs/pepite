@@ -18,8 +18,10 @@ namespace Predict.Keyboard;
 /// navigation, Ctrl+A, window switch). Password fields are checked before any text is requested (Win32 <c>ES_PASSWORD</c>,
 /// UIA <c>IsPassword</c>). Win32 <c>Edit</c>: EM_GETSEL + WM_GETTEXT; others: UIA <c>TextPattern.GetSelection</c> on the
 /// focused element (or, when it has no text pattern, its nearest ancestor that has one: a selection in a web page's
-/// static text). At most <see cref="MaxChars"/> characters (≈ 1000 words and more). The simulated Ctrl+C fallback
-/// (<see cref="ClipboardCopy"/>) runs only when the request allows it and the direct read found no text pattern.
+/// static text). LibreOffice phase 2: a Writer document window (never one of its dialogs) is read through IAccessible2
+/// (<see cref="LibreOfficeText.ReadSelection"/>); its other windows are not read. At most <see cref="MaxChars"/> characters
+/// (≈ 1000 words and more). The simulated Ctrl+C fallback (<see cref="ClipboardCopy"/>) runs only when the request allows
+/// it and the direct read found no text pattern, or IA2 read only part of the selection.
 /// </summary>
 internal sealed class SelectionReader : IDisposable
 {
@@ -49,11 +51,12 @@ internal sealed class SelectionReader : IDisposable
 
     private void WarmUp(int generation)
     {
-        foreach (var name in new[] { nameof(Read), nameof(ReadWin32), nameof(ReadUia) })
+        foreach (var name in new[] { nameof(Read), nameof(ReadWin32), nameof(ReadUia), nameof(ReadLibreOffice) })
             if (typeof(SelectionReader).GetMethod(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static |
                                                          System.Reflection.BindingFlags.Instance) is { } m)
                 RuntimeHelpers.PrepareMethod(m.MethodHandle);
         _ = ReadingDocument.Build("Le chat dort. L'arbre est grand.").UtteranceOf(0);
+        if (LibreOfficeText.Shared is not null) LibreOfficeText.WarmUp();   // phase 2: the walk is JIT-compiled off the gesture
     }
 
     private ReadResult Read(ReadRequest q)
@@ -63,9 +66,10 @@ internal sealed class SelectionReader : IDisposable
         if (pid == (uint)Environment.ProcessId) return Fail(ReadStatus.Unavailable, "own");
         var gi = new Native.GUITHREADINFO { cbSize = Marshal.SizeOf<Native.GUITHREADINFO>() };
         IntPtr focus = Native.GetGUIThreadInfo(tid, ref gi) ? gi.hwndFocus : IntPtr.Zero;
-        // 0.11.0: LibreOffice gives UIA no selection: Unavailable at once (straight to the Ctrl+C fallback when allowed;
-        // its password check still runs right before the copy)
-        var r = HostApps.UiaTextUnavailable(fg) ? Fail(ReadStatus.Unavailable, "skip")
+        // LibreOffice gives UIA no selection: a Writer document window is read through IA2 (phase 2); anything else of
+        // LibreOffice (Calc, Impress, a dialog) → Unavailable at once (the Ctrl+C fallback when allowed, never in Calc; its
+        // password check still runs right before the copy)
+        var r = HostApps.UiaTextUnavailable(fg) ? ReadLibreOffice(fg)
             : focus != IntPtr.Zero && string.Equals(PasswordProbe.ClassOf(focus), "Edit", StringComparison.OrdinalIgnoreCase)
             ? ReadWin32(focus) : ReadUia(pid, _log);
         if (r.Status == ReadStatus.Ok && r.Selected is { Length: > 0 } sel)
@@ -76,13 +80,17 @@ internal sealed class SelectionReader : IDisposable
                 _log?.Invoke($"selection: completed (D26) +{x.AddedBefore} before, +{x.AddedAfter} after{(x.TailAt >= 0 ? ", sentence end added" : "")}");
             r = r with { Selected = x.Text, TailAt = x.TailAt, Before = null, After = null };
         }
-        if (r.Status == ReadStatus.Ok && r.Selected is { } all && all.Length >= MaxChars)
+        if (r.Status == ReadStatus.Ok && r.Selected is { } all && (r.Cut || all.Length >= MaxChars))
         {
             // longer than the reader's limit (fewer than 1000 words is possible with long words): cut at a word boundary,
-            // the message is shown
-            r = r with { Selected = SelectionPolicy.CutAtWord(all), Cut = true, TailAt = -1 };
+            // the message is shown; an IA2 read already cut cleanly is only capped (phase 2)
+            var (limited, cut) = SelectionPolicy.Limit(all, r.Cut, MaxChars);
+            if (limited.Length != all.Length) r = r with { TailAt = -1 };
+            r = r with { Selected = limited, Cut = cut };
         }
-        if (q.Clipboard && SelectionPolicy.WantsFallback(r.Status) && Native.GetForegroundWindow() == fg)
+        // phase 2: an IA2 read that reached the selection's start but not its end (Partial) is shown with its own message
+        // unless the copy (when allowed) gives the whole of it; one that missed the start comes back Unavailable
+        if (q.Clipboard && SelectionPolicy.WantsFallback(r.Status, r.Partial) && Native.GetForegroundWindow() == fg)
         {
             // never in a console / terminal: Ctrl+C there is an interrupt (SIGINT)
             string fgClass = PasswordProbe.ClassOf(fg), focusClass = focus != IntPtr.Zero ? PasswordProbe.ClassOf(focus) : "";
@@ -120,6 +128,17 @@ internal sealed class SelectionReader : IDisposable
     }
 
     private static readonly object RunLock = new();
+
+    /// <summary>LibreOffice phase 2: a Writer document frame (<c>SALFRAME</c>, never a <c>SALSUBFRAME</c> dialog: nothing
+    /// is ever read there) with IA2 on → the IA2 walk, cut at <see cref="MaxChars"/> (its <c>Cut</c> kept); else
+    /// <c>Unavailable</c>, source <c>skip</c>.</summary>
+    private static ReadResult ReadLibreOffice(IntPtr fg)
+    {
+        if (LibreOfficeText.Shared is not { } lo || !string.Equals(PasswordProbe.ClassOf(fg), HostApps.FrameClass, StringComparison.Ordinal)
+            || HostApps.ModuleOf(fg) != LibreOfficeModule.Writer)
+            return Fail(ReadStatus.Unavailable, "skip");
+        return lo.ReadSelection(fg, MaxChars, SelectionExtend.Context);
+    }
 
     private static string Cap(string s) => s.Length > MaxChars ? s.Substring(0, MaxChars) : s;
 

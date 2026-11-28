@@ -19,7 +19,7 @@ on:
       minor:
         description: 'Minor version folder built from this branch (x.y, the csproj Version)'
         type: string
-        default: '0.10'
+        default: '0.11'
       help:
         description: 'Help folder of that minor: from its latest release tag (release) or from this branch (main)'
         type: choice

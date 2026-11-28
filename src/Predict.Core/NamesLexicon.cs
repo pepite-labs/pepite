@@ -195,6 +195,17 @@ public sealed class NamesLexicon
         return false;
     }
 
+    /// <summary>0.11.0: is <paramref name="form"/> (exactly) a restricted figure of the pack (D30: offered only after a capital
+    /// inside a sentence and 3 letters)? One entry per form (<see cref="Builder"/>), so its flag decides.</summary>
+    public bool IsRestricted(string form)
+    {
+        if (string.IsNullOrEmpty(form) || Entries.Length == 0 || !char.IsUpper(form[0])) return false;
+        var lo = form.ToLowerInvariant();
+        for (int i = PredictionEngine.LowerBound(Keys2, lo); i < Keys2.Length && Keys2[i] == lo; i++)
+            if (Entries[Idx2[i]].Form == form) return Entries[Idx2[i]].Restricted;
+        return false;   // restricted figures are all in the recognised tier
+    }
+
     /// <summary>The forms whose accent-stripped lowercase letters are those of <paramref name="word"/> (« ines » → « Inès »,
     /// « Ines »; « emma » → « Emma »), names before variants, the most popular first, at most <paramref name="max"/>.</summary>
     public List<string> SameLetters(string word, int max = 4)

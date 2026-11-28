@@ -1,4 +1,4 @@
-# Sources of the « Noms propres » pack (edition 2026.2)
+# Sources of the « Noms propres » pack (edition 2026.3)
 
 Every input is pinned in [names.lock.json](names.lock.json) (URL, version, SHA-256); the built pack repeats the table with
 the snapshot dates in `noms/SOURCES.md`, plus the author and licence of every Commons flag. Licence statements below were
@@ -14,6 +14,7 @@ read on 2026-11-14 (an internal study of Pépite gives the quotes and URLs).
 | flag-icons | 7.6.0 (2026-10-15), `flags/4x3/*.svg` | MIT | keep the copyright line and permission notice |
 | Wikidata | query snapshots of 2026-11-14 (`queries/*.rq`) | CC0 1.0 | none (credited as a courtesy) |
 | Wikimedia Commons | 12 flag files of the Belgian regions and provinces | public domain / CC0 only (per file; « Flag of the Province of Liège.svg », CC BY-SA 3.0, is left out) | none for PD / CC0; author listed anyway |
+| Pépite (own drawing) | `images/saint-nicolas.svg` (2026-11-27, SHA-256 `f7e8a455…a6a3fe33`): an original drawing made for Pépite with the help of Claude, no third-party art | CC0 1.0 | none; credited as « Dessin de Saint-Nicolas : Pépite (dessin original, réalisé avec l'aide de Claude), CC0 1.0 » |
 | Creative Commons | `legalcode.txt` of CC BY 4.0 | — | the pack's own licence text |
 | resvg | 0.50.0, `resvg-win-x86_64.zip` (build-time tool, never shipped) | Apache-2.0 OR MIT | — |
 
@@ -29,6 +30,8 @@ read on 2026-11-14 (an internal study of Pépite gives the quotes and URLs).
   normalised, the CLDR short form used when the long one is not a name (« Hong Kong »); continents from the UN M49 codes.
 - Towns, regions, departments, historical figures: the Wikidata French label, else the multilingual one; a historical
   figure's alias is kept as a variant only when all its words are words of the label (« Napoléon » for « Napoléon Ier »).
-- Flags: SVG rendered by resvg, fitted into 128 × 96 px, 128-colour palette PNG.
+- Flags: SVG rendered by resvg, fitted into 128 × 96 px, 128-colour palette PNG. Pépite's drawings: the same, fitted
+  into 128 × 128 px; the Saint-Nicolas drawing goes to the entry « Saint-Nicolas » only, not to its variant « Sint-Niklaas »
+  (`"image_variantes": false`).
 - A name shared by several sources is one entry (priority: continent, country, Belgian region, province, municipality,
   French region, department, town, historical figure, first name).

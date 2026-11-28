@@ -45,6 +45,13 @@ public partial class SettingsWindow : Window
     private readonly TextBlock LockSpelling = new();
     private readonly CheckBox NamePicturesBox = new() { Content = Strings.NamePicturesLabel, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock LockNamePictures = new();
+    // D33 (plan dys-sound-tolerance Phase 2): « Sons que l'élève confond » — five pairs, a setting of the profile like the two above
+    private readonly CheckBox SoundChJBox = new() { Content = Strings.SoundPairChJLabel, VerticalAlignment = VerticalAlignment.Center };
+    private readonly CheckBox SoundFVBox = new() { Content = Strings.SoundPairFVLabel, VerticalAlignment = VerticalAlignment.Center };
+    private readonly CheckBox SoundKGBox = new() { Content = Strings.SoundPairKGLabel, VerticalAlignment = VerticalAlignment.Center };
+    private readonly CheckBox SoundTDBox = new() { Content = Strings.SoundPairTDLabel, VerticalAlignment = VerticalAlignment.Center };
+    private readonly CheckBox SoundPBBox = new() { Content = Strings.SoundPairPBLabel, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock LockSoundChJ = new(), LockSoundFV = new(), LockSoundKG = new(), LockSoundTD = new(), LockSoundPB = new();
 
     /// <summary>Open Réglages for <paramref name="target"/> (one window: another profile's request replaces it).</summary>
     internal static void ShowSingle(ISettingsTarget target, PupilsSection? pupils, Speaker? speaker, PictureStore? pictures, FontCatalog fonts,
@@ -98,6 +105,7 @@ public partial class SettingsWindow : Window
         spellPanel.Children.Add(namesRow);
         spellPanel.Children.Add(new TextBlock { Text = Strings.NamePicturesHint, TextWrapping = TextWrapping.Wrap, MaxWidth = 620, Opacity = 0.75,
                                                 Margin = new Thickness(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Left });
+        spellPanel.Children.Add(SoundPairsPanel());
         var wordsDock = new DockPanel();
         DockPanel.SetDock(spellPanel, Dock.Top);
         wordsDock.Children.Add(spellPanel);
@@ -224,6 +232,39 @@ public partial class SettingsWindow : Window
         return b;
     }
 
+    /// <summary>« Sons que l'élève confond » (D33): the header with its « ? » (→ <c>reglages.html#sons</c>), the five boxes on one
+    /// wrapping row (each with its lock note) to keep the Mots tab short on a 768-pixel screen, and the hint.</summary>
+    private StackPanel SoundPairsPanel()
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 10, 0, 0), Tag = HelpTag + "sons" };
+        var head = new StackPanel { Orientation = Orientation.Horizontal };
+        var title = new TextBlock { Text = Strings.SoundPairsHeader, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(title, "SoundPairsHeader");
+        head.Children.Add(title);
+        head.Children.Add(HelpButtonFor("sons", "HelpSoundPairs", Strings.SoundPairsHeader, new Thickness(12, 0, 0, 0)));
+        panel.Children.Add(head);
+        var row = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0), MaxWidth = 620,
+                                  HorizontalAlignment = HorizontalAlignment.Left };
+        foreach (var (box, note, id) in new[] { (SoundChJBox, LockSoundChJ, "SoundPairChJ"), (SoundFVBox, LockSoundFV, "SoundPairFV"),
+                                                (SoundKGBox, LockSoundKG, "SoundPairKG"), (SoundTDBox, LockSoundTD, "SoundPairTD"),
+                                                (SoundPBBox, LockSoundPB, "SoundPairPB") })
+        {
+            System.Windows.Automation.AutomationProperties.SetAutomationId(box, id);
+            System.Windows.Automation.AutomationProperties.SetHelpText(box, Strings.SoundPairsHint);
+            note.Style = (Style)FindResource("Locked");
+            var item = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 18, 2) };
+            item.Children.Add(box);
+            item.Children.Add(note);
+            row.Children.Add(item);
+        }
+        panel.Children.Add(row);
+        var hint = new TextBlock { Text = Strings.SoundPairsHint, TextWrapping = TextWrapping.Wrap, MaxWidth = 620, Opacity = 0.75,
+                                   Margin = new Thickness(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(hint, "SoundPairsHint");
+        panel.Children.Add(hint);
+        return panel;
+    }
+
     /// <summary>The section (<c>aide:&lt;name&gt;</c> tag) holding an element: walk up the visual tree, else the logical
     /// one (a popup's items); null = none (the window's buttons, an open drop-down).</summary>
     private static string? SectionAt(DependencyObject? d)
@@ -303,6 +344,11 @@ public partial class SettingsWindow : Window
         ShowWelcome.IsChecked = _welcome is null || _service.IsLocked("start.welcome") ? s.Welcome : _welcome.Due();
         SpellingBox.IsChecked = s.SpellingIndicator;
         NamePicturesBox.IsChecked = s.NamePictures;
+        SoundChJBox.IsChecked = s.Sounds.ChJ;
+        SoundFVBox.IsChecked = s.Sounds.FV;
+        SoundKGBox.IsChecked = s.Sounds.KG;
+        SoundTDBox.IsChecked = s.Sounds.TD;
+        SoundPBBox.IsChecked = s.Sounds.PB;
         Rate.Value = s.Speech.Rate;
         Volume.Value = s.Speech.Volume;
         FreeHint.Visibility = s.Position == BarPosition.Free ? Visibility.Visible : Visibility.Collapsed;
@@ -371,6 +417,11 @@ public partial class SettingsWindow : Window
             ? w with { Reading = w.Reading with { ClipboardFallback = c.Value } } : w);
         OnToggle(SpellingBox, (w, on) => w with { SpellingIndicator = on });
         OnToggle(NamePicturesBox, (w, on) => w with { NamePictures = on });
+        OnToggle(SoundChJBox, (w, on) => w with { Sounds = w.Sounds with { ChJ = on } });
+        OnToggle(SoundFVBox, (w, on) => w with { Sounds = w.Sounds with { FV = on } });
+        OnToggle(SoundKGBox, (w, on) => w with { Sounds = w.Sounds with { KG = on } });
+        OnToggle(SoundTDBox, (w, on) => w with { Sounds = w.Sounds with { TD = on } });
+        OnToggle(SoundPBBox, (w, on) => w with { Sounds = w.Sounds with { PB = on } });
         ShowWelcome.Checked += (_, _) => { if (!_loading) _welcomeTouched = true; };
         ShowWelcome.Unchecked += (_, _) => { if (!_loading) _welcomeTouched = true; };
         Voice.SelectionChanged += (_, _) =>
@@ -463,6 +514,11 @@ public partial class SettingsWindow : Window
         L("start.welcome", LockShowWelcome, ShowWelcome);
         L("words.spellingIndicator", LockSpelling, SpellingBox);
         L("words.namePictures", LockNamePictures, NamePicturesBox);
+        L("words.soundPairs.chj", LockSoundChJ, SoundChJBox);
+        L("words.soundPairs.fv", LockSoundFV, SoundFVBox);
+        L("words.soundPairs.kg", LockSoundKG, SoundKGBox);
+        L("words.soundPairs.td", LockSoundTD, SoundTDBox);
+        L("words.soundPairs.pb", LockSoundPB, SoundPBBox);
         L("speech.rate", LockSpeechTuning, Rate);
         L("speech.volume", LockSpeechTuning, Volume);
     }

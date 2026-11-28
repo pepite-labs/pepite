@@ -19,7 +19,7 @@ namespace Predict.Keyboard;
 /// the picture pack and the bundled fonts, shows the (hidden-until-needed) suggestion bar, installs the hooks and
 /// the tray icon (Pause/Reprendre · Ajouter un mot… · Réglages… · À propos… · Quitter) and the personal words (plan 10A).
 /// Usage: Pepite.exe [path\to\prediction.sqlite] [--log] [--exit-after &lt;s&gt;] [--pictos &lt;pack&gt;]
-///                           [--no-pictures] [--no-promote] [--autostart] [--no-welcome]
+///                           [--no-pictures] [--no-promote] [--autostart] [--no-welcome] [--no-negation] [--no-ia2]
 ///        (--autostart: started with Windows — the future installer's Run key passes it: a notification instead of the
 ///         welcome window; --no-welcome: scripted tests, no welcome window)
 ///        Pepite.exe --quit   (asks the running instance to exit normally; for scripted tests)
@@ -184,7 +184,8 @@ public partial class App : Application
         // 1. settings (plan 09, D29): the one migration of 0.7.0 -> app state -> profiles -> teacher PIN -> the read-only,
         //    admin-owned machine layer (D11) -> the effective settings of the active profile
         //    (never throws: an unusable folder gives an in-memory « Mon profil » for this session)
-        var (store, profiles) = ProfileMigration.OpenStores(AppPaths.Root, AppPaths.LegacyRoot, AppPaths.Backups, log);
+        var (store, profiles) = ProfileMigration.OpenStores(AppPaths.Root, AppPaths.LegacyRoot, AppPaths.Backups, log,
+                                                            appVersion: AboutWindow.Version);
         _appState = store;
         _profiles = profiles;
         var teacherFile = profiles.OpenTeacherFile();
@@ -264,6 +265,8 @@ public partial class App : Application
         }), System.Threading.Tasks.TaskScheduler.Default);
         // plan 11 (10D-1): the morphology table for grammatical prediction (worker thread; the bar ranks as 0.8.3 until it is in)
         // once it is in, the teacher's banned words are rebuilt on the UI thread so that they bring their lemma's forms
+        // 0.11.0 (plan negation): the missing « ne » marker, on with the spelling indicator; --no-negation: a test switch only
+        if (args.Contains("--no-negation")) { eng.NegationOn = false; log?.Invoke("negation: off (--no-negation)"); }
         GrammarPack.LoadAsync(FindGrammar(Option(args, "--grammar")), eng, args.Contains("--no-grammar"), log)
             .ContinueWith(t => { if (t.IsCompletedSuccessfully && t.Result != null) Dispatcher.BeginInvoke(() => _words?.RefreshExcluded("grammar")); },
                           System.Threading.Tasks.TaskScheduler.Default);
@@ -283,7 +286,8 @@ public partial class App : Application
             SoundAlikeCorrection.KeysOnlyHosts.Add(kh);
             log?.Invoke($"correction: keys-only replacement allowed in {kh} (test switch){(SoundAlikeCorrection.RewritesWords(kh) ? " - denied: it rewrites words" : "")}");
         }
-        _ctl = new KeyboardController(_engine, win, speaker, reading) { Log = log, ClipboardWindow = _clip.Handle };
+        _ctl = new KeyboardController(_engine, win, speaker, reading) { Log = log, ClipboardWindow = _clip.Handle,
+                                                                    Ia2Enabled = !args.Contains(CommandLine.NoIa2) };
         _ctl.Configure(cur);
         _ctl.Start();
 
@@ -597,7 +601,8 @@ public partial class App : Application
             var mark = Option(args, "--mark") switch
             {
                 "known" => Predict.Core.SpellingMark.Known, "sounds" => Predict.Core.SpellingMark.SoundsLike,
-                "unknown" => Predict.Core.SpellingMark.Unknown, _ => Predict.Core.SpellingMark.None,
+                "unknown" => Predict.Core.SpellingMark.Unknown, "negation" => Predict.Core.SpellingMark.Grammar,   // 0.11.0
+                _ => Predict.Core.SpellingMark.None,
             };
             using var store = args.Contains("--no-pictures") ? null
                             : PictureStore.Open(FindPictos(Option(args, "--pictos")), SuggestionWindow.DecodePng, log);

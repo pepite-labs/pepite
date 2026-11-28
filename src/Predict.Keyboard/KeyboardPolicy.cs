@@ -51,27 +51,65 @@ internal static class KeyboardPolicy
     /// <summary>The engine's words as the bar shows and inserts them: elisions with their apostrophe in the document's
     /// style (0.10.2: <c>j’</c> after a text that writes ’), noise dropped (<see cref="Elision.Apply"/>), then cased
     /// (<see cref="CasedDistinct"/>).</summary>
+    /// <param name="hyphenHead">0.11.0: the word before the typed hyphen (<see cref="WordTracker.HyphenHead"/>): a compound
+    /// tile « head-… » (<see cref="PredictionEngine.PredictAfterHyphen"/>) is already written as it goes in, never cased
+    /// again (« saint-N » must not make « Saint-Nicolas » into anything else, nor « peut-ê » « Peut-être »).</param>
     public static System.Collections.Generic.List<Suggestion> Shown(System.Collections.Generic.IReadOnlyList<Suggestion> ranked, bool afterHyphen,
-                                                                    char apostrophe, string typed, bool sentenceStart, int max) =>
+                                                                    char apostrophe, string typed, bool sentenceStart, int max,
+                                                                    string? hyphenHead = null) =>
         CasedDistinct(Elision.Apply(ranked, afterHyphen).Select(s => s with { Word = Elision.Styled(s.Word, apostrophe) }),
-                      typed, sentenceStart, max);
+                      typed, sentenceStart, max, hyphenHead);
 
     /// <summary>
     /// The bar's words after <see cref="Cased"/> (plan 10A, Q13): « Pi » makes the lexicon's « pierre » into « Pierre »,
     /// the same text as a pupil's « Pierre »: one tile, at the first one's place, marked as a name when either is one (a
-    /// name never shows the common noun's picture). Order kept; at most <paramref name="max"/> words.
+    /// name never shows the common noun's picture). Order kept; at most <paramref name="max"/> words. 0.11.0: a compound
+    /// tile of <paramref name="hyphenHead"/> keeps its form (<see cref="Shown"/>).
     /// </summary>
     public static System.Collections.Generic.List<Suggestion> CasedDistinct(System.Collections.Generic.IEnumerable<Suggestion> ranked,
-                                                                            string typed, bool sentenceStart, int max)
+                                                                            string typed, bool sentenceStart, int max, string? hyphenHead = null)
     {
         var o = new System.Collections.Generic.List<Suggestion>();
         foreach (var s in ranked)
         {
-            var w = Cased(s.Word, typed, sentenceStart);
+            var w = hyphenHead is not null && CompoundInsert(s.Word, hyphenHead) is not null ? s.Word : Cased(s.Word, typed, sentenceStart);
             int i = o.FindIndex(x => x.Word == w);
             if (i >= 0) { if (s.Name && !o[i].Name) o[i] = o[i] with { Name = true }; continue; }
             if (o.Count >= max) continue;   // a later duplicate may still mark a kept tile as a name
             o.Add(s with { Word = w });
+        }
+        return o;
+    }
+
+    /// <summary>0.11.0 (plan hyphen-names): how a compound tile goes in after « <paramref name="head"/>- ». Null: not a compound
+    /// of that head (« head-… », any case, with something after the hyphen). <c>ReplaceHead</c>: the tile writes the head
+    /// otherwise than it was typed (« saint- » → « Saint-Nicolas », owner Q1 = B) — the head must be replaced, read first;
+    /// otherwise only <c>Ending</c> (the part after the head's hyphen) is inserted at the caret, in every host.</summary>
+    public static (bool ReplaceHead, string Ending)? CompoundInsert(string word, string head)
+    {
+        if (string.IsNullOrEmpty(word) || string.IsNullOrEmpty(head) || word.Length <= head.Length + 1 || word[head.Length] != '-'
+            || !word.StartsWith(head, StringComparison.OrdinalIgnoreCase)) return null;
+        return (string.CompareOrdinal(word, 0, head, 0, head.Length) != 0, word[(head.Length + 1)..]);
+    }
+
+    /// <summary>0.11.0 (owner Q2, decided 2026-11-27: the whole tile): what a compound tile that would replace the head shows where the window's text
+    /// cannot be read (Calc, Impress, Draw: <see cref="ReadableWindows"/>), where only its ending can go in at the caret
+    /// (« saint-Nicolas »). <see cref="CompoundUnreadable.WholeTile"/> (the owner's choice): the same « Saint-Nicolas » tile;
+    /// <see cref="CompoundUnreadable.EndingTile"/>: the tile shows « Nicolas » only. The one place to switch.</summary>
+    public const CompoundUnreadable UnreadableCompoundTile = CompoundUnreadable.WholeTile;
+
+    /// <summary>0.11.0: the bar's tiles where the head cannot be replaced (<paramref name="mayReplace"/> false), per
+    /// <see cref="UnreadableCompoundTile"/>: with <see cref="CompoundUnreadable.EndingTile"/> a tile that would replace the head
+    /// shows its ending (a duplicate of a plain tile then dropped); otherwise the list as it is.</summary>
+    public static System.Collections.Generic.List<Suggestion> CompoundTiles(System.Collections.Generic.List<Suggestion> shown, string? head,
+                                                                            bool mayReplace, CompoundUnreadable mode = UnreadableCompoundTile)
+    {
+        if (head is null || mayReplace || mode == CompoundUnreadable.WholeTile) return shown;
+        var o = new System.Collections.Generic.List<Suggestion>(shown.Count);
+        foreach (var s in shown)
+        {
+            var w = CompoundInsert(s.Word, head) is { ReplaceHead: true } c ? c.Ending : s.Word;
+            if (!o.Exists(x => x.Word == w)) o.Add(s with { Word = w });
         }
         return o;
     }
@@ -238,7 +276,34 @@ internal enum ForegroundMove { Same, Bar, Own, Other }
 /// <summary>See <see cref="KeyboardPolicy.AfterAutoSpace"/>.</summary>
 internal enum AutoSpaceFix { Keep, Absorb, Replace }
 
+/// <summary>See <see cref="KeyboardPolicy.UnreadableCompoundTile"/>.</summary>
+internal enum CompoundUnreadable { WholeTile, EndingTile }
+
 /// <summary>Result of reading back the text before the caret after <c>; : ! ?</c> in an app that may space it itself.</summary>
+/// <summary>
+/// The D22 read-back waiting for its answer (the controller keeps one under its lock): armed by the punctuation sent alone,
+/// done once its answer was handled. While pending for the current version, no LibreOffice settle read is asked (it would
+/// re-seed the tracker under the read-back); once done, the read-back's own settle read may run (review S3–S7: never
+/// cleared, it blocked that settle read for good).
+/// </summary>
+internal sealed class PendingReadBack
+{
+    public (char Punct, bool Ours, IntPtr Fg, long Version, bool Lo) Current { get; private set; }
+
+    public void Arm(char punct, bool ours, IntPtr fg, long version, bool lo) => Current = (punct, ours, fg, version, lo);
+
+    public bool IsPending(IntPtr fg, long version) => Current.Fg != IntPtr.Zero && Current.Fg == fg && Current.Version == version;
+
+    /// <summary>The answer for (<paramref name="fg"/>, <paramref name="version"/>) was handled; a newer one stays armed.</summary>
+    public void Done(IntPtr fg, long version)
+    {
+        if (Current.Fg == fg && Current.Version == version) Current = default;
+    }
+}
+
+/// <summary>The edit a D22 read-back makes (<see cref="AppRules.ReadBack"/>).</summary>
+internal enum ReadBackFix { None, InsertOurs, RemoveOne }
+
 internal enum SpacingCheck
 {
     /// <summary>The text does not end with the punctuation (the caret moved, something else was typed): do nothing.</summary>
@@ -258,8 +323,9 @@ internal enum SpacingCheck
 /// therefore take our automatic space back and send the punctuation alone (or, when this window was seen not to add
 /// one, our space + the punctuation), then read back what Word produced and add or remove one space (controller,
 /// <see cref="Check"/>). LibreOffice (0.11.0): our space is taken back too and the punctuation sent alone — its own
-/// AutoCorrect puts one U+00A0 in French text — but nothing is read back (no text to read there). Everywhere else the
-/// setting applies directly.
+/// AutoCorrect puts one U+00A0 in French text; in a Writer window that answers through IAccessible2 (phase 1, owner Q1)
+/// it is read back and our space added when LibreOffice added none — never a second one, its U+00A0 never removed;
+/// without IA2 nothing is read back. Everywhere else the setting applies directly.
 /// </summary>
 /// <summary>A click on a bar tile: its input message's time (32-bit tick count), the tile, the screen point.</summary>
 internal readonly record struct TileClick(int Time, int Tile, int X, int Y);
@@ -297,10 +363,29 @@ internal static class AppRules
     public static bool AppSpacesPunctuation(string? process) => ReadsBackSpacing(process) || HostApps.IsLibreOffice(process);
 
     /// <summary>Word only: after the punctuation, read back what the app produced and add / remove one space (D22 adaptive).
-    /// LibreOffice gives no text to read (keyboard-design § 5b): no read-back there.</summary>
+    /// LibreOffice without IAccessible2 gives no text to read (keyboard-design § 5b): no read-back there.</summary>
     public static bool ReadsBackSpacing(string? process) =>
         !string.IsNullOrEmpty(process) &&
         Array.Exists(SpacesHighPunctuationItself, n => string.Equals(n, process, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>LibreOffice phase 1 (owner Q1 = yes, 2026-11-27): Word, or LibreOffice when its Writer window answers through
+    /// IAccessible2 (<paramref name="ia2Live"/>) — the sign alone first, then a read-back adds our space when LibreOffice
+    /// added none (its AutoCorrect off, a paragraph in another language). IA2 not live: the 0.11.0 quick fix (no read-back).</summary>
+    public static bool ReadsBackSpacing(string? process, bool ia2Live) =>
+        ReadsBackSpacing(process) || ia2Live && HostApps.IsLibreOffice(process);
+
+    /// <summary>
+    /// What the read-back does with <paramref name="check"/>: Missing → our space (unless « Aucune »); Double → one removed
+    /// in Word, never in LibreOffice (its U+00A0 is never touched: logged only); Ok / Unknown → nothing. In LibreOffice the
+    /// sign always goes alone first (Word's shortcut « this window adds none: ours with the sign at once » is never used
+    /// there, owner Q4), so only this read-back adds our space.
+    /// </summary>
+    public static ReadBackFix ReadBack(SpacingCheck check, PunctuationSpacing setting, bool libreOffice) => check switch
+    {
+        SpacingCheck.Missing => SpaceFor(setting) == '\0' ? ReadBackFix.None : ReadBackFix.InsertOurs,
+        SpacingCheck.Double => libreOffice ? ReadBackFix.None : ReadBackFix.RemoveOne,
+        _ => ReadBackFix.None,
+    };
 
     /// <summary>The spacing actually used before <c>; : ! ?</c> in <paramref name="process"/>: <see cref="PunctuationSpacing.None"/>
     /// in an app that adds its own space (we must not add a second one), else the user's setting.</summary>

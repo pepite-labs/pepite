@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.Json.Nodes;
 using Xunit;
@@ -292,5 +293,130 @@ public class TeacherModeTests : IDisposable
         Assert.Throws<ArgumentException>(() => mode.Activate("1234"));
         Assert.False(mode.Enabled);
         Assert.Null(p.Class);
+    }
+}
+
+/// <summary>Plan installer-upgrade step 2 (R5): one « mise-a-jour » zip at the first start of each new version.</summary>
+public class VersionBackupTests : IDisposable
+{
+    private readonly string _base = Path.Combine(Path.GetTempPath(), "kbver-" + Guid.NewGuid().ToString("N"));
+    private string Root => Path.Combine(_base, "Pepite-Prediction");
+    private string Legacy => Path.Combine(_base, "PredictKeyboard");
+    private string Backups => Path.Combine(_base, "sauvegardes");
+    private readonly List<string> _log = new();
+    private DateTime _now = new(2026, 11, 27, 8, 0, 0, DateTimeKind.Utc);
+
+    public VersionBackupTests() => TeacherLock.Iterations = 1000;
+
+    public void Dispose() => TestDirs.Delete(_base);
+
+    /// <summary>One start of <paramref name="version"/> (null = a version before 0.11.0, which records nothing).</summary>
+    private (SettingsStore App, ProfileStore Profiles) Start(string? version)
+    {
+        _now = _now.AddMinutes(1);
+        var r = ProfileMigration.OpenStores(Root, Legacy, Backups, _log.Add, () => _now, version);
+        r.App.Flush();
+        r.Profiles.Flush();
+        return r;
+    }
+
+    private string[] Zips(string reason) =>
+        Directory.Exists(Backups) ? Directory.GetFiles(Backups, "profils-*.zip").Where(f => ProfileStore.IsBackupOf(f, reason)).ToArray() : Array.Empty<string>();
+
+    /// <summary>What a 0.10.x left: two profiles, a teacher file, the app state.</summary>
+    private void OlderVersionData()
+    {
+        var (app, p) = Start(null);
+        p.Add("Léa", Avatar.Default);
+        p.Flush();
+        File.WriteAllText(p.TeacherPath, @"{""schema"":1}");
+        app.SetWelcomeShown(true).Wait();
+    }
+
+    [Fact]
+    public void First_Start_After_An_Older_Version_Zips_Profiles_And_Settings()
+    {
+        OlderVersionData();
+        Assert.Empty(Zips(VersionBackup.Reason));
+        var (app, p) = Start("0.11.0");
+        var zip = Assert.Single(Zips(VersionBackup.Reason));
+        Assert.EndsWith("-mise-a-jour.zip", zip);
+        using (var z = ZipFile.OpenRead(zip))
+        {
+            var names = z.Entries.Select(e => e.FullName).ToList();
+            Assert.Contains("index.json", names);
+            Assert.Contains("teacher.json", names);
+            Assert.Contains("application/settings.json", names);
+            Assert.Equal(2, names.Count(n => n.EndsWith("/profile.json")));
+        }
+        Assert.Equal("0.11.0", app.LastVersion);
+        Assert.Equal(2, p.Count);
+        Assert.Contains(_log, l => l.StartsWith("version: none -> 0.11.0, backup profils-") && l.EndsWith(" ms"));
+
+        Start("0.11.0");                                     // the same version again: nothing
+        Assert.Single(Zips(VersionBackup.Reason));
+    }
+
+    [Fact]
+    public void Five_Kept_And_The_Daily_Ones_Untouched()
+    {
+        OlderVersionData();
+        var (_, p) = Start(null);
+        Assert.NotNull(p.Backup("jour"));
+        for (int i = 1; i <= 6; i++) Start("0.11." + i);
+        Assert.Equal(5, Zips(VersionBackup.Reason).Length);
+        Assert.Single(Zips("jour"));
+        // a daily backup's clean-up does not count the « -mise-a-jour » ones either
+        for (int i = 0; i < 6; i++) { _now = _now.AddMinutes(1); p.Backup("jour"); }
+        Assert.Equal(5, Zips("jour").Length);
+        Assert.Equal(5, Zips(VersionBackup.Reason).Length);
+    }
+
+    [Fact]
+    public void A_Fresh_Install_Records_The_Version_Without_A_Zip()
+    {
+        var (app, _) = Start("0.11.0");
+        Assert.Empty(Zips(VersionBackup.Reason));
+        Assert.Equal("0.11.0", app.LastVersion);
+        Assert.Contains(_log, l => l == "version: none -> 0.11.0, first start, no backup");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("?")]
+    public void An_Unknown_Version_Does_Nothing(string? version)
+    {
+        OlderVersionData();
+        var (app, _) = Start(version);
+        Assert.Empty(Zips(VersionBackup.Reason));
+        Assert.Null(app.LastVersion);
+    }
+
+    [Fact]
+    public void A_Newer_Schema_Settings_File_Gives_No_Zip_And_Is_Not_Written()
+    {
+        OlderVersionData();
+        var settings = Path.Combine(Root, SettingsStore.FileName);
+        File.WriteAllText(settings, @"{""schema"":2,""state"":{""lastVersion"":""0.12.0""}}");
+        var before = File.ReadAllBytes(settings);
+        var (app, _) = Start("0.11.0");
+        Assert.True(app.ReadOnly);
+        Assert.Empty(Zips(VersionBackup.Reason));
+        Assert.Equal(before, File.ReadAllBytes(settings));
+    }
+
+    [Fact]
+    public void An_Unusable_Backup_Folder_Leaves_The_Version_Unrecorded()
+    {
+        OlderVersionData();
+        File.WriteAllText(Backups, "not a folder");
+        var (app, _) = Start("0.11.0");
+        Assert.Null(app.LastVersion);
+        Assert.Contains(_log, l => l.Contains("backup failed, retried next start"));
+        File.Delete(Backups);                                // next start: retried
+        var (again, _) = Start("0.11.0");
+        Assert.Single(Zips(VersionBackup.Reason));
+        Assert.Equal("0.11.0", again.LastVersion);
     }
 }

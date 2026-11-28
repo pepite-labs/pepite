@@ -70,6 +70,7 @@ public class HelpTests
     [InlineData("eleves", false, "Pupils")]
     [InlineData("orthographe", true, "Spelling")]
     [InlineData("mes-mots", true, "MyWords")]
+    [InlineData("sons", true, "SettingsSounds")]     // D33: « Sons que l'élève confond » on the Mots tab
     [InlineData(null, false, "Settings")]        // Aperçu, the Enregistrer / Annuler buttons
     [InlineData(null, true, "MyWords")]          // elsewhere on the « Mots » tab
     [InlineData("inconnu", false, "Settings")]

@@ -93,7 +93,7 @@
 <dl class="reglages">
   <dt>Lire le texte sélectionné (barre de lecture)</dt><dd>Active la <a href="lire-un-texte.html">barre de lecture</a>.</dd>
   <dt>Images dans la barre de lecture</dt><dd>Avec ou sans images pendant la lecture.</dd>
-  <dt>Copier la sélection par Ctrl+C si l'application ne la donne pas (presse-papiers rétabli)</dt><dd>Pour les programmes où la lecture ne marche pas sans copie. Trois choix : <b>Dans LibreOffice Writer seulement</b> (au départ : Writer ne donne pas la sélection autrement), <b>Partout</b>, ou <b>Jamais</b>. Jamais dans LibreOffice Calc, même avec <b>Partout</b>. C'est un réglage pour les adultes : l'explication s'affiche quand la souris passe dessus.</dd>
+  <dt>Copier la sélection par Ctrl+C si l'application ne la donne pas (presse-papiers rétabli)</dt><dd>Pour les programmes où la lecture ne marche pas sans copie. Trois choix : <b>Dans LibreOffice Writer seulement</b> (au départ ; dans Writer, Pépite lit la sélection directement et copie seulement si la lecture directe échoue), <b>Partout</b>, ou <b>Jamais</b>. Jamais dans LibreOffice Calc, même avec <b>Partout</b>. C'est un réglage pour les adultes : l'explication s'affiche quand la souris passe dessus.</dd>
 </dl>
 
 <h2 id="demarrage">Démarrage</h2>
@@ -103,12 +103,25 @@
 <p>Pour une classe : un profil par élève. C'est un réglage pour les adultes : voir <a href="enseignants.html">Enseignants et parents</a>.</p>
 
 <h2 id="onglet-mots">L'onglet Mots</h2>
-<figure><img src="img/capture-reglages-mots.png" alt="La fenêtre Réglages, onglet Mots : Indicateur d'orthographe, Images pour les noms propres, puis les listes Mes mots, Mes fautes et Mots de la classe, avec leurs boutons." width="620" height="744"></figure>
+<figure><img src="img/capture-reglages-mots.png" alt="La fenêtre Réglages, onglet Mots : Indicateur d'orthographe, Images pour les noms propres, Sons que l'élève confond avec ses cinq cases (ch / j cochée), puis les listes Mes mots, Mes fautes et Mots de la classe, avec leurs boutons." width="620" height="834"></figure>
 <dl class="reglages">
   <dt>Indicateur d'orthographe</dt><dd>Le petit rond ✓, ≈ ou ? à gauche des mots. Voir <a href="orthographe.html">le rond d'orthographe</a>.</dd>
-  <dt>Images pour les noms propres</dt><dd>Le drapeau d'un pays ou l'image donnée par l'enseignant, au-dessus d'un nom propre.</dd>
+  <dt>Images pour les noms propres</dt><dd>Le drapeau d'un pays ou l'image donnée par l'enseignant, au-dessus d'un nom propre. Un nom avec un trait d'union est proposé en entier, avec sa majuscule : <q>saint-n</q> propose <b>Saint-Nicolas</b>.</dd>
+  <dt>Sons que l'élève confond</dt><dd>Pour un élève qui mélange deux sons proches. Voir <a href="#sons">plus bas</a>.</dd>
   <dt>Mes mots, Mots de la classe, Mes fautes</dt><dd>Voir <a href="mes-mots.html">Mes mots</a>.</dd>
 </dl>
+
+<h2 id="sons">Sons que l'élève confond</h2>
+<p>Certains élèves mélangent deux sons proches. Ils écrivent <q>chardin</q> pour <b>jardin</b>, ou <q>foiture</q> pour <b>voiture</b>. Pépite propose alors aussi le bon mot.</p>
+<dl class="reglages">
+  <dt>ch / j (ch, j, g, ge)</dt><dd>Cochée au départ. <q>chardin</q> donne <b>jardin</b>, <q>jien</q> donne <b>chien</b>.</dd>
+  <dt>f / v</dt><dd><q>foiture</q> donne <b>voiture</b>.</dd>
+  <dt>k / g (c, qu, k / g, gu)</dt><dd><q>crogne</q> donne <b>grogne</b>.</dd>
+  <dt>t / d</dt><dd><q>dable</q> donne <b>table</b>.</dd>
+  <dt>p / b</dt><dd><q>pateau</q> donne <b>bateau</b>.</dd>
+</dl>
+<p>Le mot trouvé ainsi est en vert, comme les mots qui se prononcent pareil. Il vient en général après eux dans la barre. Quand le mot est fini, le rond montre ≈ : un clic montre le bon mot.</p>
+<div class="astuce"><p>C'est un réglage pour les adultes. À cocher d'après le bilan du ou de la logopède : une case cochée sans besoin ajoute des mots inutiles dans la barre. Le choix fait pour la <b>Classe</b> vaut pour chaque élève qui n'a pas fait son propre choix.</p></div>
 
 <h2 id="enregistrer">Enregistrer ou annuler</h2>
 <p><b>Enregistrer</b> garde tes choix, même après avoir éteint l'ordinateur. <b>Annuler</b> (ou <kbd>Échap</kbd>) oublie tout.</p>

@@ -45,11 +45,12 @@ internal sealed class CaretTextReader : IDisposable
         var sw = Stopwatch.StartNew();
         try
         {
-            foreach (var name in new[] { nameof(Read), nameof(ReadWin32), nameof(ReadUia) })
+            foreach (var name in new[] { nameof(Read), nameof(ReadWin32), nameof(ReadUia), nameof(ReadLibreOffice) })
             {
                 var m = typeof(CaretTextReader).GetMethod(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
                 if (m != null) RuntimeHelpers.PrepareMethod(m.MethodHandle);
             }
+            LibreOfficeText.WarmUp();   // JIT only: no COM call
             ContextExtractor.Extract("la mai", 6, false, false);
             _ = EditSession.Begin(TextWindow.Of("Le chat dort. Il pleut", 4, false, false), IntPtr.Zero).Snapshot().ModifiedWord;
             _ = EditClassifier.Classify(EditSession.Begin(TextWindow.Of("Le chat.", 2, false, false), IntPtr.Zero).Snapshot(),
@@ -100,8 +101,9 @@ internal sealed class CaretTextReader : IDisposable
     {
         uint tid = Native.GetWindowThreadProcessId(fg, out uint pid);
         if (pid == (uint)Environment.ProcessId) return Fail(ReadStatus.Unavailable, "own");   // tray menu / À propos
-        // 0.11.0: LibreOffice gives UIA nothing; asking cost ≈ 110 ms and raised its CPU per key 4–8× (phase 0 probe)
-        if (HostApps.UiaTextUnavailable(fg)) return Fail(ReadStatus.Unavailable, "skip");
+        // 0.11.0: LibreOffice gives UIA nothing; asking cost ≈ 110 ms and raised its CPU per key 4–8× (phase 0 probe).
+        // Writer is read through IAccessible2 instead (LibreOffice phase 1); Calc, Impress, Draw and dialogs: keys only
+        if (HostApps.UiaTextUnavailable(fg)) return ReadLibreOffice(fg);
         var gi = new Native.GUITHREADINFO { cbSize = Marshal.SizeOf<Native.GUITHREADINFO>() };
         IntPtr focus = Native.GetGUIThreadInfo(tid, ref gi) ? gi.hwndFocus : IntPtr.Zero;
 
@@ -115,6 +117,11 @@ internal sealed class CaretTextReader : IDisposable
             r = r with { Status = ReadStatus.Stale };
         return r;
     }
+
+    /// <summary>LibreOffice phase 1: a Writer window → <see cref="LibreOfficeText"/> (IAccessible2, src <c>ia2</c>; off,
+    /// <c>--no-ia2</c> or the breaker → <c>skip</c>); any other LibreOffice window → <c>skip</c> as in 0.11.0.</summary>
+    private static ReadResult ReadLibreOffice(IntPtr fg) =>
+        LibreOfficeText.Shared is { } lo && HostApps.ModuleOf(fg) == LibreOfficeModule.Writer ? lo.Read(fg) : Fail(ReadStatus.Unavailable, "skip");
 
     private static string ClassOf(IntPtr h)
     {
@@ -265,10 +272,14 @@ internal sealed class CaretTextReader : IDisposable
     }
 
     /// <summary>D22 read-back (Word): the last <paramref name="chars"/> characters before a collapsed caret of the
-    /// focused element, raw (UIA). Same guards as a read: foreground pid, password field never read.</summary>
+    /// focused element, raw (UIA). Same guards as a read: foreground pid, password field never read. LibreOffice Writer
+    /// (phase 1, S7): through IAccessible2; any other LibreOffice window: <c>skip</c>.</summary>
     public static ReadResult ReadBeforeCaret(IntPtr fg, int chars, Action<string>? log)
     {
         const string src = "uia";
+        if (HostApps.UiaTextUnavailable(fg))
+            return LibreOfficeText.Shared is { } lo && HostApps.ModuleOf(fg) == LibreOfficeModule.Writer
+                ? lo.ReadBefore(fg, chars) : Fail(ReadStatus.Unavailable, "skip");
         try
         {
             Native.GetWindowThreadProcessId(fg, out uint pid);

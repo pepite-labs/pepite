@@ -10,7 +10,7 @@ namespace PredictEval;
 /// with <c>--grammar</c>, the grammar forms added at load) is typed every way a pupil could reach it — each prefix with no
 /// context and after « le », « la », « un », « il est », « c'est », with ch/j and with all five sound pairs; its edit-1
 /// variants and its fold checked (<see cref="PredictionEngine.Check"/>; <c>--edits</c> also predicts them); the next word after
-/// its 20 most frequent corpus predecessors (bigrams and trigrams); the same prefixes with every listed form as a personal
+/// its 20 most frequent corpus predecessors (bigrams and trigrams); 0.11.0: glued after a clitic and a subject + clitic (bar and ≈); the same prefixes with every listed form as a personal
 /// word and a « Mes fautes » target. A failure is a listed form in a top-8 / ≈ list, or a word the safety net had to drop
 /// (<see cref="PredictionEngine.ExcludedLate"/> grew: a source that does not filter). <b>Ids and counts only</b>: a form is
 /// named by its <c>forms.tsv</c> id (<c>F00012</c>), a grammar form by its rank in ordinal order (<c>G0003</c>).
@@ -19,6 +19,9 @@ internal static class ExclusionProbe
 {
     private static readonly string[][] Contexts =
         { Array.Empty<string>(), new[] { "le" }, new[] { "la" }, new[] { "un" }, new[] { "il", "est" }, new[] { "c'est" } };
+    /// <summary>0.11.0: the glued prefixes of the probe (« » alone = a 0.10.2 joined form; a subject = a three-word one).</summary>
+    private static readonly string[] GluedSubjects = { "", "j", "je", "tu", "il", "ils", "elle", "on" };
+    private static readonly string[] GluedClitics = { "m", "t", "s", "l", "n" };
 
     public static int Run(PredictionEngine eng, string dbPath, string? formsTsv, bool edits)
     {
@@ -83,6 +86,22 @@ internal static class ExclusionProbe
         }
         eng.Tolerance = keepTol;
         Console.WriteLine(FormattableString.Invariant($"probe: prefixes, checks{(edits ? ", edit-1 bars" : "")}: {queries} queries, {sw.Elapsed.TotalSeconds:0.0} s"));
+
+        // 0.11.0 (plan glued-words-followup.md): each form glued after a clitic and after a subject + clitic (« jt… », « ils… »,
+        // « ellem… »: the three-word tiles), in the bar at a sentence start and as a finished word (≈)
+        foreach (var f in forms)
+        {
+            var fid = id[f];
+            var lower = f.ToLowerInvariant();
+            foreach (var subj in GluedSubjects)
+                foreach (var b in GluedClitics)
+                {
+                    var typed = subj + b + lower;
+                    Bar(fid, "glued subject + clitic", () => eng.Predict(typed, null, 8, true));
+                    Check(fid, "glued subject + clitic check", typed);
+                }
+        }
+        Console.WriteLine(FormattableString.Invariant($"probe: + glued forms: {queries} queries, {sw.Elapsed.TotalSeconds:0.0} s"));
 
         // the next word after each form's corpus predecessors (one scan of each table, then the top 20 per form)
         var (bi, tri) = Predecessors(dbPath, forms);

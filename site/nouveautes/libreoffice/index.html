@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Nouveau dans Pépite 0.11.0 : Pépite fonctionne dans LibreOffice Writer comme dans Word — la barre au curseur, les mots corrigés, la lecture d'un texte sélectionné sans toucher au presse-papiers.">
+<title>Pépite — LibreOffice Writer</title>
+<link rel="stylesheet" href="{LATEST}/aide/style.css">
+<link rel="stylesheet" href="../nouveautes.css">
+<script src="{LATEST}/aide/prefs.js" defer></script>
+</head>
+<body>
+<!-- Page « Nouveautés » du site GitHub Pages (installer/build_help_site.py --pages), en ligne avec la version 0.11.0.
+     LATEST entre accolades = le dossier de la dernière version de l'aide. Les images sont de vraies captures de Pépite
+     0.11.0 (installation publiée), sans données d'élève.
+     Licence : CC BY-SA 4.0, sauf les pictogrammes ARASAAC visibles dans les captures (Sergio Palao, ARASAAC,
+     Gouvernement d'Aragon, CC BY-NC-SA 4.0). -->
+<!-- Date : la ligne « Page publiée le … » sous le chapeau garde la date de la première publication. Si la page
+     change ensuite, ajouter dans le même paragraphe « , mise à jour le <time datetime="AAAA-MM-JJ">…</time> ». -->
+<a class="saut" href="#contenu">Aller au texte</a>
+<header class="haut">
+  <a class="marque" href="../index.html"><img src="{LATEST}/aide/img/pepite.svg" alt="" width="100" height="100"><span><b>Pépite</b><span>prédiction de mots</span></span></a>
+  <fieldset class="choix">
+    <legend>Affichage</legend>
+    <label><input type="checkbox" id="choix-od"> Lettres OpenDyslexic</label>
+    <label><input type="checkbox" id="choix-grand"> Texte plus grand</label>
+  </fieldset>
+</header>
+<nav class="menu" aria-label="Parties de la page">
+  <ul>
+      <li><a href="#ecrire">Écrire</a></li>
+      <li><a href="#lire">Lire une sélection</a></li>
+      <li><a href="#reglage">Le réglage</a></li>
+      <li><a href="#mot-de-passe">Mot de passe</a></li>
+      <li><a href="#limites">Les limites</a></li>
+      <li><a href="../index.html">Toutes les nouveautés</a></li>
+      <li><a href="{LATEST}/aide/index.html">L'aide</a></li>
+  </ul>
+</nav>
+<main id="contenu">
+<h1>Pépite dans LibreOffice Writer</h1>
+<p class="chapeau">Nouveau dans Pépite 0.11.0&#8239;: dans LibreOffice Writer, Pépite fonctionne comme dans Word. La barre de mots suit le curseur, les mots mal écrits sont remplacés, et un texte sélectionné est lu à voix haute, sans toucher au presse-papiers.</p>
+<p class="petit">Page publiée le <time datetime="2026-11-28">28 novembre 2026</time>. Pépite 0.11.0 est une version de test (bêta)&#8239;: dites-nous ce qui ne va pas.</p>
+
+<p>Beaucoup d'écoles et de familles utilisent LibreOffice, gratuit et libre. Jusqu'ici, Pépite y voyait seulement les touches tapées&#8239;: il ne pouvait ni lire le texte, ni savoir où était le curseur. Depuis la version 0.11.0, il lit le texte de <b>Writer</b> par l'accessibilité de Windows, comme le ferait un lecteur d'écran. Rien à installer ni à régler&#8239;: il faut LibreOffice <b>25.2 ou plus récent</b>.</p>
+
+<h2 id="ecrire">Pendant que l'élève écrit</h2>
+<ul>
+  <li><b>La barre est juste sous la ligne</b> que l'élève tape, même après un retour à la ligne&#8239;: plus besoin de la chercher près de la souris.</li>
+  <li>L'élève clique au milieu d'un mot, puis choisit un mot dans la barre&#8239;: <b>le mot entier est remplacé</b>, sans lettre en trop.</li>
+  <li>Les corrections remplacent les mots mal écrits, comme dans Word&#8239;: un mot choisi avec le rond <b>≈</b> (<q>la maizon</q> → <q>la maison</q>), les mots collés (<q>ilya</q> → <q>il y a</q>) et le rond <b>ne</b> (<q>il veut pas</q> → <q>il ne veut pas</q>).</li>
+  <li>Quand l'élève modifie une phrase, Pépite lui relit le mot ou la phrase changés, même quand la correction automatique de LibreOffice est passée avant.</li>
+  <li>Devant <b>!</b> <b>?</b> <b>:</b> <b>;</b>, c'est LibreOffice qui met l'espace, comme d'habitude&#8239;: Pépite n'en ajoute pas une seconde. S'il n'en met pas (dans un paragraphe en anglais, par exemple), Pépite ajoute la sienne.</li>
+</ul>
+<figure class="capture"><img src="img/writer-barre-au-curseur.png" width="1075" height="186" alt="Une page de LibreOffice Writer avec le texte « Demain, nous irons à la mai ». Juste sous la ligne, la barre de Pépite : un rond vert, puis maison, main, mairie, même, mer, mémoire, mère et mai, la plupart avec une image, sur les touches F1 à F8."><figcaption>Dans Writer, l'élève a tapé «&#8239;Demain, nous irons à la mai&#8239;»&#8239;: la barre est sous la ligne.<br>Pictogrammes&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
+
+<h2 id="lire">Lire un texte sélectionné</h2>
+<p>L'élève sélectionne un texte&#8239;: à la souris, par un double-clic sur un mot, un triple clic sur une phrase, avec <kbd>Maj</kbd> + les flèches, ou tout le document avec <kbd>Ctrl</kbd>+<kbd>A</kbd>. La <b>barre de lecture</b> apparaît, avec les mots sélectionnés&#8239;; le bouton ▶ les lit à voix haute. Une sélection sur plusieurs paragraphes est lue en entier.</p>
+<ul>
+  <li>Pépite lit la sélection <b>directement</b>, sans rien copier&#8239;: le <b>presse-papiers n'est pas touché</b>. Ce que l'élève avait copié avant est toujours là pour <kbd>Ctrl</kbd>+<kbd>V</kbd>.</li>
+  <li>Un mot <b>coupé</b> par la sélection à la souris est lu <b>en entier</b>&#8239;: l'élève qui sélectionne de <q>…hat</q> à <q>jar…</q> entend <q>chat … jardin</q>.</li>
+</ul>
+<figure class="capture"><img src="img/writer-lecture-selection.png" width="610" height="208" alt="Dans Writer, la phrase « Le chat dort dans le jardin de mes grands-parents. » ; la sélection commence au milieu de « chat » et finit au milieu de « jardin ». Sous la phrase, la barre de lecture de Pépite : les boutons lire, précédent, suivant et grande fenêtre, puis les mots chat, dort, dans, le et jardin, en entier."><figcaption>La sélection coupe «&#8239;chat&#8239;» et «&#8239;jardin&#8239;»&#8239;: la barre de lecture montre les mots entiers.<br>Pictogrammes&#8239;: Sergio Palao, ARASAAC, Gouvernement d'Aragon, CC BY-NC-SA 4.0</figcaption></figure>
+<p class="petit">La barre de lecture est expliquée dans l'aide&#8239;: <a href="{LATEST}/aide/lire-un-texte.html#limites">Lire un texte, bon à savoir</a>.</p>
+
+<h2 id="reglage">Le réglage «&#8239;Copier la sélection&#8239;»</h2>
+<p>Si la lecture directe échoue (une très vieille version de LibreOffice, par exemple), Pépite peut encore copier la sélection, comme <kbd>Ctrl</kbd>+<kbd>C</kbd>, puis remettre le presse-papiers comme avant. C'est le réglage <b>«&#8239;Copier la sélection par Ctrl+C si l'application ne la donne pas&#8239;»</b>, dans <b>Réglages</b> → onglet <b>«&#8239;Barre et voix&#8239;»</b>, partie <b>Lecture</b>. Trois choix&#8239;:</p>
+<ul>
+  <li><b>Dans LibreOffice Writer seulement</b> (au départ)&#8239;: dans Writer, la copie sert seulement quand la lecture directe échoue&#8239;;</li>
+  <li><b>Partout</b>&#8239;: aussi dans les autres programmes qui ne donnent pas leur sélection&#8239;;</li>
+  <li><b>Jamais</b>&#8239;: Pépite ne copie jamais rien. Dans Writer, la lecture directe marche quand même.</li>
+</ul>
+<figure class="capture"><img src="img/reglages-copier-la-selection.png" width="910" height="109" alt="La partie Lecture de la fenêtre Réglages : les cases Lire le texte sélectionné et Images dans la barre de lecture, cochées, puis la liste Copier la sélection par Ctrl+C si l'application ne la donne pas, réglée sur « Dans LibreOffice Writer seulement »."><figcaption>Réglages → «&#8239;Barre et voix&#8239;» → Lecture.</figcaption></figure>
+<p>Dans <b>LibreOffice Calc</b>, Pépite ne copie jamais, même avec <b>Partout</b>&#8239;: la feuille de calcul n'est jamais modifiée. Le détail du réglage est dans l'aide&#8239;: <a href="{LATEST}/aide/reglages.html#lecture">les réglages, Lecture</a>.</p>
+
+<h2 id="mot-de-passe">La fenêtre du mot de passe</h2>
+<p>Quand un document est protégé, LibreOffice ouvre la fenêtre <q>Saisir le mot de passe</q>. Depuis la version 0.11.0, Pépite n'y <b>montre</b> rien, n'y <b>lit</b> rien et n'en garde aucune trace, même dans le journal de diagnostic. Jusqu'à la version 0.10.2, les lettres tapées dans cette fenêtre pouvaient apparaître dans la barre, et dans le journal de diagnostic quand il était activé. Comme partout&#8239;: <a href="{LATEST}/aide/comment-ca-marche.html#mots-de-passe">les mots de passe</a>.</p>
+
+<h2 id="limites">Les limites</h2>
+<ul>
+  <li><b>Calc et Impress</b>&#8239;: Pépite suit seulement les touches tapées. La barre propose des mots, mais Pépite ne peut pas lire le texte&#8239;: il écrit la fin du mot, sans remplacer le début, et il n'y a pas de rond <b>ne</b>.</li>
+  <li>Dans les <b>fenêtres de LibreOffice</b> (Enregistrer sous, Rechercher…), la barre ne s'affiche pas.</li>
+  <li>Si LibreOffice reste bloqué un moment (par exemple à la première ouverture de <q>Enregistrer sous</q>), Pépite suit seulement les touches quelques secondes, puis relit le texte comme avant.</li>
+  <li>Pour un très long document sélectionné en entier (une centaine de pages), la lecture directe ne suffit pas&#8239;: Pépite copie alors la sélection, si le réglage le permet. Avec <b>Jamais</b>, il peut n'en lire qu'une partie, ou rien.</li>
+  <li>Pépite a été vérifié avec LibreOffice 25.2 et plus récent. Avec une version plus ancienne, il peut ne suivre que les touches.</li>
+</ul>
+</main>
+<footer class="bas">
+  <p>© 2026 Les auteurs de Pépite · logiciel libre, licence GPL-3.0-or-later · <a href="https://github.com/pepite-labs/pepite">github.com/pepite-labs/pepite</a> · Développé avec l'aide de Claude (Anthropic). Cette page est hébergée par GitHub Pages, qui enregistre les visites dans ses journaux&#8239;; nous n'y ajoutons ni mesure d'audience ni cookie.</p>
+</footer>
+</body>
+</html>
